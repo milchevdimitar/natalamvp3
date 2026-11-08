@@ -1,0 +1,3750 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>NATALA — Self Discovery Mockup v16-fixed</title>
+  <style>
+    /* =========================================================
+       INNER ATLAS — ONE FILE UI MOCKUP
+       Mobile-first / responsive / no external dependencies.
+       ========================================================= */
+
+    :root {
+      --bg: #160f35;
+      --bg-deep: #0d0a22;
+      --surface: rgba(72, 55, 153, 0.55);
+      --surface-strong: rgba(91, 69, 190, 0.72);
+      --surface-soft: rgba(255,255,255,0.08);
+      --text: #ffffff;
+      --muted: rgba(255,255,255,0.66);
+      --accent: #ff6b57;
+      --accent-2: #8b72ff;
+      --accent-3: #58c7ff;
+      --success: #75e0b0;
+      --line: rgba(255,255,255,0.12);
+      --shadow: 0 24px 60px rgba(5, 2, 20, 0.34);
+      --radius-lg: 28px;
+      --radius-md: 20px;
+    }
+
+    * { box-sizing: border-box; }
+
+    html {
+      scroll-behavior: smooth;
+      background: var(--bg-deep);
+    }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      color: var(--text);
+      font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      background:
+        radial-gradient(circle at 18% 0%, rgba(91, 111, 255, 0.48), transparent 34%),
+        radial-gradient(circle at 100% 20%, rgba(115, 59, 255, 0.42), transparent 35%),
+        linear-gradient(160deg, #273d9e 0%, #432b9c 43%, #160f35 100%);
+      overflow-x: hidden;
+    }
+
+    button {
+      font: inherit;
+      color: inherit;
+    }
+
+    .app-shell {
+      width: 100%;
+      max-width: 980px;
+      min-height: 100vh;
+      margin: 0 auto;
+      padding-bottom: 110px;
+      position: relative;
+    }
+
+    .page {
+      display: none;
+      min-height: 100vh;
+      padding: 22px 18px 28px;
+      animation: pageIn 0.28s ease;
+    }
+
+    .page.active { display: block; }
+
+    @keyframes pageIn {
+      from { opacity: 0; transform: translateY(8px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    /* ---------- Shared header ---------- */
+
+    .topbar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 28px;
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-weight: 800;
+      letter-spacing: -0.03em;
+      font-size: 19px;
+    }
+
+    .brand-mark {
+      width: 34px;
+      height: 34px;
+      border-radius: 12px;
+      display: grid;
+      place-items: center;
+      background: rgba(255,255,255,0.16);
+      border: 1px solid rgba(255,255,255,0.18);
+      backdrop-filter: blur(12px);
+    }
+
+    .avatar-small {
+      width: 42px;
+      height: 42px;
+      border-radius: 50%;
+      display: grid;
+      place-items: center;
+      background: linear-gradient(145deg, #ffb36d, #8d62ff);
+      border: 2px solid rgba(255,255,255,0.7);
+      box-shadow: 0 8px 24px rgba(0,0,0,0.2);
+      font-size: 18px;
+    }
+
+    /* ---------- Profile / main screen ---------- */
+
+    .profile-hero {
+      text-align: center;
+      margin: 8px auto 28px;
+    }
+
+    .avatar-large {
+      width: 92px;
+      height: 92px;
+      margin: 0 auto 16px;
+      border-radius: 50%;
+      display: grid;
+      place-items: center;
+      font-size: 38px;
+      background:
+        radial-gradient(circle at 32% 25%, #ffd7a4 0 12%, transparent 13%),
+        linear-gradient(145deg, #ff936b, #7a57df 72%);
+      border: 4px solid rgba(255,255,255,0.22);
+      box-shadow: 0 14px 35px rgba(0,0,0,0.28);
+    }
+
+    .profile-hero h1 {
+      margin: 0;
+      font-size: clamp(42px, 8vw, 72px);
+      line-height: 0.95;
+      letter-spacing: -0.055em;
+    }
+
+    .profile-hero p {
+      margin: 14px 0 0;
+      color: var(--muted);
+      font-size: 16px;
+    }
+
+    .identity-line {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      margin-top: 12px;
+      padding: 7px 12px;
+      border-radius: 999px;
+      background: rgba(255,255,255,0.09);
+      border: 1px solid var(--line);
+      color: #e8e4ff;
+      font-size: 13px;
+      font-weight: 700;
+    }
+
+    .hero-grid {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 14px;
+      margin-bottom: 18px;
+    }
+
+
+    /* ---------- NATALA story feed ---------- */
+
+    .natala-brand {
+      margin: 2px 0 12px;
+      text-align: left;
+      font-size: 30px;
+      line-height: 1;
+      font-weight: 900;
+      letter-spacing: -0.055em;
+    }
+
+    .natala-brand span {
+      opacity: .48;
+      font-weight: 700;
+    }
+
+    .story-feed {
+      display: flex;
+      gap: 12px;
+      overflow-x: auto;
+      margin: 0 -18px;
+      padding: 0 18px 8px;
+      scrollbar-width: none;
+      scroll-snap-type: x mandatory;
+    }
+
+    .story-feed::-webkit-scrollbar { display: none; }
+
+    .story-tile {
+      position: relative;
+      flex: 0 0 190px;
+      height: 270px;
+      border: 1px solid rgba(255,255,255,0.16);
+      border-radius: 22px;
+      overflow: hidden;
+      cursor: pointer;
+      text-align: left;
+      padding: 0;
+      color: white;
+      background: #21164d;
+      box-shadow: 0 15px 35px rgba(8,3,30,.28);
+      scroll-snap-align: start;
+      isolation: isolate;
+    }
+
+    .story-tile::before {
+      content: "";
+      position: absolute;
+      inset: 0;
+      z-index: -2;
+      background: var(--story-bg);
+      background-size: cover;
+      background-position: center;
+      transform: scale(1.02);
+    }
+
+    .story-tile::after {
+      content: "";
+      position: absolute;
+      inset: 0;
+      z-index: -1;
+      background:
+        linear-gradient(180deg, rgba(0,0,0,.12) 0%, transparent 28%,
+        rgba(0,0,0,.06) 48%, rgba(8,4,25,.9) 100%);
+    }
+
+    .story-tile.cosmic {
+      --story-bg:
+        radial-gradient(circle at 68% 24%, rgba(255,197,118,.9) 0 4%, transparent 5%),
+        radial-gradient(circle at 30% 38%, rgba(120,176,255,.7) 0 3%, transparent 4%),
+        linear-gradient(145deg, #263a9f 0%, #6239a4 48%, #1a123c 100%);
+    }
+
+    .story-tile.mind {
+      --story-bg:
+        radial-gradient(circle at 70% 22%, rgba(255,154,205,.7), transparent 20%),
+        linear-gradient(145deg, #b33c78 0%, #6731a1 48%, #201047 100%);
+    }
+
+    .story-tile.luck {
+      --story-bg:
+        radial-gradient(circle at 65% 20%, rgba(255,211,111,.8), transparent 18%),
+        linear-gradient(145deg, #d65b4c 0%, #74379c 52%, #21114b 100%);
+    }
+
+    .story-tile.love {
+      --story-bg:
+        radial-gradient(circle at 50% 25%, rgba(255,174,194,.75), transparent 20%),
+        linear-gradient(145deg, #9b315e, #4a247f 58%, #181033);
+    }
+
+    .story-top {
+      position: absolute;
+      top: 10px;
+      left: 10px;
+      right: 10px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      z-index: 2;
+    }
+
+    .story-avatar-ring {
+      width: 50px;
+      height: 50px;
+      padding: 3px;
+      border-radius: 50%;
+      background: #17103d;
+      box-shadow: 0 0 0 2px #1d80ff, 0 0 0 4px rgba(0,0,0,.18);
+    }
+
+    .story-avatar-ring > div {
+      width: 100%;
+      height: 100%;
+      border-radius: 50%;
+      display: grid;
+      place-items: center;
+      background: rgba(255,255,255,.18);
+      border: 2px solid rgba(255,255,255,.75);
+      font-size: 19px;
+    }
+
+    .story-duration {
+      padding: 5px 7px;
+      border-radius: 8px;
+      background: rgba(0,0,0,.28);
+      font-size: 9px;
+      font-weight: 800;
+    }
+
+    .story-center-symbol {
+      position: absolute;
+      left: 50%;
+      top: 49%;
+      transform: translate(-50%, -50%);
+      font-size: 66px;
+      line-height: 1;
+      filter: drop-shadow(0 8px 18px rgba(0,0,0,.25));
+      opacity: .9;
+    }
+
+    .story-content {
+      position: absolute;
+      left: 14px;
+      right: 14px;
+      bottom: 14px;
+      z-index: 2;
+    }
+
+    .story-content .story-kicker {
+      font-size: 9px;
+      text-transform: uppercase;
+      letter-spacing: .11em;
+      font-weight: 900;
+      opacity: .72;
+      margin-bottom: 4px;
+    }
+
+    .story-content h3 {
+      margin: 0;
+      font-size: 21px;
+      line-height: 1.02;
+      letter-spacing: -.045em;
+    }
+
+    .story-content p {
+      margin: 5px 0 0;
+      font-size: 10px;
+      line-height: 1.35;
+      color: rgba(255,255,255,.76);
+    }
+
+
+    .back-button {
+      width: 38px;
+      height: 38px;
+      border: 1px solid var(--line);
+      border-radius: 13px;
+      background: rgba(255,255,255,.07);
+      cursor: pointer;
+      font-size: 18px;
+      margin-right: 9px;
+    }
+
+    .story-feed-label {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin: 0 0 9px;
+    }
+
+    .story-feed-label h2 {
+      margin: 0;
+      font-size: 18px;
+      letter-spacing: -.03em;
+    }
+
+    .story-feed-label span {
+      color: var(--muted);
+      font-size: 10px;
+      font-weight: 700;
+    }
+
+    /* ---------- Daily retention / discovery modules ---------- */
+
+    .streak-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      margin: 4px 0 18px;
+    }
+
+    .streak {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 8px 11px;
+      border-radius: 999px;
+      background: rgba(255,255,255,0.09);
+      border: 1px solid var(--line);
+      font-size: 12px;
+      font-weight: 800;
+    }
+
+    .streak span { color: #ffbd78; }
+
+    .date-label {
+      color: var(--muted);
+      font-size: 12px;
+    }
+
+    .stories {
+      display: flex;
+      gap: 14px;
+      overflow-x: auto;
+      padding: 2px 2px 8px;
+      scrollbar-width: none;
+    }
+
+    .stories::-webkit-scrollbar { display: none; }
+
+    .story {
+      flex: 0 0 76px;
+      border: 0;
+      background: transparent;
+      color: white;
+      cursor: pointer;
+      padding: 0;
+      text-align: center;
+    }
+
+    .story-ring {
+      width: 68px;
+      height: 68px;
+      margin: 0 auto 7px;
+      padding: 3px;
+      border-radius: 50%;
+      background: conic-gradient(#ff6958, #ffb16d, #8b72ff, #ff6958);
+    }
+
+    .story-ring.seen {
+      background: rgba(255,255,255,0.2);
+    }
+
+    .story-avatar {
+      width: 100%;
+      height: 100%;
+      border-radius: 50%;
+      display: grid;
+      place-items: center;
+      background: linear-gradient(145deg, #2f429e, #39236d);
+      border: 3px solid #241852;
+      font-size: 24px;
+    }
+
+    .story-label {
+      color: rgba(255,255,255,0.84);
+      font-size: 10px;
+      line-height: 1.2;
+      font-weight: 700;
+    }
+
+    .daily-grid {
+      display: grid;
+      gap: 12px;
+      margin-top: 18px;
+    }
+
+    .daily-card {
+      border: 1px solid var(--line);
+      border-radius: 24px;
+      padding: 18px;
+      background: rgba(255,255,255,0.08);
+      backdrop-filter: blur(14px);
+      box-shadow: 0 14px 35px rgba(14, 6, 48, 0.16);
+    }
+
+    .daily-card.featured {
+      background:
+        radial-gradient(circle at 100% 0%, rgba(255,177,109,0.18), transparent 38%),
+        linear-gradient(135deg, rgba(255,255,255,0.14), rgba(255,255,255,0.06));
+    }
+
+    .daily-head {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      margin-bottom: 12px;
+    }
+
+    .daily-head-left {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .daily-icon {
+      width: 38px;
+      height: 38px;
+      border-radius: 13px;
+      display: grid;
+      place-items: center;
+      background: rgba(255,255,255,0.1);
+    }
+
+    .daily-kicker {
+      color: var(--muted);
+      font-size: 10px;
+      text-transform: uppercase;
+      letter-spacing: 0.12em;
+      font-weight: 800;
+    }
+
+    .daily-title {
+      margin: 2px 0 0;
+      font-size: 15px;
+      font-weight: 800;
+    }
+
+    .daily-card p {
+      color: var(--muted);
+      font-size: 13px;
+      line-height: 1.55;
+      margin: 0;
+    }
+
+    .planet-row {
+      display: flex;
+      gap: 7px;
+      overflow-x: auto;
+      margin-top: 14px;
+      scrollbar-width: none;
+    }
+
+    .planet-row::-webkit-scrollbar { display: none; }
+
+    .planet-pill {
+      flex: 0 0 auto;
+      padding: 9px 11px;
+      border-radius: 13px;
+      background: rgba(255,255,255,0.08);
+      border: 1px solid var(--line);
+      font-size: 11px;
+      font-weight: 700;
+    }
+
+    .planet-pill b { color: #ffb16d; }
+
+    .luck-card {
+      display: grid;
+      grid-template-columns: auto 1fr auto;
+      gap: 13px;
+      align-items: center;
+    }
+
+    .luck-number {
+      width: 52px;
+      height: 52px;
+      border-radius: 17px;
+      display: grid;
+      place-items: center;
+      background: linear-gradient(145deg, #ff7059, #a05cff);
+      font-size: 21px;
+      font-weight: 900;
+    }
+
+    .open-link {
+      border: 0;
+      background: transparent;
+      color: #d8d1ff;
+      font-size: 11px;
+      font-weight: 800;
+      cursor: pointer;
+    }
+
+    .story-modal {
+      position: fixed;
+      inset: 0;
+      z-index: 50;
+      display: none;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+      background: rgba(8, 4, 24, 0.72);
+      backdrop-filter: blur(12px);
+    }
+
+    .story-modal.open { display: flex; }
+
+    .story-modal-card {
+      width: min(390px, 100%);
+      min-height: 520px;
+      border-radius: 30px;
+      padding: 24px;
+      position: relative;
+      overflow: hidden;
+      background:
+        radial-gradient(circle at 75% 10%, rgba(255,180,110,0.3), transparent 32%),
+        linear-gradient(160deg, #3449a8, #4d2a9d 55%, #21124e);
+      box-shadow: 0 30px 80px rgba(0,0,0,0.48);
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+    }
+
+    .story-progress {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 5px;
+      margin-bottom: 24px;
+    }
+
+    .story-progress span {
+      height: 3px;
+      border-radius: 999px;
+      background: rgba(255,255,255,0.3);
+    }
+
+    .story-progress span:first-child { background: white; }
+
+    .story-modal-card h2 {
+      font-size: 42px;
+      line-height: 0.98;
+      letter-spacing: -0.05em;
+      margin: 0 0 14px;
+    }
+
+    .story-modal-card p {
+      color: rgba(255,255,255,0.75);
+      line-height: 1.6;
+      font-size: 14px;
+    }
+
+    .close-story {
+      position: absolute;
+      top: 19px;
+      right: 19px;
+      border: 0;
+      width: 38px;
+      height: 38px;
+      border-radius: 50%;
+      background: rgba(255,255,255,0.1);
+      cursor: pointer;
+      font-size: 18px;
+    }
+
+
+    /* ---------- Subscription / upgrade ---------- */
+
+    .plan-banner {
+      position: relative;
+      overflow: hidden;
+      padding: 17px;
+      border-radius: 24px;
+      margin: 0 0 20px;
+      background:
+        radial-gradient(circle at 100% 0%, rgba(255,190,118,0.28), transparent 35%),
+        linear-gradient(135deg, rgba(255,255,255,0.15), rgba(255,255,255,0.06));
+      border: 1px solid rgba(255,255,255,0.14);
+      box-shadow: 0 14px 35px rgba(10,4,35,0.18);
+      cursor: pointer;
+    }
+
+    .plan-banner::after {
+      content: "✦";
+      position: absolute;
+      right: 17px;
+      top: 10px;
+      font-size: 44px;
+      color: rgba(255,190,118,0.18);
+      transform: rotate(12deg);
+    }
+
+    .plan-row {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      position: relative;
+      z-index: 1;
+    }
+
+    .plan-badge {
+      width: 43px;
+      height: 43px;
+      flex: 0 0 auto;
+      display: grid;
+      place-items: center;
+      border-radius: 15px;
+      background: linear-gradient(145deg, #ff9d66, #8e69ff);
+      font-size: 19px;
+      box-shadow: 0 8px 22px rgba(90,50,170,0.28);
+    }
+
+    .plan-copy {
+      min-width: 0;
+      flex: 1;
+    }
+
+    .plan-copy .kicker {
+      color: #ffd09f;
+      font-size: 10px;
+      text-transform: uppercase;
+      letter-spacing: 0.12em;
+      font-weight: 900;
+    }
+
+    .plan-copy h3 {
+      margin: 2px 0 2px;
+      font-size: 16px;
+      letter-spacing: -0.02em;
+    }
+
+    .plan-copy p {
+      margin: 0;
+      color: var(--muted);
+      font-size: 11px;
+      line-height: 1.4;
+    }
+
+    .plan-cta {
+      flex: 0 0 auto;
+      border: 0;
+      padding: 10px 12px;
+      border-radius: 13px;
+      background: white;
+      color: #2a1a62;
+      font-size: 11px;
+      font-weight: 900;
+      cursor: pointer;
+      position: relative;
+      z-index: 2;
+    }
+
+    .plan-progress {
+      position: relative;
+      z-index: 1;
+      margin-top: 13px;
+    }
+
+    .plan-progress-row {
+      display: flex;
+      justify-content: space-between;
+      color: rgba(255,255,255,0.56);
+      font-size: 10px;
+      margin-bottom: 6px;
+    }
+
+    .plan-progress-bar {
+      height: 5px;
+      border-radius: 999px;
+      background: rgba(255,255,255,0.09);
+      overflow: hidden;
+    }
+
+    .plan-progress-bar span {
+      display: block;
+      height: 100%;
+      width: 72%;
+      border-radius: inherit;
+      background: linear-gradient(90deg, #ff795f, #ffbd78);
+    }
+
+    .plan-sheet {
+      position: fixed;
+      inset: 0;
+      z-index: 60;
+      display: none;
+      align-items: flex-end;
+      justify-content: center;
+      background: rgba(6,3,20,0.68);
+      backdrop-filter: blur(10px);
+    }
+
+    .plan-sheet.open { display: flex; }
+
+    .plan-sheet-card {
+      width: min(560px, 100%);
+      padding: 24px;
+      border-radius: 30px 30px 0 0;
+      background: linear-gradient(160deg, #30257d, #19103d);
+      border: 1px solid var(--line);
+      box-shadow: 0 -20px 70px rgba(0,0,0,0.35);
+    }
+
+    .plan-sheet-card h2 {
+      margin: 5px 0 7px;
+      font-size: 30px;
+      letter-spacing: -0.04em;
+    }
+
+    .plan-sheet-card > p {
+      color: var(--muted);
+      font-size: 13px;
+      line-height: 1.55;
+      margin: 0 0 18px;
+    }
+
+    .upgrade-options {
+      display: grid;
+      gap: 10px;
+    }
+
+    .upgrade-option {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 14px;
+      padding: 15px;
+      border-radius: 18px;
+      background: rgba(255,255,255,0.07);
+      border: 1px solid var(--line);
+    }
+
+    .upgrade-option strong { font-size: 14px; }
+    .upgrade-option span {
+      color: var(--muted);
+      font-size: 11px;
+      display: block;
+      margin-top: 3px;
+    }
+
+    .upgrade-option button {
+      border: 0;
+      border-radius: 12px;
+      padding: 9px 12px;
+      background: linear-gradient(135deg, #ff735d, #b65ce5);
+      color: white;
+      font-size: 11px;
+      font-weight: 900;
+      cursor: pointer;
+    }
+
+    .close-plan {
+      float: right;
+      width: 36px;
+      height: 36px;
+      border: 0;
+      border-radius: 50%;
+      background: rgba(255,255,255,0.08);
+      cursor: pointer;
+      font-size: 17px;
+    }
+
+
+    /* ---------- New self-discovery systems ---------- */
+
+    .signal-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 10px;
+      margin-top: 10px;
+    }
+
+    .signal-card {
+      min-height: 128px;
+      padding: 15px;
+      border-radius: 21px;
+      border: 1px solid var(--line);
+      background: linear-gradient(145deg, rgba(255,255,255,.10), rgba(255,255,255,.045));
+      box-shadow: 0 14px 30px rgba(7,3,25,.14);
+      position: relative;
+      overflow: hidden;
+    }
+
+    .signal-card::after {
+      content: "";
+      position: absolute;
+      width: 85px;
+      height: 85px;
+      right: -25px;
+      bottom: -30px;
+      border-radius: 50%;
+      background: rgba(139,114,255,.14);
+      filter: blur(2px);
+    }
+
+    .signal-icon {
+      width: 35px;
+      height: 35px;
+      display: grid;
+      place-items: center;
+      border-radius: 12px;
+      background: rgba(255,255,255,.10);
+      margin-bottom: 10px;
+      font-size: 18px;
+    }
+
+    .signal-label {
+      color: var(--muted);
+      font-size: 9px;
+      text-transform: uppercase;
+      letter-spacing: .10em;
+      font-weight: 900;
+    }
+
+    .signal-value {
+      margin-top: 3px;
+      font-size: 17px;
+      font-weight: 900;
+      letter-spacing: -.03em;
+    }
+
+    .signal-note {
+      margin-top: 4px;
+      color: rgba(255,255,255,.55);
+      font-size: 10px;
+      line-height: 1.35;
+    }
+
+    .element-balance {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 7px;
+      margin-top: 14px;
+    }
+
+    .element {
+      text-align: center;
+      padding: 9px 4px;
+      border-radius: 14px;
+      background: rgba(255,255,255,.055);
+      border: 1px solid rgba(255,255,255,.07);
+    }
+
+    .element b {
+      display: block;
+      font-size: 13px;
+      margin-bottom: 3px;
+    }
+
+    .element span {
+      display: block;
+      color: var(--muted);
+      font-size: 9px;
+    }
+
+    .element-bar {
+      height: 4px;
+      margin-top: 7px;
+      border-radius: 99px;
+      background: rgba(255,255,255,.08);
+      overflow: hidden;
+    }
+
+    .element-bar i {
+      display: block;
+      height: 100%;
+      border-radius: inherit;
+      background: linear-gradient(90deg, #8b72ff, #58c7ff);
+    }
+
+    .tarot-card {
+      min-height: 180px;
+      padding: 18px;
+      border-radius: 24px;
+      background:
+        radial-gradient(circle at 80% 10%, rgba(255,196,116,.25), transparent 24%),
+        linear-gradient(145deg, #21134d, #4a2b8e 58%, #17102f);
+      border: 1px solid rgba(255,255,255,.13);
+      position: relative;
+      overflow: hidden;
+    }
+
+    .tarot-card .tarot-mark {
+      position: absolute;
+      right: 18px;
+      top: 12px;
+      font-size: 65px;
+      opacity: .18;
+    }
+
+    .tarot-card h3 {
+      margin: 6px 0 4px;
+      font-size: 24px;
+      letter-spacing: -.04em;
+    }
+
+    .tarot-card p {
+      margin: 0;
+      max-width: 80%;
+      color: rgba(255,255,255,.68);
+      font-size: 11px;
+      line-height: 1.45;
+    }
+
+    .profile-meta-strip {
+      display: flex;
+      gap: 7px;
+      flex-wrap: wrap;
+      margin-top: 13px;
+    }
+
+    .profile-meta-strip span {
+      padding: 7px 10px;
+      border-radius: 999px;
+      background: rgba(255,255,255,.07);
+      border: 1px solid var(--line);
+      color: rgba(255,255,255,.78);
+      font-size: 10px;
+      font-weight: 800;
+    }
+
+    /* ---------- Daily Sky / planetary positions ---------- */
+
+    .sky-page {
+      min-height: 100vh;
+      padding-bottom: 120px;
+      background:
+        radial-gradient(circle at 50% 3%, rgba(118,154,255,.35), transparent 28%),
+        radial-gradient(circle at 85% 24%, rgba(190,92,255,.20), transparent 25%);
+    }
+
+    .sky-hero {
+      position: relative;
+      overflow: hidden;
+      padding: 23px 20px 22px;
+      border-radius: 30px;
+      margin-top: 12px;
+      background:
+        radial-gradient(circle at 50% 37%, rgba(255,255,255,.11) 0 1%, transparent 2%),
+        radial-gradient(circle at 22% 23%, rgba(255,255,255,.8) 0 1px, transparent 2px),
+        radial-gradient(circle at 73% 17%, rgba(255,255,255,.8) 0 1px, transparent 2px),
+        radial-gradient(circle at 88% 52%, rgba(255,255,255,.65) 0 1px, transparent 2px),
+        linear-gradient(160deg, #263c93 0%, #4c2c96 53%, #171033 100%);
+      border: 1px solid rgba(255,255,255,.15);
+      box-shadow: 0 25px 60px rgba(4,2,20,.28);
+    }
+
+    .sky-hero::before {
+      content: "✦   ·     ✧       ·   ✦";
+      position: absolute;
+      inset: 15px 0 auto;
+      text-align: center;
+      font-size: 12px;
+      letter-spacing: 17px;
+      opacity: .28;
+    }
+
+    .sky-date {
+      color: rgba(255,255,255,.58);
+      text-transform: uppercase;
+      letter-spacing: .13em;
+      font-size: 9px;
+      font-weight: 900;
+      position: relative;
+    }
+
+    .sky-hero h1 {
+      margin: 8px 0 3px;
+      font-size: 38px;
+      line-height: .95;
+      letter-spacing: -.055em;
+      position: relative;
+    }
+
+    .sky-subtitle {
+      color: rgba(255,255,255,.68);
+      font-size: 12px;
+      position: relative;
+    }
+
+    .moon-display {
+      width: 122px;
+      height: 122px;
+      margin: 22px auto 17px;
+      border-radius: 50%;
+      background:
+        radial-gradient(circle at 36% 30%, rgba(255,255,255,.95) 0 2%, transparent 3%),
+        radial-gradient(circle at 63% 58%, rgba(100,93,150,.28) 0 10%, transparent 11%),
+        radial-gradient(circle at 45% 66%, rgba(80,73,130,.20) 0 7%, transparent 8%),
+        linear-gradient(135deg, #f7f4ff, #bbb9d7);
+      box-shadow: 0 0 0 10px rgba(255,255,255,.04), 0 0 55px rgba(212,203,255,.30);
+      position: relative;
+    }
+
+    .moon-display::after {
+      content: "";
+      position: absolute;
+      width: 112px;
+      height: 112px;
+      left: 25px;
+      top: -3px;
+      border-radius: 50%;
+      background: #3b277e;
+      opacity: .98;
+    }
+
+    .moon-label {
+      text-align: center;
+      position: relative;
+      z-index: 2;
+    }
+
+    .moon-label strong {
+      display: block;
+      font-size: 16px;
+    }
+
+    .moon-label span {
+      color: var(--muted);
+      font-size: 10px;
+    }
+
+    .zodiac-season {
+      margin-top: 20px;
+      padding: 15px;
+      border-radius: 20px;
+      background: rgba(255,255,255,.07);
+      border: 1px solid rgba(255,255,255,.10);
+      display: flex;
+      align-items: center;
+      gap: 13px;
+    }
+
+    .zodiac-glyph {
+      width: 50px;
+      height: 50px;
+      display: grid;
+      place-items: center;
+      border-radius: 16px;
+      background: rgba(255,255,255,.10);
+      font-size: 27px;
+    }
+
+    .zodiac-season .label {
+      color: rgba(255,255,255,.52);
+      font-size: 9px;
+      text-transform: uppercase;
+      letter-spacing: .11em;
+      font-weight: 900;
+    }
+
+    .zodiac-season h3 {
+      margin: 2px 0 2px;
+      font-size: 19px;
+    }
+
+    .zodiac-season p {
+      margin: 0;
+      color: var(--muted);
+      font-size: 10px;
+    }
+
+    .planet-timeline {
+      margin-top: 16px;
+      display: grid;
+      gap: 8px;
+    }
+
+    .planet-position {
+      display: grid;
+      grid-template-columns: 36px 1fr auto;
+      align-items: center;
+      gap: 9px;
+      padding: 11px 12px;
+      border-radius: 17px;
+      background: rgba(255,255,255,.06);
+      border: 1px solid rgba(255,255,255,.08);
+    }
+
+    .planet-glyph {
+      width: 32px;
+      height: 32px;
+      display: grid;
+      place-items: center;
+      border-radius: 11px;
+      background: rgba(255,255,255,.09);
+      font-size: 17px;
+    }
+
+    .planet-position strong {
+      display: block;
+      font-size: 12px;
+    }
+
+    .planet-position small {
+      color: var(--muted);
+      font-size: 9px;
+    }
+
+    .planet-degree {
+      text-align: right;
+      font-size: 10px;
+      font-weight: 900;
+      color: rgba(255,255,255,.75);
+    }
+
+    .sky-insight {
+      margin-top: 16px;
+      padding: 17px;
+      border-radius: 22px;
+      background: linear-gradient(135deg, rgba(255,107,87,.18), rgba(139,114,255,.15));
+      border: 1px solid rgba(255,255,255,.11);
+    }
+
+    .sky-insight h3 {
+      margin: 4px 0 5px;
+      font-size: 17px;
+    }
+
+    .sky-insight p {
+      margin: 0;
+      color: rgba(255,255,255,.68);
+      font-size: 11px;
+      line-height: 1.5;
+    }
+
+    .sky-open {
+      width: 100%;
+      border: 0;
+      margin-top: 12px;
+      padding: 12px;
+      border-radius: 14px;
+      background: rgba(255,255,255,.10);
+      color: white;
+      font-weight: 900;
+      cursor: pointer;
+    }
+
+    .system-card-new {
+      position: relative;
+    }
+
+    @media (min-width: 760px) {
+      .signal-grid { grid-template-columns: repeat(4, 1fr); }
+      .sky-layout {
+        display: grid;
+        grid-template-columns: 1.05fr .95fr;
+        gap: 14px;
+        align-items: start;
+      }
+      .sky-hero { margin-top: 0; }
+    }
+
+    /* ---------- Matches ---------- */
+
+    .matches-hero {
+      margin: 20px 0 18px;
+    }
+
+    .matches-hero h1 {
+      margin: 6px 0 8px;
+      font-size: clamp(40px, 8vw, 58px);
+      line-height: .96;
+      letter-spacing: -0.055em;
+    }
+
+    .matches-hero p {
+      color: var(--muted);
+      line-height: 1.55;
+      max-width: 650px;
+    }
+
+    .match-card {
+      position: relative;
+      min-height: 520px;
+      border-radius: 30px;
+      overflow: hidden;
+      background:
+        linear-gradient(180deg, rgba(16,10,42,0.02) 20%, rgba(16,10,42,0.92) 93%),
+        radial-gradient(circle at 50% 20%, #8e79d8, #33236e 48%, #130c2c);
+      border: 1px solid var(--line);
+      box-shadow: var(--shadow);
+      margin-bottom: 14px;
+    }
+
+    .match-avatar {
+      position: absolute;
+      inset: 48px 30px auto;
+      height: 280px;
+      display: grid;
+      place-items: center;
+      font-size: 110px;
+      opacity: .95;
+    }
+
+    .match-glow {
+      position: absolute;
+      width: 250px;
+      height: 250px;
+      top: 30px;
+      left: 50%;
+      transform: translateX(-50%);
+      border-radius: 50%;
+      background: rgba(139,114,255,0.22);
+      filter: blur(20px);
+    }
+
+    .match-info {
+      position: absolute;
+      left: 22px;
+      right: 22px;
+      bottom: 22px;
+    }
+
+    .match-info h2 {
+      margin: 0;
+      font-size: 34px;
+      letter-spacing: -0.045em;
+    }
+
+    .match-meta {
+      color: rgba(255,255,255,0.7);
+      font-size: 13px;
+      margin: 6px 0 14px;
+    }
+
+    .match-tags {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 7px;
+      margin-bottom: 18px;
+    }
+
+    .match-tag {
+      padding: 7px 9px;
+      border-radius: 999px;
+      background: rgba(255,255,255,0.1);
+      border: 1px solid rgba(255,255,255,0.12);
+      font-size: 10px;
+      font-weight: 700;
+    }
+
+    .compatibility {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .compatibility strong {
+      font-size: 22px;
+      color: #ffb16d;
+    }
+
+    .match-actions {
+      display: grid;
+      grid-template-columns: 1fr 1.35fr;
+      gap: 10px;
+    }
+
+    .match-action {
+      min-height: 52px;
+      border: 1px solid var(--line);
+      border-radius: 18px;
+      background: rgba(255,255,255,0.08);
+      cursor: pointer;
+      font-weight: 800;
+    }
+
+    .match-action.primary {
+      background: linear-gradient(135deg, #ff6958, #c6579c);
+      border: 0;
+    }
+
+    .compatibility-card {
+      padding: 18px;
+      border-radius: 24px;
+      background: rgba(255,255,255,0.08);
+      border: 1px solid var(--line);
+    }
+
+    .compatibility-card h3 { margin: 0 0 7px; }
+    .compatibility-card p {
+      color: var(--muted);
+      font-size: 13px;
+      line-height: 1.5;
+      margin: 0;
+    }
+
+    .score-card {
+      min-height: 168px;
+      border-radius: var(--radius-lg);
+      padding: 20px;
+      position: relative;
+      overflow: hidden;
+      box-shadow: var(--shadow);
+    }
+
+    .score-card::after {
+      content: "";
+      position: absolute;
+      width: 150px;
+      height: 150px;
+      right: -50px;
+      top: -50px;
+      border-radius: 50%;
+      background: rgba(255,255,255,0.11);
+    }
+
+    .score-card.primary {
+      background: linear-gradient(145deg, #ff6555, #e94b52);
+    }
+
+    .score-card.secondary {
+      background: linear-gradient(145deg, rgba(88,75,188,0.94), rgba(61,48,139,0.9));
+    }
+
+    .score-card.light {
+      background: rgba(250,250,255,0.97);
+      color: #241d4e;
+    }
+
+    .card-icon {
+      width: 38px;
+      height: 38px;
+      margin-bottom: 20px;
+      opacity: 0.9;
+    }
+
+    .score-label {
+      font-size: 13px;
+      font-weight: 700;
+      opacity: 0.7;
+      margin-bottom: 5px;
+    }
+
+    .score-value {
+      font-size: 48px;
+      line-height: 1;
+      font-weight: 850;
+      letter-spacing: -0.06em;
+    }
+
+    .score-value small {
+      font-size: 21px;
+      letter-spacing: -0.02em;
+    }
+
+    .section-title {
+      display: flex;
+      align-items: end;
+      justify-content: space-between;
+      margin: 26px 2px 12px;
+    }
+
+    .section-title h2 {
+      margin: 0;
+      font-size: 20px;
+      letter-spacing: -0.03em;
+    }
+
+    .section-title span {
+      color: var(--muted);
+      font-size: 12px;
+    }
+
+    .stat-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+    }
+
+    .stat-card {
+      min-height: 112px;
+      padding: 18px;
+      border-radius: 22px;
+      background: var(--surface);
+      border: 1px solid var(--line);
+      box-shadow: 0 14px 35px rgba(14, 6, 48, 0.18);
+      backdrop-filter: blur(16px);
+    }
+
+    .stat-card .label {
+      color: var(--muted);
+      font-size: 12px;
+      margin-bottom: 12px;
+    }
+
+    .stat-card .value {
+      font-size: 22px;
+      font-weight: 800;
+      letter-spacing: -0.03em;
+    }
+
+    .insight-card {
+      padding: 20px;
+      border-radius: 24px;
+      background: linear-gradient(135deg, rgba(255,255,255,0.13), rgba(255,255,255,0.05));
+      border: 1px solid var(--line);
+      margin-bottom: 14px;
+      backdrop-filter: blur(14px);
+    }
+
+    .insight-top {
+      display: flex;
+      gap: 12px;
+      align-items: flex-start;
+    }
+
+    .insight-icon {
+      flex: 0 0 auto;
+      width: 42px;
+      height: 42px;
+      border-radius: 14px;
+      display: grid;
+      place-items: center;
+      background: rgba(255,255,255,0.1);
+    }
+
+    .insight-card h3 {
+      margin: 0 0 6px;
+      font-size: 15px;
+    }
+
+    .insight-card p {
+      margin: 0;
+      color: var(--muted);
+      font-size: 13px;
+      line-height: 1.55;
+    }
+
+    .progress-wrap { margin-top: 16px; }
+
+    .progress-row {
+      display: flex;
+      justify-content: space-between;
+      color: var(--muted);
+      font-size: 11px;
+      margin-bottom: 7px;
+    }
+
+    .progress {
+      height: 7px;
+      border-radius: 999px;
+      background: rgba(255,255,255,0.09);
+      overflow: hidden;
+    }
+
+    .progress > span {
+      display: block;
+      height: 100%;
+      border-radius: inherit;
+      background: linear-gradient(90deg, #ff725c, #ffb16d);
+    }
+
+    /* ---------- Home ---------- */
+
+    .welcome {
+      margin: 32px 0 24px;
+    }
+
+    .eyebrow {
+      color: #c9c3ff;
+      font-size: 12px;
+      font-weight: 800;
+      text-transform: uppercase;
+      letter-spacing: 0.16em;
+    }
+
+    .welcome h1 {
+      margin: 7px 0 0;
+      font-size: clamp(38px, 7vw, 60px);
+      line-height: 0.98;
+      letter-spacing: -0.055em;
+    }
+
+    .welcome p {
+      max-width: 610px;
+      color: var(--muted);
+      line-height: 1.6;
+      margin-top: 14px;
+    }
+
+    .focus-card {
+      padding: 24px;
+      border-radius: 28px;
+      background: linear-gradient(135deg, rgba(255,255,255,0.15), rgba(255,255,255,0.06));
+      border: 1px solid var(--line);
+      box-shadow: var(--shadow);
+    }
+
+    .focus-card h2 {
+      margin: 0 0 8px;
+      font-size: 23px;
+      letter-spacing: -0.035em;
+    }
+
+    .focus-card p {
+      color: var(--muted);
+      line-height: 1.6;
+      font-size: 14px;
+    }
+
+    .focus-pills {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-top: 16px;
+    }
+
+    .pill {
+      padding: 9px 12px;
+      border-radius: 999px;
+      background: rgba(255,255,255,0.09);
+      border: 1px solid var(--line);
+      font-size: 12px;
+      font-weight: 700;
+    }
+
+    /* ---------- Explore ---------- */
+
+    .search-box {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 14px 16px;
+      border-radius: 18px;
+      background: rgba(255,255,255,0.1);
+      border: 1px solid var(--line);
+      margin-bottom: 22px;
+    }
+
+    .search-box input {
+      flex: 1;
+      border: 0;
+      outline: 0;
+      background: transparent;
+      color: white;
+      font-size: 15px;
+    }
+
+    .search-box input::placeholder { color: rgba(255,255,255,0.48); }
+
+    .system-list {
+      display: grid;
+      gap: 12px;
+    }
+
+    .system-card {
+      display: flex;
+      align-items: center;
+      gap: 15px;
+      width: 100%;
+      text-align: left;
+      border: 1px solid var(--line);
+      border-radius: 22px;
+      background: rgba(255,255,255,0.08);
+      padding: 15px;
+      cursor: pointer;
+      transition: transform .18s ease, background .18s ease;
+    }
+
+    .system-card:hover {
+      transform: translateY(-2px);
+      background: rgba(255,255,255,0.12);
+    }
+
+    .system-icon {
+      width: 48px;
+      height: 48px;
+      flex: 0 0 auto;
+      border-radius: 16px;
+      display: grid;
+      place-items: center;
+      background: linear-gradient(145deg, rgba(139,114,255,.85), rgba(73,58,166,.85));
+      font-size: 22px;
+    }
+
+    .system-copy { flex: 1; }
+    .system-copy h3 { margin: 0 0 4px; font-size: 15px; }
+    .system-copy p { margin: 0; color: var(--muted); font-size: 12px; line-height: 1.4; }
+
+    .status {
+      font-size: 10px;
+      color: var(--success);
+      font-weight: 800;
+      white-space: nowrap;
+    }
+
+    /* ---------- Floating navigation ---------- */
+
+    .bottom-nav-wrap {
+      position: fixed;
+      left: 0;
+      right: 0;
+      bottom: 14px;
+      z-index: 20;
+      display: flex;
+      justify-content: center;
+      pointer-events: none;
+    }
+
+    .bottom-nav {
+      width: min(520px, calc(100vw - 24px));
+      padding: 7px;
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 4px;
+      align-items: stretch;
+      border-radius: 26px;
+      background: rgba(29, 19, 76, 0.58);
+      border: 1px solid rgba(255,255,255,0.16);
+      box-shadow: 0 18px 50px rgba(4, 1, 17, 0.42);
+      backdrop-filter: blur(22px);
+      -webkit-backdrop-filter: blur(22px);
+      pointer-events: auto;
+    }
+
+    .nav-btn {
+      min-height: 54px;
+      min-width: 0;
+      border: 0;
+      border-radius: 20px;
+      background: transparent;
+      color: rgba(255,255,255,0.58);
+      cursor: pointer;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 4px;
+      transition: .18s ease;
+    }
+
+    .nav-btn svg { width: 22px; height: 22px; }
+    .nav-btn span { font-size: 10px; font-weight: 700; }
+
+    .nav-btn.active {
+      color: white;
+      background: rgba(255,255,255,0.11);
+      box-shadow: inset 0 0 0 1px rgba(255,255,255,0.07);
+    }
+
+    /* ---------- Desktop ---------- */
+
+    @media (min-width: 720px) {
+      .app-shell { padding-bottom: 48px; }
+
+      .page {
+        padding: 36px 42px 54px;
+      }
+
+      .hero-grid {
+        grid-template-columns: repeat(3, 1fr);
+      }
+
+      .daily-grid {
+        grid-template-columns: 1.2fr .8fr;
+      }
+
+      .story-feed {
+        margin-left: 0;
+        margin-right: 0;
+      }
+
+      .profile-hero { margin-top: 22px; }
+
+      .stat-grid {
+        grid-template-columns: repeat(4, 1fr);
+      }
+
+      .system-list {
+        grid-template-columns: 1fr 1fr;
+      }
+
+      .bottom-nav-wrap {
+        bottom: 24px;
+      }
+    }
+
+    /* NATALA v6: reveal-based daily home */
+    [hidden]{display:none!important}
+    .reveal-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+    .reveal-panel{min-width:0;min-height:345px;border:1px solid rgba(255,255,255,.19);border-radius:26px;padding:15px;background:radial-gradient(circle at 50% 24%,rgba(255,198,133,.20),transparent 48%),linear-gradient(160deg,#693a94,#3b246f 65%,#241746);box-shadow:0 15px 40px rgba(10,3,35,.25);text-align:center;overflow:hidden}
+    .tarot-panel{background:radial-gradient(circle at 50% 20%,rgba(136,164,255,.23),transparent 50%),linear-gradient(160deg,#364b9c,#432477 65%,#21163e)}
+    .reveal-overline,.sky-feature-kicker{font-size:10px;letter-spacing:.14em;font-weight:900;color:#e4c7ff}
+    .reveal-stage{min-height:300px;display:flex;align-items:center;justify-content:center}
+    .reveal-front,.reveal-back{width:100%;animation:pageIn .38s ease}
+    .reveal-front h3,.reveal-back h3{font-size:19px;letter-spacing:-.035em;line-height:1.15;margin:13px 0 7px}
+    .reveal-front p,.reveal-back p{font-size:11px;line-height:1.5;color:rgba(255,255,255,.7);margin:0 auto 16px;max-width:210px}
+    .fortune-illustration{height:125px;display:grid;place-items:center;font-size:85px;color:#ffd49b;filter:drop-shadow(0 12px 15px rgba(0,0,0,.25));animation:floaty 4s ease-in-out infinite}
+    @keyframes floaty{50%{transform:translateY(-8px)}}
+    .tarot-deck{height:125px;width:88px;border-radius:10px;border:3px solid #d4baff;padding:5px;margin:0 auto;transform:rotate(-8deg);box-shadow:8px 8px 0 rgba(10,6,34,.35),0 14px 30px rgba(0,0,0,.25);background:#30205f}
+    .tarot-deck-inner{height:100%;border:1px solid #b99dff;border-radius:5px;display:flex;flex-direction:column;justify-content:center;align-items:center;font-size:46px;color:#e9d8ff}
+    .tarot-deck-inner small{font-size:8px;letter-spacing:.22em}
+    .reveal-button{width:100%;border:0;border-radius:14px;padding:12px 7px;background:linear-gradient(100deg,#ffba77,#ff786d);color:#351b47;font-weight:900;font-size:12px;cursor:pointer;box-shadow:0 9px 20px rgba(11,3,30,.2)}
+    .reveal-button:active{transform:scale(.97)}
+    .revealed-glyph,.tarot-revealed{font-size:66px;margin:12px 0 8px;color:#ffd6a0;animation:floaty 4s ease-in-out infinite}
+    .reveal-tag{font-size:9px;letter-spacing:.13em;color:#e5b9ff;font-weight:900}
+    .claimed-note{font-size:10px;color:#f6c7aa}
+    .tarot-prompt{border-top:1px solid rgba(255,255,255,.17);padding:12px 4px;margin-bottom:12px;font-size:11px;line-height:1.45;color:#f8e6ff}
+    .moon-feature{position:relative;min-height:245px;display:grid;grid-template-columns:1fr 1fr;align-items:center;gap:5px;padding:22px;border-radius:28px;overflow:hidden;background:radial-gradient(circle at 75% 45%,#4c509c,transparent 46%),linear-gradient(135deg,#192c65,#34206b 80%);border:1px solid rgba(255,255,255,.14)}
+    .moon-copy{position:relative;z-index:1}
+    .moon-copy h3{font-size:clamp(23px,4vw,36px);line-height:1.03;margin:12px 0;letter-spacing:-.05em}
+    .moon-copy p{color:rgba(255,255,255,.7);font-size:12px;line-height:1.5}
+    .moon-chips{display:flex;flex-wrap:wrap;gap:6px;margin-top:15px}
+    .moon-chips span{font-size:9px;padding:7px 9px;border-radius:20px;background:rgba(255,255,255,.11)}
+    .moon-art{position:relative;display:grid;place-items:center;min-height:180px}
+    .moon-orb{width:min(34vw,155px);height:min(34vw,155px);max-width:155px;max-height:155px;min-width:105px;min-height:105px;border-radius:50%;background:radial-gradient(circle at 33% 35%,rgba(98,93,144,.24) 0 11%,transparent 12%),radial-gradient(circle at 63% 65%,rgba(93,89,141,.25) 0 9%,transparent 10%),linear-gradient(125deg,#fff,#aaa9ce);box-shadow:0 0 55px rgba(196,190,255,.4),0 0 0 12px rgba(255,255,255,.035);position:relative;overflow:hidden}
+    .moon-orb:after{content:"";position:absolute;inset:-6px -47% -6px 46%;border-radius:50%;background:#29285f;box-shadow:-9px 0 15px rgba(27,24,64,.35)}
+    .moon-stars{position:absolute;top:2px;right:0;opacity:.5;letter-spacing:15px}
+    .zodiac-feature{display:flex;align-items:center;gap:16px;margin-top:12px;padding:17px;border:1px solid rgba(255,255,255,.14);border-radius:23px;background:linear-gradient(110deg,rgba(112,65,160,.65),rgba(45,35,102,.65))}
+    .zodiac-emblem{width:65px;height:65px;flex:0 0 auto;display:grid;place-items:center;border-radius:21px;background:rgba(255,255,255,.1);font-size:37px;color:#ffd9ab}
+    .zodiac-feature h3{margin:5px 0;font-size:21px;letter-spacing:-.04em}
+    .zodiac-feature p{margin:0;font-size:11px;color:var(--muted)}
+    .planet-feature{padding:17px;border:1px solid rgba(255,255,255,.14);border-radius:25px;background:rgba(39,30,96,.62)}
+    .planet-disclaimer{font-size:10px;color:rgba(255,255,255,.55);margin:0 0 12px}
+    .planet-mini-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:9px}
+    .planet-mini{display:flex;align-items:center;gap:9px;min-width:0;padding:11px 9px;border-radius:15px;background:rgba(255,255,255,.07)}
+    .planet-mini>span{font-size:23px;color:#d6c5ff}
+    .planet-mini div{flex:1;min-width:0}
+    .planet-mini b{display:block;font-size:11px}
+    .planet-mini small{display:block;font-size:10px;color:var(--muted);margin-top:2px}
+    .planet-mini em{font-size:20px;font-style:normal;color:#f7b88e}
+    .sky-detail-btn{display:flex;justify-content:space-between;align-items:center;width:100%;padding:14px 16px;margin-top:12px;border:0;border-radius:14px;background:rgba(255,255,255,.11);font-size:12px;font-weight:800;cursor:pointer}
+    @media(min-width:720px){.reveal-panel{min-height:370px}.reveal-stage{min-height:330px}.reveal-front h3,.reveal-back h3{font-size:25px}.reveal-front p,.reveal-back p{font-size:13px}.moon-feature{min-height:270px}.planet-mini-grid{grid-template-columns:repeat(3,minmax(0,1fr))}}
+    @media(max-width:370px){.reveal-panel{padding:11px}.reveal-front h3,.reveal-back h3{font-size:17px}.reveal-button{font-size:10px}.moon-feature{padding:15px}.moon-copy h3{font-size:23px}}
+    @media(prefers-reduced-motion:reduce){.fortune-illustration,.revealed-glyph,.tarot-revealed{animation:none}}
+
+
+    /* v7: sharing, fullscreen story viewer and analysis report */
+    .share-pill{display:block;margin:13px auto 0;padding:10px 14px;border:1px solid rgba(255,255,255,.28);border-radius:999px;background:rgba(255,255,255,.12);font-weight:800;font-size:11px;cursor:pointer}
+    .story-open,.report-open{overflow:hidden}
+    .story-modal{padding:0;background:#0b0820;z-index:100}
+    .story-modal-card{width:100vw;height:100dvh;min-height:100vh;max-width:none;border-radius:0;display:flex;flex-direction:column;justify-content:space-between;padding:calc(env(safe-area-inset-top) + 15px) 20px calc(env(safe-area-inset-bottom) + 20px);background:radial-gradient(circle at 65% 36%,rgba(216,147,255,.27),transparent 38%),linear-gradient(150deg,#273d8b,#542e96 57%,#150c39);filter:hue-rotate(var(--story-hue,0deg));position:relative;overflow:hidden}
+    .story-progress{display:flex;gap:5px;margin:0 0 18px;position:relative;z-index:6}
+    .story-progress span{flex:1;background:rgba(255,255,255,.25);height:4px;border-radius:20px}
+    .story-progress span.filled{background:white}
+    .story-view-top{display:flex;justify-content:space-between;align-items:center;position:relative;z-index:7}
+    .story-view-brand{font-size:12px;letter-spacing:.16em;font-weight:900}
+    .story-view-top .close-story{position:static;font-size:23px}
+    .story-view-content{position:relative;z-index:2;text-align:center;max-width:580px;margin:auto}
+    .story-big-icon{font-size:clamp(100px,25vw,210px);line-height:1.2;filter:drop-shadow(0 20px 25px rgba(0,0,0,.28));margin-bottom:18px}
+    .story-view-content h2{font-size:clamp(46px,9vw,84px);letter-spacing:-.06em;line-height:.98;margin:12px 0 22px}
+    .story-view-content p{font-size:clamp(15px,2.5vw,20px);line-height:1.65;color:rgba(255,255,255,.83)}
+    .story-view-actions{position:relative;z-index:8;display:flex;gap:10px;width:min(550px,100%);margin:0 auto}
+    .story-view-actions button{flex:1;padding:15px 8px;border-radius:16px;background:rgba(255,255,255,.17);border:1px solid rgba(255,255,255,.25);font-weight:800;font-size:13px;cursor:pointer}
+    .story-view-actions button:last-child{background:#fff;color:#2b1a68}
+    .story-hit{position:absolute;top:100px;bottom:100px;width:28%;border:0;background:transparent;z-index:4;cursor:pointer}
+    .story-hit-left{left:0}.story-hit-right{right:0}
+    .analysis-hero-cta{width:100%;display:flex;align-items:center;gap:15px;text-align:left;border:1px solid rgba(255,230,189,.45);border-radius:26px;padding:18px;background:radial-gradient(circle at 100% 0%,rgba(255,207,142,.25),transparent 42%),linear-gradient(110deg,#6948a9,#a357a0 55%,#de746a);box-shadow:0 14px 40px rgba(23,5,65,.32);cursor:pointer;margin-bottom:16px}
+    .analysis-icon{font-size:32px;width:56px;height:56px;flex:0 0 auto;display:grid;place-items:center;background:rgba(255,255,255,.17);border-radius:18px}
+    .analysis-cta-copy{flex:1;min-width:0;display:flex;flex-direction:column;gap:5px}
+    .analysis-cta-copy small{font-size:9px;letter-spacing:.13em;color:#ffe7c4;font-weight:900}
+    .analysis-cta-copy strong{font-size:clamp(17px,3vw,24px);letter-spacing:-.04em}
+    .analysis-cta-copy em{font-size:11px;font-style:normal;color:rgba(255,255,255,.8)}
+    .analysis-arrow{font-size:24px}
+    .profile-systems{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
+    .profile-systems span{border-radius:14px;padding:12px 9px;background:rgba(255,255,255,.08);border:1px solid var(--line);font-size:11px}
+    .report-overlay[hidden]{display:none!important}
+    .report-overlay{position:fixed;inset:0;z-index:90;display:flex;align-items:center;justify-content:center;background:rgba(4,2,20,.83);padding:10px;backdrop-filter:blur(12px)}
+    .report-dialog{width:min(780px,100%);max-height:calc(100dvh - 20px);display:flex;flex-direction:column;background:#1d164b;border:1px solid var(--line);border-radius:22px;overflow:hidden}
+    .report-toolbar,.report-actions{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:13px 17px}
+    .report-toolbar strong{font-size:13px}.report-toolbar button{border:0;background:rgba(255,255,255,.1);border-radius:11px;padding:9px 12px;cursor:pointer}
+    .report-paper{background:#f8f6f4;color:#292345;padding:clamp(22px,5vw,50px);overflow:auto;flex:1}
+    .report-kicker{font-size:10px;font-weight:900;letter-spacing:.18em;color:#8d6bb2}
+    .report-paper h1{font-size:clamp(36px,7vw,65px);line-height:.95;letter-spacing:-.06em;margin:20px 0}
+    .report-intro{font-size:15px!important;color:#5c5670!important}
+    .report-paper h2{font-size:20px;margin:26px 0 10px;color:#3b2d7b}
+    .report-paper p{font-size:13px;line-height:1.75;color:#4e4960}
+    .report-chips{display:flex;flex-wrap:wrap;gap:7px;margin:18px 0}
+    .report-chips span{border:1px solid #d8c9ed;border-radius:30px;padding:8px 12px;font-size:11px;font-weight:800}
+    .report-footnote{border-top:1px solid #ddd5e8;margin-top:28px;padding-top:12px;color:#81788f;font-size:10px}
+    .report-actions button{flex:1;padding:13px;border:0;border-radius:12px;font-weight:900;cursor:pointer;background:#f1e9ff;color:#3c2877}
+    .report-actions button:last-child{background:#ffab7d;color:#2c1c49}
+    @media print{
+      @page{size:A4;margin:16mm}
+      body,html{background:white!important}
+      body *{visibility:hidden!important}
+      #reportPaper,#reportPaper *{visibility:visible!important}
+      #reportPaper{position:absolute;left:0;top:0;width:100%;height:auto!important;overflow:visible!important;padding:0!important;background:white!important;color:#222!important}
+      .report-overlay,.report-dialog{display:block!important;position:static!important;overflow:visible!important;background:white!important;max-height:none!important;border:0!important}
+      .report-paper h2{break-after:avoid}
+      .report-paper p{break-inside:avoid}
+    }
+
+    /* v8 — scrollable friends stories, five-item nav and chat */
+    .bottom-nav{grid-template-columns:repeat(5,minmax(0,1fr));width:min(550px,calc(100vw - 20px));gap:2px;padding:6px}
+    .nav-btn{min-height:54px;border-radius:16px;gap:3px}
+    .nav-btn span{font-size:9px}
+    .nav-btn svg{width:21px;height:21px}
+    .story-feed{display:flex;overflow-x:auto;overflow-y:hidden;touch-action:pan-x;overscroll-behavior-x:contain;-webkit-overflow-scrolling:touch;scroll-snap-type:x proximity}
+    .story-tile{flex:0 0 190px;scroll-snap-align:start}
+    .story-owner{position:absolute;top:66px;left:10px;z-index:4;background:rgba(13,9,43,.55);border-radius:20px;padding:4px 10px;font-size:11px;font-weight:900;backdrop-filter:blur(10px)}
+    .story-tile.friend-maya{--story-bg:linear-gradient(145deg,#274d85,#8b56bd 65%,#25194b)}
+    .story-tile.friend-alex{--story-bg:linear-gradient(145deg,#5b318c,#c17e80 65%,#301c55)}
+    .story-tile.friend-sofia{--story-bg:linear-gradient(145deg,#116f91,#4d68b8 65%,#201c58)}
+    .story-tile.friend-daniel{--story-bg:linear-gradient(145deg,#7a408c,#b37a55 65%,#281c51)}
+    .chat-header{display:flex;justify-content:space-between;align-items:center;padding:20px 4px 18px}
+    .chat-header h1{font-size:38px;letter-spacing:-.06em;margin:5px 0}
+    .chat-header h1 span{color:#ffba8a}
+    .chat-header p{font-size:12px;color:var(--muted)}
+    .chat-header-icon{font-size:35px;width:70px;height:70px;border-radius:23px;display:grid;place-items:center;background:linear-gradient(135deg,#ad5fd5,#f2859a)}
+    .chat-search-wrap{display:flex;align-items:center;gap:10px;border:1px solid var(--line);border-radius:17px;padding:13px 16px;background:rgba(255,255,255,.08)}
+    .chat-search-wrap span{font-size:22px;color:#cbb9ff}
+    .chat-search-wrap input{border:0;outline:0;background:transparent;color:white;width:100%;font:inherit;font-size:13px}
+    .chat-list{display:grid;gap:9px}
+    .chat-person{display:flex;align-items:center;gap:13px;padding:13px;border:1px solid rgba(255,255,255,.10);border-radius:20px;background:rgba(255,255,255,.07);text-align:left;cursor:pointer;min-width:0}
+    .chat-person[hidden]{display:none!important}
+    .chat-avatar{display:grid;place-items:center;width:53px;height:53px;flex:0 0 53px;border-radius:18px;font-size:21px;font-weight:900;background:linear-gradient(135deg,#8d6cf1,#f38aa4)}
+    .chat-avatar.alex{background:linear-gradient(135deg,#4864c2,#75bbd7)}
+    .chat-avatar.sofia{background:linear-gradient(135deg,#367f92,#85c7b9)}
+    .chat-avatar.daniel{background:linear-gradient(135deg,#a36a54,#f1b16e)}
+    .chat-avatar.elena{background:linear-gradient(135deg,#a85eaa,#d6a1d6)}
+    .chat-person-body{flex:1;min-width:0}
+    .chat-person-body strong{display:block;font-size:14px;margin-bottom:5px}
+    .chat-person-body strong i{color:#a2f4c8;font-size:9px;font-style:normal}
+    .chat-person-body small{display:block;font-size:11px;color:var(--muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+    .chat-person-side{display:flex;flex-direction:column;align-items:flex-end;gap:8px}
+    .chat-person-side time{font-size:10px;color:var(--muted);white-space:nowrap}
+    .chat-person-side b{background:#ff8c8a;color:#32183e;border-radius:50%;min-width:19px;height:19px;display:grid;place-items:center;font-size:10px}
+    .chat-empty{padding:20px;color:var(--muted);text-align:center}
+    .chat-thread-overlay[hidden]{display:none!important}
+    .chat-thread-overlay{position:fixed;inset:0;z-index:80;background:rgba(10,6,35,.96);display:flex;justify-content:center}
+    .chat-thread{width:min(620px,100%);display:flex;flex-direction:column;height:100dvh;background:linear-gradient(160deg,#2e2579,#181039)}
+    .chat-thread-head{display:flex;align-items:center;gap:14px;padding:calc(env(safe-area-inset-top) + 15px) 20px 15px;border-bottom:1px solid var(--line)}
+    .chat-thread-head button{background:rgba(255,255,255,.1);border:0;border-radius:12px;padding:9px 13px;cursor:pointer}
+    .chat-thread-head strong{flex:1}
+    .chat-thread-messages{flex:1;overflow-y:auto;display:flex;flex-direction:column;gap:12px;padding:20px}
+    .chat-bubble{max-width:80%;border-radius:20px;padding:13px 16px;font-size:13px;line-height:1.5}
+    .chat-bubble.theirs{align-self:flex-start;background:rgba(255,255,255,.13)}
+    .chat-bubble.mine{align-self:flex-end;background:linear-gradient(120deg,#b174df,#ed8b9b)}
+    .chat-compose{display:flex;gap:10px;padding:14px 18px calc(env(safe-area-inset-bottom) + 14px);border-top:1px solid var(--line)}
+    .chat-compose input{flex:1;min-width:0;border:1px solid var(--line);background:rgba(255,255,255,.09);border-radius:16px;padding:13px;color:white;font:inherit}
+    .chat-compose button{border:0;border-radius:14px;background:#f6b38f;color:#332051;padding:0 19px;font-size:19px;cursor:pointer}
+    @media(max-width:380px){.story-tile{flex-basis:175px}.bottom-nav{width:calc(100vw - 12px)}.nav-btn span{font-size:8px}}
+
+
+    /* v9 — People, navigation, QR */
+    .bottom-nav{position:relative;isolation:isolate}
+    .nav-indicator{position:absolute;left:0;top:6px;bottom:6px;border-radius:16px;background:rgba(255,255,255,.14);box-shadow:inset 0 0 0 1px rgba(255,255,255,.09);z-index:-1;pointer-events:none}
+    .nav-btn{position:relative;z-index:1}
+    .nav-btn.active{background:transparent;box-shadow:none}
+    .chat-notification{position:absolute!important;top:0;right:18%;min-width:17px;height:17px;padding:0 4px;border-radius:20px;background:#ff435d;color:white!important;border:2px solid #251748;font-size:10px!important;line-height:13px;font-weight:900!important;display:grid;place-items:center}
+    .people-scan{border:1px solid rgba(255,255,255,.23);border-radius:15px;background:rgba(255,255,255,.1);padding:11px 13px;font-weight:900;cursor:pointer}
+    .people-scan span{font-size:11px}
+    .people-heading{margin:17px 0 24px}
+    .people-heading h1{font-size:clamp(42px,8vw,65px);letter-spacing:-.07em;line-height:.95;margin:10px 0}
+    .people-heading h1 em{font-style:normal;color:#e6a3d9}
+    .people-heading p{max-width:430px;color:var(--muted);font-size:12px;line-height:1.6}
+    .swipe-deck{max-width:480px;margin:0 auto}
+    .people-match-card{overflow:hidden;border-radius:28px;border:1px solid rgba(255,255,255,.19);background:linear-gradient(140deg,#372b83,#25194e);box-shadow:0 20px 55px rgba(10,4,34,.32);touch-action:pan-y;user-select:none}
+    .match-card-art{height:235px;display:grid;place-items:center;position:relative;background:radial-gradient(circle at 55% 40%,rgba(241,173,230,.48),transparent 48%),linear-gradient(140deg,#5946a8,#9d5d9b)}
+    .match-card-emoji{font-size:110px;filter:drop-shadow(0 20px 20px rgba(10,4,30,.25))}
+    .match-alignment{position:absolute;top:15px;right:15px;background:rgba(17,8,47,.63);padding:9px 13px;border-radius:20px;font-size:11px;font-weight:900}
+    .match-card-details{padding:20px}
+    .match-card-details h3{font-size:30px;letter-spacing:-.05em;margin:0 0 5px}
+    .match-card-details>p{font-size:12px;color:var(--muted)}
+    .match-card-details .match-tags{margin:13px 0}
+    .match-note{margin:12px 0 0;line-height:1.5}
+    .swipe-hint{display:flex;justify-content:space-between;margin:12px 5px;color:var(--muted);font-size:10px}
+    .people-match-actions{display:flex;justify-content:center;gap:14px;margin:15px 0 25px}
+    .people-match-actions button{width:59px;height:59px;border-radius:50%;border:1px solid rgba(255,255,255,.2);background:rgba(255,255,255,.09);font-size:25px;cursor:pointer}
+    .people-match-actions button:nth-child(2){width:auto;height:48px;align-self:center;border-radius:30px;padding:0 18px;font-size:12px;font-weight:900}
+    .people-match-actions button:last-child{background:linear-gradient(130deg,#ff8a8e,#d66bb9)}
+    .swipe-left{animation:swipeAwayLeft .24s ease forwards}.swipe-right{animation:swipeAwayRight .24s ease forwards}
+    @keyframes swipeAwayLeft{to{transform:translateX(-90px) rotate(-8deg);opacity:0}}
+    @keyframes swipeAwayRight{to{transform:translateX(90px) rotate(8deg);opacity:0}}
+    .friend-list{display:grid;gap:9px}
+    .friend-row{display:flex;align-items:center;gap:13px;text-align:left;padding:11px 13px;background:rgba(255,255,255,.065);border:1px solid rgba(255,255,255,.09);border-radius:19px;cursor:pointer}
+    .friend-face{flex:0 0 48px;width:48px;height:48px;display:grid;place-items:center;border-radius:16px;font-size:20px;font-weight:900;background:linear-gradient(135deg,#8569db,#dd81ad)}
+    .face-2{background:linear-gradient(135deg,#5687d1,#76bfc6)}.face-3{background:linear-gradient(135deg,#478f9d,#81c3a5)}.face-4{background:linear-gradient(135deg,#9b699b,#e8a06c)}
+    .friend-row>span:nth-child(2){flex:1;min-width:0}
+    .friend-row strong,.friend-row small{display:block}.friend-row strong{font-size:13px}.friend-row small{font-size:10px;color:var(--muted);margin-top:4px}
+    .friend-row b{font-size:10px;color:#ffc0bd}
+    .discover-caption{color:var(--muted);font-size:12px;margin:-3px 0 15px}
+    .discover-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:11px}
+    .discover-person{text-align:center;border-radius:22px;background:rgba(255,255,255,.07);border:1px solid var(--line);padding:18px 9px}
+    .discover-avatar{width:68px;height:68px;border-radius:50%;margin:0 auto 11px;display:grid;place-items:center;font-size:35px;background:linear-gradient(145deg,#8b6ecf,#d680ab)}
+    .disc-2{background:linear-gradient(145deg,#4d78a6,#81b2c6)}.disc-3{background:linear-gradient(145deg,#668ba2,#87bda1)}.disc-4{background:linear-gradient(145deg,#b17791,#cba070)}
+    .discover-person strong,.discover-person small{display:block}.discover-person strong{font-size:13px}.discover-person small{font-size:10px;color:var(--muted);margin:5px 0 13px}
+    .discover-connect{border:1px solid rgba(255,255,255,.23);border-radius:20px;padding:9px 13px;background:rgba(255,255,255,.12);font-size:11px;font-weight:800;cursor:pointer}
+    .discover-connect:disabled{opacity:.6}
+    .profile-share-actions{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin:0 0 15px}
+    .profile-share-actions button{border:1px solid rgba(255,255,255,.19);border-radius:15px;padding:13px 8px;background:rgba(255,255,255,.1);font-size:12px;font-weight:900;cursor:pointer}
+    .qr-overlay[hidden]{display:none!important}
+    .qr-overlay{position:fixed;inset:0;z-index:110;background:rgba(6,3,24,.83);display:flex;align-items:center;justify-content:center;padding:18px;backdrop-filter:blur(12px)}
+    .qr-sheet{position:relative;width:min(420px,100%);padding:26px;border:1px solid var(--line);border-radius:29px;background:linear-gradient(150deg,#3d2c88,#1d1548);text-align:center;max-height:90dvh;overflow:auto}
+    .qr-sheet h2{font-size:29px;letter-spacing:-.05em;margin:12px 0 7px}
+    .qr-sheet p,.qr-sheet small{display:block;color:var(--muted);font-size:12px;line-height:1.5}
+    .qr-sheet img{display:block;width:min(230px,80%);border-radius:18px;margin:20px auto;padding:12px;background:white}
+    .qr-sheet strong{display:block;font-size:15px;margin-bottom:5px}
+    .qr-sheet>button:not(.qr-close),.scan-upload{display:block;width:100%;border:0;border-radius:14px;background:linear-gradient(120deg,#e8a5c9,#ffc391);color:#2c1a55;padding:13px;margin-top:16px;font-weight:900;cursor:pointer}
+    .qr-close{position:absolute;right:14px;top:14px;border:0;border-radius:12px;padding:8px 11px;background:rgba(255,255,255,.12);cursor:pointer}
+    #qrVideo{width:100%;max-height:260px;object-fit:cover;background:#0c0927;border-radius:15px;margin-top:15px}
+    .scan-result{padding:12px;background:rgba(255,255,255,.1);border-radius:12px;overflow-wrap:anywhere;font-size:12px;margin-top:12px}
+    @media(min-width:760px){.discover-grid{grid-template-columns:repeat(4,1fr)}}
+    @media(prefers-reduced-motion:reduce){.nav-indicator{transition:none!important}.swipe-left,.swipe-right{animation:none}}
+
+
+    /* v10: streamlined profile actions and People search */
+    .profile-header-actions{display:flex;align-items:center;gap:9px;margin-left:auto}
+    .profile-icon-action,.people-scan{width:43px;height:43px;flex:0 0 43px;display:grid;place-items:center;border:1px solid rgba(255,255,255,.22);border-radius:50%;background:linear-gradient(145deg,rgba(255,255,255,.18),rgba(255,255,255,.06));color:white;box-shadow:0 5px 15px rgba(8,4,35,.12);cursor:pointer;transition:transform .2s,background .2s}
+    .profile-icon-action:hover,.people-scan:hover{transform:translateY(-2px);background:rgba(255,255,255,.22)}
+    .profile-icon-action svg,.people-scan svg{width:21px;height:21px}
+    .people-search-row{display:flex;gap:10px;align-items:center;margin:0 0 23px}
+    .people-search-field{display:flex;align-items:center;gap:11px;flex:1;min-width:0;padding:12px 14px;border:1px solid rgba(255,255,255,.18);border-radius:17px;background:rgba(255,255,255,.085)}
+    .people-search-field svg{width:21px;height:21px;flex-shrink:0;color:#d5c7fa}
+    .people-search-field input{width:100%;min-width:0;background:none;border:0;outline:0;color:white;font:inherit;font-size:13px}
+    .people-search-field input::placeholder{color:rgba(255,255,255,.52)}
+    .people-search-empty{color:var(--muted);font-size:12px;padding:12px 0 20px}
+    .friend-row[hidden],.discover-person[hidden],.swipe-deck[hidden],.people-search-empty[hidden]{display:none!important}
+
+
+    /* NATALA v11 — editorial redesign, restrained color, shared semantic tokens.
+       Inspired by the audit-first approach of heydamir/unslop.
+       Theme modes: system (device), light, dark. */
+    :root {
+      color-scheme: light dark;
+      --canvas:#f5f3ee; --panel:#ffffff; --panel-2:#eeece6;
+      --ink:#222922; --subtle:#6c736b; --hairline:#dcded7;
+      --brand:#3e6553; --brand-ink:#f6faf6; --highlight:#d7b58c;
+      --soft-shadow:0 12px 30px rgba(32,40,32,.06);
+      --bg:var(--canvas); --bg-deep:var(--canvas); --surface:var(--panel);
+      --surface-strong:var(--panel-2); --surface-soft:var(--panel-2);
+      --text:var(--ink); --muted:var(--subtle); --accent:var(--brand);
+      --accent-2:var(--brand); --accent-3:var(--brand); --line:var(--hairline);
+      --shadow:var(--soft-shadow);
+    }
+    :root[data-theme="dark"] {
+      color-scheme:dark;
+      --canvas:#161c1a; --panel:#202925; --panel-2:#2b3630;
+      --ink:#f0f1eb; --subtle:#a8b1a9; --hairline:#3b4840;
+      --brand:#a5c8b3; --brand-ink:#1a2b20; --highlight:#c6a37c;
+      --soft-shadow:0 12px 30px rgba(0,0,0,.13);
+    }
+    @media(prefers-color-scheme:dark){
+      :root:not([data-theme="light"]):not([data-theme="dark"]){
+        color-scheme:dark;
+        --canvas:#161c1a; --panel:#202925; --panel-2:#2b3630;
+        --ink:#f0f1eb; --subtle:#a8b1a9; --hairline:#3b4840;
+        --brand:#a5c8b3; --brand-ink:#1a2b20; --highlight:#c6a37c;
+        --soft-shadow:0 12px 30px rgba(0,0,0,.13);
+      }
+    }
+    html,body{background:var(--canvas)!important;color:var(--ink)!important}
+    body{font-family:Inter,ui-sans-serif,system-ui,-apple-system,"Segoe UI",sans-serif!important;letter-spacing:-.012em}
+    .page{animation:pageIn .2s ease}
+    .topbar{border-bottom:1px solid var(--hairline);padding-bottom:17px;margin-bottom:22px}
+    .brand,.natala-brand{color:var(--ink)!important;letter-spacing:-.055em!important;font-weight:750!important}
+    .brand-mark{background:var(--brand)!important;color:var(--brand-ink)!important;box-shadow:none!important;border-radius:11px!important}
+    .avatar-small,.avatar-large{background:var(--panel-2)!important;color:var(--brand)!important;border:1px solid var(--hairline)!important;box-shadow:none!important}
+    .section-title h2,.people-heading h1,.chat-header h1,.profile-hero h1{color:var(--ink)!important;letter-spacing:-.055em!important}
+    .section-title span,.date-label,.story-feed-label span,.people-heading p,.chat-header p{color:var(--subtle)!important}
+    .eyebrow,.kicker,.sky-feature-kicker,.reveal-overline{color:var(--brand)!important;letter-spacing:.12em}
+    .people-heading h1 em,.chat-header h1 span{color:var(--brand)!important}
+    /* Quiet surfaces: no gradient blobs, decorative glows or stacked shadows */
+    .plan-banner,.score-card,.stat-card,.signal-card,.insight-card,.system-card,.system-card-new,
+    .planet-feature,.zodiac-feature,.moon-feature,.element-balance,.chat-person,.friend-row,
+    .discover-person,.people-match-card,.reveal-panel,.tarot-panel,.chat-header-icon,
+    .chat-search-wrap,.people-search-wrap,.people-scan,.profile-icon-action,.analysis-hero-cta,
+    .streak-row,.story-feed-label,.profile-hero,.match-card-art,.report-dialog,.qr-sheet{
+      background:var(--panel)!important;color:var(--ink)!important;border:1px solid var(--hairline)!important;
+      box-shadow:none!important;filter:none!important;
+    }
+    .plan-banner,.score-card,.stat-card,.signal-card,.insight-card,.system-card,.system-card-new,
+    .planet-feature,.zodiac-feature,.element-balance,.chat-person,.friend-row,.discover-person,
+    .reveal-panel,.tarot-panel,.people-match-card{border-radius:17px!important}
+    .moon-feature{border-radius:21px!important;background:var(--panel-2)!important}
+    .profile-hero{border-radius:20px!important}
+    .profile-hero h1,.profile-hero p,.profile-hero .identity-line,
+    .score-card *, .stat-card *, .signal-card *, .insight-card *,
+    .plan-banner *, .planet-feature *, .zodiac-feature *, .moon-feature *,
+    .element-balance *, .people-match-card *, .discover-person *, .chat-person *,
+    .reveal-panel *, .tarot-panel *{color:var(--ink)}
+    .score-label,.signal-note,.stat-card .label,.reveal-front p,.reveal-back p,
+    .moon-copy p,.planet-disclaimer,.chat-person-body small,.friend-row small,
+    .discover-person small,.match-card-details>p,.match-note,.zodiac-feature p{color:var(--subtle)!important}
+    .score-card.primary,.score-card.secondary,.score-card.light{background:var(--panel)!important}
+    .score-value,.stat-card .value,.signal-value{color:var(--ink)!important}
+    .reveal-panel,.tarot-panel{min-height:325px}
+    .fortune-illustration,.revealed-glyph,.tarot-revealed{color:var(--brand)!important;filter:none!important}
+    .tarot-deck{background:var(--panel-2)!important;border-color:var(--brand)!important;box-shadow:5px 5px 0 var(--hairline)!important}
+    .tarot-deck-inner{border-color:var(--brand)!important;color:var(--brand)!important}
+    .reveal-button,.plan-cta,.sky-detail-btn,.analysis-hero-cta,.discover-connect,
+    .qr-sheet>button:not(.qr-close),.scan-upload{background:var(--brand)!important;color:var(--brand-ink)!important;border:1px solid transparent!important;box-shadow:none!important}
+    .analysis-hero-cta{padding:20px!important;border-radius:18px!important}
+    .analysis-cta-copy small,.analysis-cta-copy strong,.analysis-cta-copy em,.analysis-icon,.analysis-arrow{color:var(--brand-ink)!important}
+    .analysis-icon{background:rgba(255,255,255,.12)!important}
+    .reveal-tag,.claimed-note,.match-alignment{color:var(--brand)!important}
+    .share-pill,.profile-icon-action,.people-scan,.profile-share-actions button,
+    .people-match-actions button,.friend-row b,.chat-search-wrap input,.people-search-wrap input,
+    .chat-person-body strong,.chat-person-side time,.planet-mini,.moon-chips span{
+      color:var(--ink)!important
+    }
+    .share-pill,.people-match-actions button,.profile-icon-action,.people-scan,.sky-detail-btn,
+    .profile-share-actions button,.moon-chips span,.planet-mini,.match-tag,.chat-search-wrap,
+    .people-search-wrap{background:var(--panel-2)!important;border:1px solid var(--hairline)!important}
+    .planet-mini em,.planet-mini>span,.zodiac-emblem{color:var(--brand)!important}
+    .zodiac-emblem{background:var(--panel-2)!important}
+    .moon-orb{box-shadow:none!important;background:linear-gradient(120deg,#faf7ed,#b4bdb2)!important}
+    .moon-orb:after{background:var(--panel-2)!important;box-shadow:none!important}
+    .moon-stars{display:none}
+    .planet-mini-grid{gap:7px}
+    .planet-mini{border-radius:12px!important}
+    .story-tile{filter:saturate(.48)!important;box-shadow:none!important;border:1px solid var(--hairline)!important;border-radius:18px!important}
+    .story-tile .story-content h3,.story-tile .story-kicker,.story-tile .story-owner{color:white!important}
+    .story-owner{background:rgba(18,25,20,.72)!important}
+    .story-duration{background:rgba(18,25,20,.6)!important}
+    .story-modal-card{filter:none!important;background:linear-gradient(145deg,#1e352c,#304c3d 70%,#1a2b23)!important}
+    .story-view-content h2,.story-view-content p,.story-view-brand,.story-modal .eyebrow{color:#f8f8f2!important}
+    .story-view-actions button{background:rgba(255,255,255,.12)!important;color:white!important}
+    .story-view-actions button:last-child{background:#f2f2ea!important;color:#263b30!important}
+    .bottom-nav{background:var(--panel)!important;border:1px solid var(--hairline)!important;box-shadow:0 8px 26px rgba(0,0,0,.09)!important;backdrop-filter:none!important}
+    .nav-btn{color:var(--subtle)!important}
+    .nav-btn.active{color:var(--ink)!important}
+    .nav-indicator{background:var(--panel-2)!important;box-shadow:none!important;border-radius:12px!important}
+    .chat-notification{background:#bd4d47!important;border-color:var(--panel)!important;color:white!important}
+    .chat-header-icon,.match-card-art{background:var(--panel-2)!important}
+    .match-alignment{background:var(--panel)!important;border-radius:9px!important}
+    .match-card-emoji{filter:none!important}
+    .friend-face,.chat-avatar,.discover-avatar{background:var(--panel-2)!important;color:var(--brand)!important;border:1px solid var(--hairline)!important}
+    .chat-thread{background:var(--canvas)!important}
+    .chat-thread-head,.chat-compose{border-color:var(--hairline)!important}
+    .chat-bubble.theirs{background:var(--panel-2)!important;color:var(--ink)!important}
+    .chat-bubble.mine{background:var(--brand)!important;color:var(--brand-ink)!important}
+    .chat-compose input,.chat-search-wrap input{color:var(--ink)!important}
+    .chat-compose button{background:var(--brand)!important;color:var(--brand-ink)!important}
+    .qr-sheet,.report-dialog{background:var(--panel)!important}
+    .qr-sheet h2,.qr-sheet strong,.qr-sheet .eyebrow{color:var(--ink)!important}
+    .qr-sheet p,.qr-sheet small{color:var(--subtle)!important}
+    .report-toolbar,.report-actions{color:var(--ink)!important}
+    .report-toolbar button{color:var(--ink)!important;background:var(--panel-2)!important}
+    .report-actions button{background:var(--panel-2)!important;color:var(--ink)!important}
+    .report-actions button:last-child{background:var(--brand)!important;color:var(--brand-ink)!important}
+    .profile-header-actions{gap:8px}
+    .profile-icon-action{width:39px!important;height:39px!important;border-radius:50%!important}
+    .theme-preference{display:flex;align-items:center;justify-content:space-between;gap:10px;margin:-6px 0 17px;padding:12px 15px;border:1px solid var(--hairline);border-radius:14px;background:var(--panel)}
+    .theme-preference>div{display:flex;flex-direction:column;gap:4px}
+    .theme-preference strong{font-size:12px;color:var(--ink)}
+    .theme-preference span{font-size:11px;color:var(--subtle)}
+    .theme-choice{padding:10px 12px;border-radius:10px;border:1px solid var(--hairline);background:var(--panel-2);color:var(--ink);font-size:11px;font-weight:750;cursor:pointer;white-space:nowrap}
+    .profile-hero{margin-top:0}
+    .system-card:hover,.friend-row:hover,.chat-person:hover,.discover-connect:hover{border-color:var(--brand)!important}
+    button:focus-visible,input:focus-visible{outline:2px solid var(--brand)!important;outline-offset:3px}
+    @media(prefers-reduced-motion:reduce){*,*:before,*:after{animation-duration:.01ms!important;transition-duration:.01ms!important}}
+
+
+    /* v12 — reference-led retail/fitness visual system.
+       Bright canvas, confident type, solid cards, minimal borders.
+       All colours are theme tokens so device appearance remains reactive. */
+    :root{
+      --canvas:#f5f6f8;--panel:#fff;--panel-2:#f0f2f5;
+      --ink:#151719;--subtle:#747982;--hairline:#e9ebef;
+      --brand:#176a58;--brand-ink:#fff;--highlight:#eaa26c;
+      --soft-shadow:none;--story-edge:#f5f6f8;
+      --story-ring:#f5f6f8;--active-nav:#e7f2ed;
+    }
+    :root[data-theme="dark"]{
+      --canvas:#101315;--panel:#1b2023;--panel-2:#252b2f;
+      --ink:#f5f6f7;--subtle:#abb0b6;--hairline:#293136;
+      --brand:#8bcbb3;--brand-ink:#11271e;--highlight:#d5a275;
+      --soft-shadow:none;--story-edge:#101315;
+      --story-ring:#101315;--active-nav:#293b34;
+    }
+    @media(prefers-color-scheme:dark){
+      :root:not([data-theme="light"]):not([data-theme="dark"]){
+        --canvas:#101315;--panel:#1b2023;--panel-2:#252b2f;
+        --ink:#f5f6f7;--subtle:#abb0b6;--hairline:#293136;
+        --brand:#8bcbb3;--brand-ink:#11271e;--highlight:#d5a275;
+        --soft-shadow:none;--story-edge:#101315;
+        --story-ring:#101315;--active-nav:#293b34;
+      }
+    }
+    html,body{background:var(--canvas)!important;color:var(--ink)!important}
+    body{font-family:system-ui,-apple-system,'Segoe UI',Roboto,Arial,sans-serif!important;font-weight:450!important;letter-spacing:-.018em!important}
+    .page{padding:22px 20px 32px!important}
+    .topbar{border-bottom:0!important;padding-bottom:0!important;margin-bottom:20px!important}
+    .brand,.natala-brand{font-weight:850!important;font-size:26px!important;letter-spacing:-.065em!important}
+    h1,h2,h3,.section-title h2,.story-feed-label h2,.chat-header h1,.people-heading h1,
+    .profile-hero h1,.welcome h1{font-weight:850!important;letter-spacing:-.045em!important}
+    .section-title{margin-top:30px!important;margin-bottom:15px!important}
+    .section-title h2,.story-feed-label h2{font-size:23px!important}
+    .section-title span,.story-feed-label span{font-weight:500!important}
+    .score-card,.stat-card,.signal-card,.insight-card,.system-card,.system-card-new,
+    .planet-feature,.zodiac-feature,.element-balance,.chat-person,.friend-row,
+    .discover-person,.reveal-panel,.tarot-panel,.people-match-card,
+    .plan-banner,.moon-feature,.profile-hero,.chat-header-icon,.match-card-art{
+      background:var(--panel)!important;
+      border:1px solid transparent!important;
+      box-shadow:none!important;
+      border-radius:23px!important;
+    }
+    .reveal-panel,.tarot-panel,.score-card,.stat-card,.signal-card,.insight-card,
+    .planet-feature,.element-balance,.plan-banner,.system-card,.system-card-new{padding:21px!important}
+    .score-value,.stat-card .value,.signal-value,.reveal-front h3,.reveal-back h3,
+    .moon-copy h3,.zodiac-feature h3,.match-card-details h3{font-weight:850!important}
+    .story-feed-label{background:transparent!important;border:0!important;box-shadow:none!important}
+    .story-feed{margin:0 -20px!important;padding:0 20px 10px!important;gap:12px!important}
+    /* Story outline is deliberately identical to the page canvas in BOTH themes. */
+    .story-tile,.story-tile.cosmic,.story-tile.mind,.story-tile.love,
+    .story-tile.friend-maya,.story-tile.friend-alex,.story-tile.friend-sofia,.story-tile.friend-daniel{
+      border:2px solid var(--story-edge)!important;
+      outline:0!important;
+      box-shadow:none!important;
+      filter:none!important;
+      border-radius:22px!important;
+      flex-basis:184px!important;
+    }
+    .story-avatar-ring{
+      background:var(--story-ring)!important;
+      border:0!important;
+      box-shadow:0 0 0 2px var(--story-ring)!important;
+      padding:3px!important;
+    }
+    .story-avatar-ring>div{border:0!important;background:#e9e9e9!important;color:#242424!important;font-weight:800!important}
+    .story-tile .story-owner{font-weight:800!important;border:0!important}
+    .story-content h3{font-weight:850!important;letter-spacing:-.045em!important}
+    .story-tile.cosmic{--story-bg:linear-gradient(145deg,#206b79,#143e57 70%,#102f40)!important}
+    .story-tile.mind{--story-bg:linear-gradient(145deg,#aa6a59,#734d55 70%,#423744)!important}
+    .story-tile.love{--story-bg:linear-gradient(145deg,#a85069,#713b54 70%,#3d3042)!important}
+    .story-tile.friend-maya{--story-bg:linear-gradient(145deg,#326d62,#214d48 70%,#183c38)!important}
+    .story-tile.friend-alex{--story-bg:linear-gradient(145deg,#8a7053,#594b43 70%,#3c3533)!important}
+    .story-tile.friend-sofia{--story-bg:linear-gradient(145deg,#4479a0,#28556e 70%,#1d3e53)!important}
+    .story-tile.friend-daniel{--story-bg:linear-gradient(145deg,#8e7159,#605448 70%,#383a38)!important}
+    .reveal-panel,.tarot-panel{min-height:310px!important}
+    .reveal-button,.plan-cta,.sky-detail-btn,.discover-connect,.analysis-hero-cta{
+      border-radius:14px!important;font-weight:800!important;
+    }
+    .plan-banner{background:var(--panel)!important}
+    .plan-badge,.system-icon,.card-icon{background:var(--panel-2)!important;color:var(--brand)!important;border:0!important;box-shadow:none!important}
+    .moon-feature{background:var(--panel)!important}
+    .moon-orb{background:linear-gradient(120deg,#f9f6eb,#b5c1ba)!important}
+    .planet-mini,.match-tag,.moon-chips span{border:0!important;background:var(--panel-2)!important;border-radius:12px!important}
+    .chat-search-wrap,.people-search-wrap,.search-box,.theme-preference{
+      background:var(--panel)!important;border:1px solid transparent!important;
+      box-shadow:none!important;border-radius:16px!important;
+    }
+    .friend-row,.chat-person{padding:15px!important}
+    .friend-row strong,.chat-person-body strong,.discover-person strong{font-weight:800!important}
+    .friend-face,.chat-avatar,.discover-avatar{border:0!important}
+    .people-match-card{overflow:hidden!important}
+    .match-card-art{background:#e8eee9!important;border-radius:0!important}
+    :root[data-theme="dark"] .match-card-art{background:#2b3934!important}
+    .bottom-nav{border:0!important;border-top:1px solid var(--hairline)!important;
+      background:var(--panel)!important;box-shadow:none!important;border-radius:20px!important}
+    .nav-indicator{background:var(--active-nav)!important;border:0!important;box-shadow:none!important}
+    .nav-btn.active{font-weight:800!important}
+    .profile-icon-action,.people-scan{border:0!important;background:var(--panel)!important}
+    .analysis-hero-cta{background:var(--brand)!important;border:0!important}
+    .analysis-hero-cta *{color:var(--brand-ink)!important}
+    .report-paper{background:#fff!important}
+    @media(max-width:380px){.story-tile{flex-basis:168px!important}}
+
+
+    /* v13 — return to amethyst accents, warm metallic-gold details, clear streak */
+    @import url('https://fonts.googleapis.com/css2?family=Dancing+Script:wght@700&display=swap');
+    :root{
+      --brand:#7050a6!important;--brand-ink:#ffffff!important;
+      --highlight:#ad7d3d!important;--active-nav:#e9e1f5!important;
+      --gold-text:#8d642e;--gold-surface:#f7efdf;
+    }
+    :root[data-theme="dark"]{
+      --brand:#bca1f2!important;--brand-ink:#1b1427!important;
+      --highlight:#dfbc7d!important;--active-nav:#3a304e!important;
+      --gold-text:#e7c486;--gold-surface:#332b24;
+    }
+    @media(prefers-color-scheme:dark){
+      :root:not([data-theme="light"]):not([data-theme="dark"]){
+        --brand:#bca1f2!important;--brand-ink:#1b1427!important;
+        --highlight:#dfbc7d!important;--active-nav:#3a304e!important;
+        --gold-text:#e7c486;--gold-surface:#332b24;
+      }
+    }
+    .natala-brand,.brand.natala-logo{
+      font-family:'Dancing Script',cursive!important;
+      font-size:43px!important;font-weight:700!important;
+      line-height:1.15!important;letter-spacing:0!important;
+      text-transform:none!important;color:var(--ink)!important;
+    }
+    .natala-brand span,.brand.natala-logo .brand-mark{display:none!important}
+    .streak-row{gap:10px!important;flex-wrap:wrap}
+    .streak-row,.streak-row *{color:var(--ink)!important}
+    .streak-row{background:transparent!important;border:0!important;box-shadow:none!important}
+    .streak{
+      display:inline-flex!important;align-items:center!important;gap:8px!important;
+      padding:7px 10px 7px 8px!important;border:0!important;
+      border-radius:12px!important;background:var(--panel)!important;
+      box-shadow:none!important;font-size:12px!important;font-weight:750!important;
+    }
+    .streak-flame{font-size:16px;line-height:1.1}
+    .streak .streak-count{
+      display:inline-flex;align-items:center;justify-content:center;
+      background:var(--gold-surface)!important;color:var(--gold-text)!important;
+      padding:7px 10px!important;border-radius:9px!important;
+      font-size:12px!important;font-weight:900!important;white-space:nowrap;
+    }
+    .streak .streak-label{color:var(--ink)!important;font-weight:800!important}
+    .streak-row .date-label{color:var(--subtle)!important;font-weight:650!important}
+    .sky-feature-kicker,.report-kicker,.analysis-cta-copy small,
+    .story-feed-label>span,.zodiac-feature .sky-feature-kicker{
+      color:var(--gold-text)!important;
+    }
+    .planet-mini{display:flex!important;gap:11px!important;align-items:center!important}
+    .planet-mini .zodiac-sign{
+      flex:0 0 37px;width:37px;height:37px;
+      display:grid;place-items:center;font-size:25px!important;
+      color:var(--brand)!important;background:var(--canvas)!important;
+      border-radius:11px!important;
+    }
+    .planet-mini em{display:none!important}
+    .planet-mini b{color:var(--ink)!important;font-weight:850!important}
+    .planet-mini small{color:var(--subtle)!important}
+    .reveal-button,.plan-cta,.sky-detail-btn,.discover-connect,
+    .analysis-hero-cta,.chat-compose button{background:var(--brand)!important;color:var(--brand-ink)!important}
+    .analysis-hero-cta *{color:var(--brand-ink)!important}
+    .nav-btn.active,.nav-btn.active svg,.planet-mini .zodiac-sign{color:var(--brand)!important}
+    .chat-notification{color:white!important}
+    .story-tile,.story-tile.cosmic,.story-tile.mind,.story-tile.love,
+    .story-tile.friend-maya,.story-tile.friend-alex,.story-tile.friend-sofia,.story-tile.friend-daniel{
+      border-color:var(--canvas)!important;
+    }
+    .story-avatar-ring{background:var(--canvas)!important;box-shadow:0 0 0 2px var(--canvas)!important}
+
+
+/* v14 — targeted layout and contrast refinements */
+#home>.topbar{justify-content:flex-start!important}
+#explore>.welcome{margin-top:0!important}
+#chat>.chat-header,#matches>.people-heading{margin-top:0!important}
+.streak-row{display:block!important;margin-top:15px!important}
+.streak-row .streak{display:flex!important;width:100%!important;box-sizing:border-box!important;flex-wrap:wrap!important;gap:9px!important;padding:10px 12px!important;border:0!important;border-radius:14px!important;background:var(--panel)!important}
+.streak-row .date-label{margin-left:auto!important;padding-left:9px!important;border-left:1px solid var(--hairline)!important;color:var(--ink)!important;font-weight:800!important;white-space:nowrap}
+@media(max-width:390px){.streak-row .date-label{margin-left:0!important;border-left:0!important;padding-left:0!important}}
+.element-rings{display:grid!important;grid-template-columns:repeat(4,minmax(0,1fr))!important;gap:9px!important;padding:12px 4px!important}
+.element-rings .element{background:transparent!important;border:0!important;padding:4px 0!important;display:flex;flex-direction:column;align-items:center;gap:6px}
+.element-ring{width:clamp(60px,16vw,90px);aspect-ratio:1;border-radius:50%;display:grid;place-items:center;position:relative;background:conic-gradient(var(--element-color) calc(var(--pct)*1%),var(--panel-2) 0)!important}
+.element-ring:before{content:"";position:absolute;inset:7px;border-radius:50%;background:var(--panel)!important}
+.element-ring .alchemy-symbol{position:relative;z-index:1;color:var(--element-color)!important;font-family:'DejaVu Sans','Segoe UI Symbol','Noto Sans Symbols 2',sans-serif;font-size:clamp(26px,7vw,39px)!important;line-height:1}
+.element-rings .element b{color:var(--ink)!important;font-size:12px!important;margin:0!important}
+.element-rings .element>span{font-size:11px!important;color:var(--subtle)!important;font-weight:800!important}
+.element-rings .element-bar{display:none!important}
+
+    #peopleSearch,#chatSearch{color:var(--ink)!important;opacity:1!important}
+    #peopleSearch::placeholder,#chatSearch::placeholder{color:var(--subtle)!important;opacity:1!important}
+    .people-search-field,.chat-search-wrap{background:var(--panel)!important;border:1px solid var(--hairline)!important}
+    .streak-row .streak{background:var(--panel)!important;border:0!important}
+
+/* NATALA v15: contrast-safe floating glass navigation and compact profile metrics */
+:root{--nav-glass:rgba(249,249,252,.76);--nav-selection:rgba(112,80,166,.14);--analysis-ink:#382315}
+:root[data-theme="dark"]{--nav-glass:rgba(23,22,30,.70);--nav-selection:rgba(188,161,242,.22);--analysis-ink:#302015}
+@media(prefers-color-scheme:dark){:root:not([data-theme="light"]):not([data-theme="dark"]){--nav-glass:rgba(23,22,30,.70);--nav-selection:rgba(188,161,242,.22);--analysis-ink:#302015}}
+.bottom-nav{
+ background:var(--nav-glass)!important;
+ border:1px solid rgba(140,130,155,.14)!important;
+ border-radius:23px!important;
+ -webkit-backdrop-filter:blur(22px) saturate(155%)!important;
+ backdrop-filter:blur(22px) saturate(155%)!important;
+ box-shadow:0 9px 30px rgba(20,16,30,.11)!important;
+ overflow:hidden;
+}
+.nav-indicator{
+ background:var(--nav-selection)!important;
+ border:1px solid rgba(140,110,170,.10)!important;
+ box-shadow:none!important;
+ -webkit-backdrop-filter:blur(10px)!important;
+ backdrop-filter:blur(10px)!important;
+}
+/* Buttons align at the bottom even when titles/descriptions have different lengths */
+.reveal-grid{align-items:stretch!important}
+.reveal-panel{display:flex!important;flex-direction:column!important}
+.reveal-stage{flex:1!important;display:flex!important;align-items:stretch!important;min-height:300px}
+.reveal-front{display:flex!important;flex-direction:column!important;align-items:center!important;flex:1!important;height:100%!important}
+.reveal-front .reveal-button{margin-top:auto!important;flex-shrink:0!important}
+.reveal-front p{margin-bottom:16px!important}
+/* Profile metrics always sit in a row, including narrow mobile widths */
+#profile .profile-hero{padding-bottom:24px!important}
+#profile .profile-hero .identity-line{margin-bottom:12px!important}
+#profile .hero-grid{display:grid!important;grid-template-columns:repeat(3,minmax(0,1fr))!important;gap:8px!important}
+#profile .score-card{min-width:0!important;min-height:148px!important;padding:14px 10px!important;display:flex!important;flex-direction:column!important;align-items:flex-start!important;overflow:hidden!important}
+#profile .score-card::after{display:none!important}
+#profile .score-card .card-icon{width:auto!important;height:auto!important;margin:0 0 14px!important;padding:0!important;background:none!important;border:0!important;box-shadow:none!important;font-size:31px!important;line-height:1!important;color:var(--brand)!important;opacity:1!important}
+#profile .score-label{font-size:clamp(9px,2.45vw,12px)!important;line-height:1.2!important;letter-spacing:-.02em!important;opacity:1!important;min-height:27px!important}
+#profile .score-value{font-size:clamp(24px,6.4vw,39px)!important;line-height:1.05!important;white-space:nowrap!important;margin-top:auto!important}
+#profile .score-value small{font-size:.42em!important}
+/* Gold-orange AI report entry point, readable on both themes */
+#profile .analysis-hero-cta{
+ background:linear-gradient(112deg,#f4c47d 0%,#eaa45f 56%,#dc8758 100%)!important;
+ border:1px solid rgba(125,70,28,.12)!important;
+ box-shadow:0 9px 22px rgba(163,99,45,.16)!important;
+ border-radius:19px!important;
+}
+#profile .analysis-hero-cta *{color:var(--analysis-ink)!important}
+#profile .analysis-hero-cta .analysis-icon{background:rgba(255,255,255,.29)!important;color:var(--analysis-ink)!important}
+#profile .analysis-cta-copy small{color:#68442a!important;opacity:.88}
+#profile .analysis-cta-copy em{color:#62402c!important}
+/* No boxed background behind the zodiac glyphs in the home planetary rows */
+#home .planet-mini .zodiac-sign,#home .planet-mini .planet-sign,#home .planet-mini .planet-symbol{
+ background:transparent!important;border:0!important;box-shadow:none!important;border-radius:0!important;
+}
+
+
+/* v16 — equal-sized illustrated gifts and safe revealed state */
+#fortunePanel .gift-art,#tarotPanel .gift-art{width:126px!important;height:126px!important;min-width:126px!important;min-height:126px!important;max-width:126px!important;max-height:126px!important;margin:0 auto 4px!important;padding:0!important;display:grid!important;place-items:center!important;border:0!important;border-radius:0!important;background:transparent!important;box-shadow:none!important;transform:none!important;filter:none!important;animation:none!important}
+#fortunePanel .gift-art svg,#tarotPanel .gift-art svg{width:126px!important;height:126px!important;display:block}
+/* Crucial: the reveal-front flex override must never override hidden. */
+.reveal-stage>.reveal-front[hidden],.reveal-stage>.reveal-back[hidden]{display:none!important}
+.reveal-stage{min-width:0!important;width:100%!important;display:flex!important;flex-direction:column!important;align-items:stretch!important}
+.reveal-stage>.reveal-front,.reveal-stage>.reveal-back{min-width:0!important;width:100%!important;max-width:100%!important;flex:1 1 auto!important;box-sizing:border-box!important}
+.reveal-stage>.reveal-back{display:flex;flex-direction:column;align-items:center;justify-content:center;overflow-wrap:anywhere;word-break:normal}
+.reveal-stage>.reveal-back p,.reveal-stage>.reveal-back h3,.reveal-stage>.reveal-back .tarot-prompt{max-width:100%;overflow-wrap:anywhere}
+.reveal-stage>.reveal-back .share-pill{flex-shrink:0}
+/* Chat notification floats over icon; labels do not change SVG sizing. */
+.bottom-nav .nav-btn[data-page="chat"]{position:relative!important;flex:1 1 0!important;min-width:0!important}
+.bottom-nav .nav-btn[data-page="chat"]>svg{width:22px!important;height:22px!important;min-width:22px!important;min-height:22px!important;flex:0 0 22px!important}
+.bottom-nav .nav-btn[data-page="chat"]>.chat-notification{position:absolute!important;top:3px!important;left:calc(50% + 4px)!important;right:auto!important;width:17px!important;min-width:17px!important;height:17px!important;padding:0!important;line-height:13px!important;font-size:10px!important;z-index:3!important;pointer-events:none!important;display:grid!important;place-items:center!important;border-radius:50%!important}
+/* Profile spacing and lens icons */
+#profile .profile-hero{padding-top:24px!important;padding-bottom:24px!important}
+#profile .profile-hero h1{margin-top:0!important}
+#profile .signal-icon{width:auto!important;height:45px!important;display:flex!important;align-items:center!important;justify-content:flex-start!important;font-size:35px!important;line-height:1!important;background:transparent!important;border:0!important;box-shadow:none!important;margin-bottom:10px!important}
+/* Slightly clearer glass effect: more content visible beneath. */
+:root{--nav-glass:rgba(249,249,252,.57)!important;--nav-selection:rgba(112,80,166,.10)!important}
+:root[data-theme="dark"]{--nav-glass:rgba(23,22,30,.48)!important;--nav-selection:rgba(188,161,242,.14)!important}
+@media(prefers-color-scheme:dark){:root:not([data-theme="light"]):not([data-theme="dark"]){--nav-glass:rgba(23,22,30,.48)!important;--nav-selection:rgba(188,161,242,.14)!important}}
+@media(max-width:390px){#fortunePanel .gift-art,#tarotPanel .gift-art{width:106px!important;height:106px!important;min-width:106px!important;min-height:106px!important;max-width:106px!important;max-height:106px!important}#fortunePanel .gift-art svg,#tarotPanel .gift-art svg{width:106px!important;height:106px!important}}
+
+  
+/* v17: unified responsive gift flip cards, no leaking faces */
+.reveal-grid{display:grid!important;grid-template-columns:repeat(2,minmax(0,1fr))!important;align-items:stretch!important;gap:12px!important}
+#fortunePanel,#tarotPanel{position:relative!important;display:flex!important;flex-direction:column!important;min-width:0!important;min-height:405px!important;padding:17px!important;overflow:hidden!important;isolation:isolate}
+#fortunePanel .reveal-overline,#tarotPanel .reveal-overline{flex:0 0 auto;position:relative;z-index:2;margin-bottom:13px}
+#fortunePanel .reveal-stage,#tarotPanel .reveal-stage{position:relative!important;display:grid!important;grid-template-columns:minmax(0,1fr)!important;grid-template-rows:minmax(0,1fr)!important;align-items:stretch!important;justify-items:stretch!important;flex:1 1 auto!important;min-height:0!important;width:100%!important;perspective:1100px;transform-style:preserve-3d}
+#fortunePanel .reveal-front,#fortunePanel .reveal-back,#tarotPanel .reveal-front,#tarotPanel .reveal-back{grid-area:1/1!important;position:relative!important;width:100%!important;min-width:0!important;min-height:0!important;height:100%!important;box-sizing:border-box!important;display:flex!important;flex-direction:column!important;align-items:center!important;justify-content:flex-start!important;text-align:center!important;padding:4px 0 0!important;transform-origin:center center;backface-visibility:hidden;-webkit-backface-visibility:hidden;transition:transform .65s cubic-bezier(.2,.7,.2,1),opacity .4s ease;animation:none!important}
+#fortunePanel .reveal-front,#tarotPanel .reveal-front{opacity:1;transform:rotateY(0deg);pointer-events:auto}
+#fortunePanel .reveal-back,#tarotPanel .reveal-back{opacity:0;transform:rotateY(-180deg);pointer-events:none;visibility:hidden;justify-content:center!important}
+#fortunePanel.is-revealed .reveal-front,#tarotPanel.is-revealed .reveal-front{opacity:0;transform:rotateY(180deg);pointer-events:none;visibility:hidden}
+#fortunePanel.is-revealed .reveal-back,#tarotPanel.is-revealed .reveal-back{opacity:1;transform:rotateY(0deg);pointer-events:auto;visibility:visible}
+/* State is controlled by a single panel class, not hidden attributes (previous CSS overrides conflicted). */
+#fortunePanel .reveal-front[hidden],#fortunePanel .reveal-back[hidden],#tarotPanel .reveal-front[hidden],#tarotPanel .reveal-back[hidden]{display:flex!important}
+#fortunePanel .gift-art,#tarotPanel .gift-art{flex:0 0 auto!important;margin:6px auto 9px!important}
+#fortunePanel .reveal-front h3,#tarotPanel .reveal-front h3{margin:8px 0 7px!important;line-height:1.15!important}
+#fortunePanel .reveal-front p,#tarotPanel .reveal-front p{margin:0 auto 16px!important;line-height:1.45!important;max-width:220px!important}
+#fortunePanel .reveal-button,#tarotPanel .reveal-button{margin-top:auto!important;min-height:43px!important;flex-shrink:0!important}
+#fortunePanel .reveal-back .revealed-glyph,#tarotPanel .reveal-back .tarot-revealed{font-size:47px!important;line-height:1!important;margin:0 0 10px!important;animation:none!important}
+#fortunePanel .reveal-back h3,#tarotPanel .reveal-back h3{font-size:clamp(17px,2.4vw,23px)!important;margin:8px 0!important;line-height:1.18!important}
+#fortunePanel .reveal-back p,#tarotPanel .reveal-back p{font-size:clamp(11px,1.35vw,13px)!important;line-height:1.45!important;margin:0 auto 10px!important;max-width:290px!important}
+#fortunePanel .reveal-back .tarot-prompt,#tarotPanel .reveal-back .tarot-prompt{font-size:11px!important;line-height:1.35!important;padding:9px 2px!important;margin:2px 0 8px!important;width:100%!important}
+#fortunePanel .reveal-back .claimed-note,#tarotPanel .reveal-back .claimed-note{font-size:10px!important;line-height:1.3!important}
+#fortunePanel .reveal-back .share-pill,#tarotPanel .reveal-back .share-pill{margin:auto auto 0!important;min-height:38px!important;width:100%!important;display:grid!important;place-items:center!important;border-radius:13px!important}
+@media(min-width:720px){#fortunePanel,#tarotPanel{min-height:420px!important;padding:21px!important}#fortunePanel .reveal-back,#tarotPanel .reveal-back{padding:12px 12px 0!important}}
+@media(max-width:540px){.reveal-grid{gap:9px!important}#fortunePanel,#tarotPanel{min-height:385px!important;padding:12px 9px!important;border-radius:19px!important}#fortunePanel .reveal-overline,#tarotPanel .reveal-overline{font-size:9px!important;letter-spacing:.08em!important;margin-bottom:8px!important}#fortunePanel .gift-art,#tarotPanel .gift-art{width:94px!important;height:94px!important;min-width:94px!important;min-height:94px!important;max-width:94px!important;max-height:94px!important}#fortunePanel .gift-art svg,#tarotPanel .gift-art svg{width:94px!important;height:94px!important}#fortunePanel .reveal-front h3,#tarotPanel .reveal-front h3{font-size:16px!important}#fortunePanel .reveal-front p,#tarotPanel .reveal-front p{font-size:11px!important}#fortunePanel .reveal-back .revealed-glyph,#tarotPanel .reveal-back .tarot-revealed{font-size:36px!important;margin-bottom:6px!important}#fortunePanel .reveal-back h3,#tarotPanel .reveal-back h3{font-size:17px!important}#fortunePanel .reveal-back p,#tarotPanel .reveal-back p{font-size:10.5px!important}#fortunePanel .reveal-back .tarot-prompt,#tarotPanel .reveal-back .tarot-prompt{font-size:10px!important;padding:7px 0!important}#fortunePanel .reveal-back .claimed-note,#tarotPanel .reveal-back .claimed-note{font-size:9px!important}#fortunePanel .reveal-back .share-pill,#tarotPanel .reveal-back .share-pill{font-size:10px!important;padding:8px 4px!important}}
+@media(max-width:350px){#fortunePanel,#tarotPanel{min-height:410px!important;padding:10px 7px!important}#fortunePanel .reveal-front h3,#tarotPanel .reveal-front h3{font-size:15px!important}}
+@media(prefers-reduced-motion:reduce){#fortunePanel .reveal-front,#fortunePanel .reveal-back,#tarotPanel .reveal-front,#tarotPanel .reveal-back{transition:none!important}}
+
+
+/* v18 — optical radii, circular people portraits, and splash */
+.bottom-nav{--nav-radius:26px;border-radius:var(--nav-radius)!important;padding:7px!important}
+.nav-indicator{top:7px!important;bottom:7px!important;border-radius:19px!important}
+.chat-avatar,.friend-face,.discover-avatar{border-radius:50%!important;aspect-ratio:1;overflow:hidden}
+.profile-header-actions .profile-icon-action{flex-shrink:0}
+#natalaSplash{position:fixed;inset:0;z-index:100000;display:grid;place-items:center;background:var(--canvas,#f5f6f8);color:var(--ink,#151719);opacity:1;visibility:visible;transition:opacity .55s ease,visibility .55s ease;pointer-events:auto}
+#natalaSplash.splash-gone{opacity:0;visibility:hidden;pointer-events:none}
+.splash-center{text-align:center;display:flex;flex-direction:column;align-items:center;gap:19px;transform:translateY(-14px)}
+.splash-wordmark{font-family:'Dancing Script',cursive!important;font-size:clamp(72px,15vw,104px);font-weight:700;line-height:1.2;letter-spacing:-.035em;color:var(--brand,#7050a6);animation:splash-rise .9s cubic-bezier(.2,.8,.2,1) both}
+.splash-spark{display:flex;gap:8px;align-items:center;justify-content:center;animation:splash-rise .9s .18s both}
+.splash-spark i{display:block;width:6px;height:6px;border-radius:50%;background:var(--brand,#7050a6);opacity:.3;animation:splash-pulse 1s ease-in-out infinite alternate}
+.splash-spark i:nth-child(2){animation-delay:.2s}.splash-spark i:nth-child(3){animation-delay:.4s}
+@keyframes splash-rise{from{opacity:0;transform:translateY(18px) scale(.96)}to{opacity:1;transform:translateY(0) scale(1)}}
+@keyframes splash-pulse{to{opacity:1;transform:scale(1.3)}}
+@media(prefers-reduced-motion:reduce){.splash-wordmark,.splash-spark,.splash-spark i{animation:none!important}#natalaSplash{transition:none!important}}
+
+/* v19: scroll-triggered, accessible motion */
+.moon-orb:after{transform:translateX(-205%);transition:transform 1.45s cubic-bezier(.2,.78,.2,1)!important;will-change:transform}
+.moon-feature.moon-animated .moon-orb:after{transform:translateX(0)}
+#profile .progress>span{transform:scaleX(0);transform-origin:left center;transition:transform 1.15s cubic-bezier(.18,.75,.24,1)}
+#profile .progress.progress-animated>span{transform:scaleX(1)}
+#profile .element-ring{--ring-progress:0;background:conic-gradient(var(--element-color) calc(var(--ring-progress)*1%),var(--panel-2) 0)!important;transition:--ring-progress 1s ease}
+@property --ring-progress{syntax:'<number>';inherits:false;initial-value:0}
+#profile .element-ring.ring-animated{--ring-progress:var(--pct)}
+#profile .hero-grid .score-value{opacity:0;transform:translateY(7px);transition:opacity .42s ease,transform .42s ease}
+#profile .hero-grid.scores-animated .score-value{opacity:1;transform:translateY(0)}
+#profile .analysis-hero-cta{position:relative}
+#profile .analysis-premium-badge{align-self:center;flex-shrink:0;padding:7px 9px;border-radius:999px;background:rgba(75,38,15,.14);border:1px solid rgba(94,49,18,.22);font-size:9px;font-weight:900;letter-spacing:.08em;color:#54341f;white-space:nowrap}
+@media(max-width:420px){#profile .analysis-premium-badge{position:absolute;right:14px;top:10px;padding:5px 7px;font-size:8px}#profile .analysis-cta-copy{padding-top:12px}}
+@media(prefers-reduced-motion:reduce){.moon-orb:after,#profile .progress>span,#profile .hero-grid .score-value{transition:none!important}.moon-orb:after{transform:translateX(0)}#profile .progress>span{transform:scaleX(1)}#profile .hero-grid .score-value{opacity:1;transform:none}#profile .element-ring{--ring-progress:var(--pct)}}
+
+/* NATALA v20 — unified Explore / Chat / People heading and search geometry */
+#explore>.unified-tab-heading,#chat>.unified-tab-heading,#matches>.unified-tab-heading{
+  display:grid!important;grid-template-rows:18px 126px 42px!important;row-gap:9px!important;
+  margin:0 0 22px!important;padding:0!important;min-height:0!important;
+}
+#explore>.unified-tab-heading .eyebrow,#chat>.unified-tab-heading .eyebrow,#matches>.unified-tab-heading .eyebrow{
+  font-size:11px!important;font-weight:800!important;line-height:18px!important;letter-spacing:.12em!important;
+  margin:0!important;align-self:start!important;
+}
+#explore>.unified-tab-heading h1,#chat>.unified-tab-heading h1,#matches>.unified-tab-heading h1{
+  font-size:clamp(42px,8vw,65px)!important;line-height:.95!important;letter-spacing:-.055em!important;
+  font-weight:850!important;margin:0!important;align-self:center!important;
+}
+#explore>.unified-tab-heading h1 em,#chat>.unified-tab-heading h1 em,#matches>.unified-tab-heading h1 em{
+  font-style:normal!important;color:var(--brand)!important;
+}
+#explore>.unified-tab-heading p,#chat>.unified-tab-heading p,#matches>.unified-tab-heading p{
+  max-width:430px!important;font-size:12px!important;line-height:1.6!important;
+  color:var(--subtle)!important;margin:0!important;align-self:start!important;
+}
+#explore>.unified-search-row,#chat>.unified-search-row,#matches>.unified-search-row{
+  display:flex!important;align-items:stretch!important;gap:10px!important;
+  height:50px!important;margin:0 0 23px!important;
+}
+#explore .unified-search-field,#chat .unified-search-field,#matches .unified-search-field{
+  display:flex!important;align-items:center!important;gap:11px!important;
+  flex:1!important;min-width:0!important;height:50px!important;box-sizing:border-box!important;
+  padding:0 14px!important;border-radius:16px!important;
+  background:var(--panel)!important;border:1px solid var(--hairline)!important;
+}
+#explore .unified-search-field svg,#chat .unified-search-field svg,#matches .unified-search-field svg{
+  width:21px!important;height:21px!important;flex-shrink:0!important;color:var(--brand)!important;
+}
+#explore .unified-search-field input,#chat .unified-search-field input,#matches .unified-search-field input{
+  display:block!important;flex:1!important;min-width:0!important;width:100%!important;
+  background:transparent!important;border:0!important;outline:0!important;
+  color:var(--ink)!important;font:inherit!important;font-size:13px!important;
+}
+#explore .unified-search-field input::placeholder,#chat .unified-search-field input::placeholder,#matches .unified-search-field input::placeholder{
+  color:var(--subtle)!important;opacity:1!important;
+}
+#matches .unified-search-row .people-scan{
+  height:50px!important;width:50px!important;box-sizing:border-box!important;
+  flex:0 0 50px!important;display:grid!important;place-items:center!important;
+  border-radius:16px!important;background:var(--panel)!important;
+  border:1px solid var(--hairline)!important;padding:0!important;
+}
+#matches .unified-search-row .people-scan svg{width:23px!important;height:23px!important;color:var(--brand)!important}
+@media(max-width:430px){
+  #explore>.unified-tab-heading,#chat>.unified-tab-heading,#matches>.unified-tab-heading{
+    grid-template-rows:18px 104px 48px!important;row-gap:9px!important;
+  }
+  #explore>.unified-tab-heading h1,#chat>.unified-tab-heading h1,#matches>.unified-tab-heading h1{
+    font-size:clamp(39px,10vw,49px)!important;
+  }
+}
+
+</style>
+</head>
+
+<body>
+  <div id="natalaSplash" role="status" aria-label="Loading Natala"><div class="splash-center"><div class="splash-wordmark">Natala</div><div class="splash-spark" aria-hidden="true"><i></i><i></i><i></i></div></div></div>
+  <main class="app-shell">
+
+    <!-- =====================================================
+         HOME
+         ===================================================== -->
+    <section id="home" class="page active">
+      <header class="topbar" style="margin-bottom:12px;">
+        <div class="natala-brand">Natala</div>
+        </header>
+
+      <div class="story-feed-label"><h2>Today's stories</h2><span>Discover something new</span></div>
+      <div class="story-feed">
+        <button class="story-tile cosmic" data-story="0"><div class="story-top"><div class="story-avatar-ring"><div>☉</div></div><div class="story-duration">NEW</div></div><div class="story-center-symbol">☾</div><div class="story-content"><div class="story-kicker">Cosmic weather</div><h3>Your sky<br>today</h3><p>What the heavens inspire.</p></div><div class="story-owner">Me</div></button>
+        <button class="story-tile mind" data-story="1"><div class="story-top"><div class="story-avatar-ring"><div>✦</div></div><div class="story-duration">NEW</div></div><div class="story-center-symbol">🪞</div><div class="story-content"><div class="story-kicker">Personality lens</div><h3>A side<br>you hide</h3><p>A new perspective on yourself.</p></div><div class="story-owner">Me</div></button>
+        <button class="story-tile love" data-story="3"><div class="story-top"><div class="story-avatar-ring"><div>♡</div></div><div class="story-duration">NEW</div></div><div class="story-center-symbol">♡</div><div class="story-content"><div class="story-kicker">Connection</div><h3>Your love<br>lens</h3><p>A small relationship insight.</p></div><div class="story-owner">Me</div></button>
+        <button class="story-tile friend-maya" data-story="5"><div class="story-top"><div class="story-avatar-ring"><div>M</div></div><div class="story-duration">NEW</div></div><div class="story-center-symbol">🌙</div><div class="story-content"><div class="story-kicker">Shared from NATALA</div><h3>Moon ritual</h3><p>A quiet moment of reflection</p></div><div class="story-owner">Maya</div></button>
+        <button class="story-tile friend-alex" data-story="6"><div class="story-top"><div class="story-avatar-ring"><div>A</div></div><div class="story-duration">NEW</div></div><div class="story-center-symbol">🃏</div><div class="story-content"><div class="story-kicker">Shared from NATALA</div><h3>The Star</h3><p>My daily tarot draw</p></div><div class="story-owner">Alex</div></button>
+        <button class="story-tile friend-sofia" data-story="7"><div class="story-top"><div class="story-avatar-ring"><div>S</div></div><div class="story-duration">NEW</div></div><div class="story-center-symbol">🌊</div><div class="story-content"><div class="story-kicker">Shared from NATALA</div><h3>Water element</h3><p>My elemental balance</p></div><div class="story-owner">Sofia</div></button>
+        <button class="story-tile friend-daniel" data-story="8"><div class="story-top"><div class="story-avatar-ring"><div>D</div></div><div class="story-duration">NEW</div></div><div class="story-center-symbol">✨</div><div class="story-content"><div class="story-kicker">Shared from NATALA</div><h3>Life Path 7</h3><p>My numerology insight</p></div><div class="story-owner">Daniel</div></button>
+      </div>
+
+      <div class="streak-row" style="margin-top:15px;">
+        <div class="streak"><span class="streak-flame" aria-hidden="true">🔥</span><span class="streak-count">7 day</span><span class="streak-label">discovery streak</span><span class="date-label" id="homeDate"></span></div>
+      </div>
+
+      <div class="plan-banner" id="planBanner">
+        <div class="plan-row">
+          <div class="plan-badge">✦</div>
+          <div class="plan-copy">
+            <div class="kicker">Your plan · Explorer</div>
+            <h3>Unlock the deeper layers</h3>
+            <p>More personalized insights, full reports and advanced compatibility.</p>
+          </div>
+          <button class="plan-cta" id="upgradeButton">Upgrade</button>
+        </div>
+      </div>
+
+      <div class="section-title"><h2>Open your daily gifts</h2><span>Two surprises await</span></div>
+      <div class="reveal-grid">
+        <article class="reveal-panel" id="fortunePanel">
+          <div class="reveal-overline">✦ DAILY FORTUNE</div>
+          <div class="reveal-stage">
+            <div class="reveal-front" id="fortuneFront"><div class="fortune-illustration gift-art"><svg viewBox="0 0 160 160" role="img" aria-label="Sealed letter with wax seal" xmlns="http://www.w3.org/2000/svg"><defs><linearGradient id="paper" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#fffaf0"/><stop offset="1" stop-color="#e7d7ba"/></linearGradient><linearGradient id="wax" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#b89ae7"/><stop offset="1" stop-color="#7654ac"/></linearGradient></defs><rect x="24" y="41" width="112" height="79" rx="12" fill="url(#paper)" stroke="#c5af8c" stroke-width="2"/><path d="M25 48 80 89 135 48" fill="none" stroke="#c7b28e" stroke-width="3"/><path d="M25 115 65 83M135 115 95 83" stroke="#c7b28e" stroke-width="2"/><circle cx="80" cy="91" r="17" fill="url(#wax)" stroke="#62458e" stroke-width="2"/><path d="m80 81 2.6 7.2 7.4 2.8-7.4 2.7-2.6 7.3-2.7-7.3-7.3-2.7 7.3-2.8Z" fill="#fff8e5"/><path d="m39 29 2 5 5 2-5 2-2 5-2-5-5-2 5-2Zm85 93 2 5 5 2-5 2-2 5-2-5-5-2 5-2Z" fill="#c6a16a"/></svg></div><h3>A message for you</h3><p>Your little spark of inspiration is sealed.</p><button class="reveal-button" id="drawFortune">✦ Open fortune</button></div>
+            <div class="reveal-back" id="fortuneBack"><div class="revealed-glyph">✧</div><div class="reveal-tag">TODAY'S MESSAGE</div><h3 id="fortuneTitle"></h3><p id="fortuneText"></p><span class="claimed-note">✦ Unlocked for today</span><button class="share-pill" id="shareFortune">↗ Share fortune</button></div>
+          </div>
+        </article>
+        <article class="reveal-panel tarot-panel" id="tarotPanel">
+          <div class="reveal-overline">☽ DAILY TAROT</div>
+          <div class="reveal-stage">
+            <div class="reveal-front" id="tarotFront"><div class="tarot-deck gift-art"><svg viewBox="0 0 160 160" role="img" aria-label="Ornamental tarot card" xmlns="http://www.w3.org/2000/svg"><defs><linearGradient id="tarotInk" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#392c65"/><stop offset="1" stop-color="#6b4d94"/></linearGradient></defs><rect x="36" y="16" width="88" height="128" rx="9" fill="url(#tarotInk)" stroke="#b99a69" stroke-width="3"/><rect x="43" y="23" width="74" height="114" rx="5" fill="none" stroke="#e9d3a8" stroke-width="1.5"/><rect x="49" y="29" width="62" height="102" rx="2" fill="none" stroke="#d5bd91" stroke-width=".8"/><circle cx="80" cy="80" r="25" fill="none" stroke="#ead6ad" stroke-width="1.5"/><path d="M80 46v68M46 80h68M56 56l48 48m0-48-48 48" stroke="#d7b780" stroke-width="1.3"/><circle cx="80" cy="80" r="12" fill="#f1dfb6"/><path d="M80 69a11 11 0 1 0 0 22 8 8 0 0 1 0-22" fill="#7d62a4"/><path d="m80 34 2 5 5 2-5 2-2 5-2-5-5-2 5-2Zm0 80 2 5 5 2-5 2-2 5-2-5-5-2 5-2Z" fill="#f1dfb6"/></svg></div><h3>Your card awaits</h3><p>Reveal an archetype to reflect on today.</p><button class="reveal-button" id="drawTarot">♠ Draw a card</button></div>
+            <div class="reveal-back" id="tarotBack"><div class="tarot-revealed" id="tarotGlyph">✺</div><div class="reveal-tag">YOUR CARD</div><h3 id="tarotTitle"></h3><p id="tarotMeaning"></p><div class="tarot-prompt" id="tarotPrompt"></div><span class="claimed-note">✦ Your card for today</span><button class="share-pill" id="shareTarot">↗ Share tarot</button></div>
+          </div>
+        </article>
+      </div>
+
+      <div class="section-title"><h2>The sky today</h2><span>Cosmic dashboard</span></div>
+      <article class="moon-feature">
+        <div class="moon-copy"><div class="sky-feature-kicker">☾ LUNAR CYCLE</div><h3 id="homeMoonTitle">Moon phase</h3><p id="homeMoonSubtitle">A new perspective with every phase.</p><div class="moon-chips"><span id="moonIllumination">Illustrative phase</span><span>Reflect & reset</span></div></div>
+        <div class="moon-art"><div class="moon-orb"></div><div class="moon-stars">✦ · ✧</div></div>
+      </article>
+
+      <article class="zodiac-feature">
+        <div class="zodiac-emblem" id="seasonGlyph">♏</div>
+        <div><div class="sky-feature-kicker">CURRENT ZODIAC SEASON</div><h3 id="seasonName">Scorpio season</h3><p id="seasonDates">Oct 23 – Nov 21 · Depth, renewal & honesty</p></div>
+      </article>
+
+      <div class="section-title"><h2>Planetary positions</h2><span>Demo preview</span></div>
+      <article class="planet-feature">
+        <p class="planet-disclaimer">Example positions for the UI concept — not live astronomical data.</p>
+        <div class="planet-mini-grid">
+          <div class="planet-mini"><span class="zodiac-sign">♏</span><div><b>Sun</b><small>Scorpio</small></div></div>
+          <div class="planet-mini"><span class="zodiac-sign">♊</span><div><b>Moon</b><small>Gemini</small></div></div>
+          <div class="planet-mini"><span class="zodiac-sign">♏</span><div><b>Mercury</b><small>Scorpio</small></div></div>
+          <div class="planet-mini"><span class="zodiac-sign">♎</span><div><b>Venus</b><small>Libra</small></div></div>
+          <div class="planet-mini"><span class="zodiac-sign">♏</span><div><b>Mars</b><small>Scorpio</small></div></div>
+          <div class="planet-mini"><span class="zodiac-sign">♉</span><div><b>Jupiter</b><small>Taurus</small></div></div>
+        </div>
+        <button class="sky-detail-btn" id="openSkyPage">Explore the full sky <span>↗</span></button>
+      </article>
+    </section>
+
+    <!-- =====================================================
+         EXPLORE / SEARCH
+         ===================================================== -->
+    <section id="explore" class="page">
+
+      <div class="people-heading unified-tab-heading"><div class="eyebrow">YOUR ATLAS · EXPLORE & DISCOVER</div><h1>Find a<br><em>new lens.</em></h1><p>Explore the systems that shape your inner world and discover new perspectives.</p></div>
+      <div class="people-search-row unified-search-row"><label class="people-search-field unified-search-field"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m16 16 5 5"/></svg><input id="systemSearch" type="search" placeholder="Search systems..." aria-label="Search systems" autocomplete="off"></label></div>
+
+      <div id="systemList" class="system-list">
+        <button class="system-card" data-search="mbti personality">
+          <div class="system-icon">◈</div>
+          <div class="system-copy">
+            <h3>MBTI</h3>
+            <p>Personality preferences, communication and decision-making.</p>
+          </div>
+          <div class="status">READY</div>
+        </button>
+
+        <button class="system-card" data-search="astrology birth chart zodiac">
+          <div class="system-icon">☉</div>
+          <div class="system-copy">
+            <h3>Astrology</h3>
+            <p>Birth chart patterns, archetypes and life themes.</p>
+          </div>
+          <div class="status">READY</div>
+        </button>
+
+        <button class="system-card" data-search="numerology numbers life path">
+          <div class="system-icon">⑦</div>
+          <div class="system-copy">
+            <h3>Numerology</h3>
+            <p>Number symbolism and recurring personal themes.</p>
+          </div>
+          <div class="status">READY</div>
+        </button>
+
+        <button class="system-card" data-search="tarot cards cartology archetypes">
+          <div class="system-icon">◇</div>
+          <div class="system-copy">
+            <h3>Cardology</h3>
+            <p>Card-based reflection and archetypal exploration.</p>
+          </div>
+          <div class="status">SOON</div>
+        </button>
+
+
+        <button class="system-card system-card-new" data-search="tarot tarot cards archetypes">
+          <div class="system-icon">♠</div>
+          <div class="system-copy">
+            <h3>Tarot</h3>
+            <p>Daily archetypes, reflection prompts and symbolic card patterns.</p>
+          </div>
+          <div class="status">READY</div>
+        </button>
+
+        <button class="system-card system-card-new" data-search="blood type blood group">
+          <div class="system-icon">◉</div>
+          <div class="system-copy">
+            <h3>Blood Group</h3>
+            <p>Personal profile data that can be used as an optional discovery lens.</p>
+          </div>
+          <div class="status">PROFILE</div>
+        </button>
+
+        <button class="system-card system-card-new" data-search="ayurveda dosha vata pitta kapha">
+          <div class="system-icon">☯</div>
+          <div class="system-copy">
+            <h3>Ayurveda</h3>
+            <p>Dosha-inspired self-reflection around rhythm, energy and balance.</p>
+          </div>
+          <div class="status">READY</div>
+        </button>
+
+        <button class="system-card system-card-new" data-search="elements air water fire earth">
+          <div class="system-icon">◌</div>
+          <div class="system-copy">
+            <h3>Elements</h3>
+            <p>Air, Water, Fire and Earth as a visual personal archetype map.</p>
+          </div>
+          <div class="status">READY</div>
+        </button>
+
+        <button class="system-card" data-search="enneagram personality">
+          <div class="system-icon">△</div>
+          <div class="system-copy">
+            <h3>Enneagram</h3>
+            <p>Motivations, patterns and growth edges.</p>
+          </div>
+          <div class="status">SOON</div>
+        </button>
+
+        <button class="system-card" data-search="human design energy">
+          <div class="system-icon">✧</div>
+          <div class="system-copy">
+            <h3>Human Design</h3>
+            <p>A symbolic system for exploring energy and decision-making.</p>
+          </div>
+          <div class="status">SOON</div>
+        </button>
+      </div>
+    </section>
+
+
+    <!-- =====================================================
+         DAILY SKY — PLANETARY POSITIONS
+         ===================================================== -->
+    <section id="sky" class="page sky-page">
+      <header class="topbar">
+        <button class="back-button" id="backFromSky" aria-label="Back">←</button>
+        <div class="brand">
+          <div class="brand-mark">☾</div>
+          Today's Sky
+        </div>
+        <div class="avatar-small">✦</div>
+      </header>
+
+      <div class="sky-layout">
+        <div>
+          <div class="sky-hero">
+            <div class="sky-date">Tuesday · 7 November</div>
+            <h1>Scorpio<br />season.</h1>
+            <div class="sky-subtitle">A deeper month. A quieter kind of power.</div>
+
+            <div class="moon-display"></div>
+            <div class="moon-label">
+              <strong>Waxing Crescent</strong>
+              <span>Moon in Gemini · 31% illuminated</span>
+            </div>
+
+            <div class="zodiac-season">
+              <div class="zodiac-glyph">♏</div>
+              <div>
+                <div class="label">Current zodiac season</div>
+                <h3>Scorpio · Oct 23 — Nov 21</h3>
+                <p>Depth · transformation · truth · intimacy</p>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div>
+          <div class="section-title" style="margin-top:14px;">
+            <h2>Planetary positions</h2>
+            <span>Demo positions</span>
+          </div>
+
+          <div class="planet-timeline">
+            <div class="planet-position">
+              <div class="planet-glyph">☉</div>
+              <div><strong>Sun</strong><small>Scorpio · Water</small></div>
+              <div class="planet-degree">15° 22′</div>
+            </div>
+            <div class="planet-position">
+              <div class="planet-glyph">☾</div>
+              <div><strong>Moon</strong><small>Gemini · Air</small></div>
+              <div class="planet-degree">09° 41′</div>
+            </div>
+            <div class="planet-position">
+              <div class="planet-glyph">☿</div>
+              <div><strong>Mercury</strong><small>Scorpio · Water</small></div>
+              <div class="planet-degree">11° 08′</div>
+            </div>
+            <div class="planet-position">
+              <div class="planet-glyph">♀</div>
+              <div><strong>Venus</strong><small>Libra · Air</small></div>
+              <div class="planet-degree">27° 16′</div>
+            </div>
+            <div class="planet-position">
+              <div class="planet-glyph">♂</div>
+              <div><strong>Mars</strong><small>Scorpio · Water</small></div>
+              <div class="planet-degree">03° 55′</div>
+            </div>
+            <div class="planet-position">
+              <div class="planet-glyph">♃</div>
+              <div><strong>Jupiter</strong><small>Taurus · Earth</small></div>
+              <div class="planet-degree">08° 19′</div>
+            </div>
+            <div class="planet-position">
+              <div class="planet-glyph">♄</div>
+              <div><strong>Saturn</strong><small>Pisces · Water</small></div>
+              <div class="planet-degree">00° 47′</div>
+            </div>
+          </div>
+
+          <div class="sky-insight">
+            <div class="eyebrow">NATALA synthesis</div>
+            <h3>Go deeper, not louder.</h3>
+            <p>
+              Scorpio season brings the theme of depth, while the Gemini Moon adds
+              curiosity and movement. Today is a good symbolic prompt to ask one
+              better question instead of searching for one fast answer.
+            </p>
+          </div>
+
+          <button class="sky-open" onclick="alert('Future: open full astrology engine')">
+            View full birth-chart impact →
+          </button>
+        </div>
+      </div>
+    </section>
+
+    <!-- =====================================================
+         MATCHES — FUTURE DATING / COMPATIBILITY NETWORK
+         ===================================================== -->
+    <section id="chat" class="page">
+      <div class="people-heading unified-tab-heading"><div class="eyebrow">YOUR CONNECTIONS · SHARE & GROW</div><h1>Words that<br><em>connect.</em></h1><p>Keep meaningful conversations going and stay close to your circle.</p></div>
+      <div class="people-search-row unified-search-row"><label class="people-search-field unified-search-field"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m16 16 5 5"/></svg><input id="chatSearch" type="search" placeholder="Search conversations..." aria-label="Search conversations" autocomplete="off"></label></div>
+      <div class="section-title"><h2>Conversations</h2><span>Demo inbox</span></div>
+      <div class="chat-list" id="chatList">
+        <button class="chat-person" data-person="Maya" data-message="I pulled The Star today ✨"><span class="chat-avatar maya">M</span><span class="chat-person-body"><strong>Maya Petrova <i>●</i></strong><small>I pulled The Star today ✨</small></span><span class="chat-person-side"><time>12:42</time><b>2</b></span></button>
+        <button class="chat-person" data-person="Alex" data-message="Our life paths are both 7!"><span class="chat-avatar alex">A</span><span class="chat-person-body"><strong>Alex Rivera</strong><small>Our life paths are both 7!</small></span><span class="chat-person-side"><time>Yesterday</time></span></button>
+        <button class="chat-person" data-person="Sofia" data-message="Look at my element chart 🌊"><span class="chat-avatar sofia">S</span><span class="chat-person-body"><strong>Sofia Ivanova <i>●</i></strong><small>Look at my element chart 🌊</small></span><span class="chat-person-side"><time>Mon</time><b>1</b></span></button>
+        <button class="chat-person" data-person="Daniel" data-message="Thanks for sharing your reading!"><span class="chat-avatar daniel">D</span><span class="chat-person-body"><strong>Daniel Kim</strong><small>Thanks for sharing your reading!</small></span><span class="chat-person-side"><time>Sun</time></span></button>
+        <button class="chat-person" data-person="Elena" data-message="Let's compare our birth charts"><span class="chat-avatar elena">E</span><span class="chat-person-body"><strong>Elena Rose</strong><small>Let's compare our birth charts</small></span><span class="chat-person-side"><time>Fri</time></span></button>
+      </div>
+      <div class="chat-empty" id="chatEmpty" hidden>No conversations found.</div>
+    </section>
+
+    <div class="chat-thread-overlay" id="chatThread" hidden>
+      <div class="chat-thread">
+        <div class="chat-thread-head"><button id="chatBack" aria-label="Back to conversations">←</button><strong id="chatThreadName">Maya</strong><span>✦</span></div>
+        <div class="chat-thread-messages" id="chatMessages"></div>
+        <form id="chatCompose" class="chat-compose"><input id="chatInput" placeholder="Write a message..." autocomplete="off" aria-label="Message"><button type="submit">➤</button></form>
+      </div>
+    </div>
+
+    <section id="matches" class="page">
+      <div class="people-heading unified-tab-heading"><div class="eyebrow">YOUR CIRCLE · DISCOVER & CONNECT</div><h1>People who<br><em>resonate.</em></h1><p>Discover connections, keep your circle close, and meet someone new.</p></div>
+      <div class="people-search-row unified-search-row">
+        <label class="people-search-field unified-search-field"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m16 16 5 5"/></svg><input id="peopleSearch" type="search" placeholder="Search people..." aria-label="Search people" autocomplete="off"></label>
+        <button class="people-scan" id="openScanner" type="button" aria-label="Scan profile QR code" title="Scan QR code"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M4 9V4h5M15 4h5v5M20 15v5h-5M9 20H4v-5"/><path d="M8 8h3v3H8zM13 8h3v3h-3zM8 13h3v3H8zM13 13h3v3h-3z"/></svg></button>
+      </div>
+      <div class="people-search-empty" id="peopleSearchEmpty" hidden>No people match your search.</div>
+
+      <div class="section-title"><h2>Potential matches</h2><span id="matchCounter">1 / 4</span></div>
+      <div class="swipe-deck" id="swipeDeck">
+        <article class="people-match-card" id="peopleMatchCard" tabindex="0" aria-label="Swipe left to pass, right to connect">
+          <div class="match-card-art"><div class="match-card-emoji" id="matchEmoji">🌙</div><div class="match-alignment" id="matchAlignment">✦ 92% alignment</div></div>
+          <div class="match-card-details"><h3 id="matchName">Maya, 29</h3><p id="matchMeta">INFJ · Libra · Life Path 2</p><div class="match-tags" id="matchTags"><span class="match-tag">Creativity</span></div><p class="match-note" id="matchReason">Shared curiosity and deep conversations.</p></div>
+        </article>
+        <div class="swipe-hint">← Pass <span>Swipe or use buttons</span> Connect →</div>
+        <div class="people-match-actions"><button id="matchPass" aria-label="Pass this person">✕</button><button id="matchInfo" aria-label="Why this match">✧ Why?</button><button id="matchLike" aria-label="Connect with this person">♡</button></div>
+      </div>
+
+      <div class="section-title"><h2>Your friends</h2><span>4 connections</span></div>
+      <div class="friend-list">
+        <button class="friend-row" data-friend="Maya"><span class="friend-face face-1">M</span><span><strong>Maya Petrova</strong><small>Shared a moon ritual · Online</small></span><b>Message ↗</b></button>
+        <button class="friend-row" data-friend="Alex"><span class="friend-face face-2">A</span><span><strong>Alex Rivera</strong><small>Tarot · Numerology</small></span><b>Message ↗</b></button>
+        <button class="friend-row" data-friend="Sofia"><span class="friend-face face-3">S</span><span><strong>Sofia Ivanova</strong><small>Elements · Ayurveda</small></span><b>Message ↗</b></button>
+        <button class="friend-row" data-friend="Daniel"><span class="friend-face face-4">D</span><span><strong>Daniel Kim</strong><small>Life Path 7 · Astrology</small></span><b>Message ↗</b></button>
+      </div>
+
+      <div class="section-title"><h2>People to discover</h2><span>Beyond your circle</span></div>
+      <p class="discover-caption">Low-pressure introductions based on shared interests — not a swipe deck.</p>
+      <div class="discover-grid">
+        <article class="discover-person"><div class="discover-avatar disc-1">✺</div><strong>Elena Rose</strong><small>Tarot · Art · INFP</small><button class="discover-connect" data-name="Elena">+ Connect</button></article>
+        <article class="discover-person"><div class="discover-avatar disc-2">☽</div><strong>Noah James</strong><small>Astrology · Nature</small><button class="discover-connect" data-name="Noah">+ Connect</button></article>
+        <article class="discover-person"><div class="discover-avatar disc-3">❋</div><strong>Lina Chen</strong><small>Ayurveda · Wellness</small><button class="discover-connect" data-name="Lina">+ Connect</button></article>
+        <article class="discover-person"><div class="discover-avatar disc-4">✧</div><strong>Oliver Reed</strong><small>MBTI · Journaling</small><button class="discover-connect" data-name="Oliver">+ Connect</button></article>
+      </div>
+    </section>
+
+    <!-- =====================================================
+         PROFILE — PRIMARY MOCKUP
+         Inspired by the supplied sports-profile screenshot:
+         bold name, identity badge, 3 metric cards, 2x2 stats,
+         and a feed of insights.
+         ===================================================== -->
+    <section id="profile" class="page">
+      <header class="topbar">
+        <div class="brand natala-logo">Natala</div>
+        <div class="profile-header-actions">
+          <button class="profile-icon-action" id="fullscreenToggle" type="button" aria-label="Enter fullscreen" title="Fullscreen"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M8 3H3v5m13-5h5v5M3 16v5h5m13-5v5h-5"/></svg></button>
+          <button class="profile-icon-action theme-toggle" id="themeToggle" type="button" aria-label="Theme: system" title="Theme: system"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><circle cx="12" cy="12" r="4"/><path d="M12 2v2m0 16v2M4.93 4.93l1.41 1.41m11.32 11.32 1.41 1.41M2 12h2m16 0h2M4.93 19.07l1.41-1.41M17.66 6.34l1.41-1.41"/></svg></button>
+          <button class="profile-icon-action" id="shareProfile" type="button" aria-label="Share profile" title="Share profile"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><circle cx="18" cy="5" r="2.5"/><circle cx="6" cy="12" r="2.5"/><circle cx="18" cy="19" r="2.5"/><path d="m8.3 10.8 7.4-4.6M8.3 13.2l7.4 4.6"/></svg></button>
+          <button class="profile-icon-action" id="showProfileQR" type="button" aria-label="Show my QR code" title="My QR code"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M3 3h7v7H3zM14 3h7v7h-7zM3 14h7v7H3zM14 14h3v3h-3zM20 14v3M14 20h3M20 20h1"/></svg></button>
+        </div>
+      </header>
+
+      <div class="theme-preference"><div><strong>Appearance</strong><span id="themeDescription">Following your device setting</span></div><button class="theme-choice" id="themeChoice" type="button">System · Auto</button></div>
+      <div class="profile-hero">
+        <h1>Alex<br />Morgan</h1>
+        <p>Inner Explorer</p>
+        <div class="identity-line">✦ INFP · The Mediator</div>
+      </div>
+
+      <div class="hero-grid">
+        <article class="score-card primary">
+          <div class="card-icon" aria-hidden="true">◉</div>
+          <div class="score-label">Self Awareness</div>
+          <div class="score-value">84</div>
+        </article>
+
+        <article class="score-card secondary">
+          <div class="card-icon" aria-hidden="true">✧</div>
+          <div class="score-label">Systems Explored</div>
+          <div class="score-value">8 <small>/ 10</small></div>
+        </article>
+
+        <article class="score-card light">
+          <div class="card-icon" aria-hidden="true">◎</div>
+          <div class="score-label">Alignment</div>
+          <div class="score-value">82.3<small>%</small></div>
+        </article>
+      </div>
+
+      <button class="analysis-hero-cta" id="openAnalysis">
+        <span class="analysis-icon">✧</span>
+        <span class="analysis-cta-copy"><small>YOUR PERSONAL SYNTHESIS</small><strong>Analyze my entire map</strong><em>Discover patterns across all your systems</em></span>
+        <span class="analysis-premium-badge" aria-label="Premium feature">✦ PREMIUM</span><span class="analysis-arrow">↗</span>
+      </button>
+
+      <div class="section-title">
+        <h2>Your profile</h2>
+        <span>Core signals</span>
+      </div>
+
+      <div class="stat-grid">
+        <div class="stat-card">
+          <div class="label">Personality</div>
+          <div class="value">INFP</div>
+        </div>
+        <div class="stat-card">
+          <div class="label">Life Path</div>
+          <div class="value">7 · Seeker</div>
+        </div>
+        <div class="stat-card">
+          <div class="label">Sun Sign</div>
+          <div class="value">Pisces</div>
+        </div>
+        <div class="stat-card">
+          <div class="label">Core Theme</div>
+          <div class="value">Meaning</div>
+        </div>
+      </div>
+
+
+      <div class="section-title">
+        <h2>Personal lenses</h2>
+        <span>Part of your map</span>
+      </div>
+
+      <div class="signal-grid">
+        <article class="signal-card">
+          <div class="signal-icon">♠</div>
+          <div class="signal-label">Tarot archetype</div>
+          <div class="signal-value">The Hermit</div>
+          <div class="signal-note">Your current reflection card.</div>
+        </article>
+        <article class="signal-card">
+          <div class="signal-icon">☯</div>
+          <div class="signal-label">Ayurveda</div>
+          <div class="signal-value">Vata · 61%</div>
+          <div class="signal-note">Self-reflection lens, not a medical assessment.</div>
+        </article>
+        <article class="signal-card">
+          <div class="signal-icon">◉</div>
+          <div class="signal-label">Blood group</div>
+          <div class="signal-value">A+</div>
+          <div class="signal-note">Optional profile attribute.</div>
+        </article>
+        <article class="signal-card">
+          <div class="signal-icon">◐</div>
+          <div class="signal-label">Elements</div>
+          <div class="signal-value">Water · 42%</div>
+          <div class="signal-note">Your symbolic elemental balance.</div>
+        </article>
+      </div>
+
+      <div class="element-balance element-rings" aria-label="Symbolic elemental balance">
+        <div class="element element-air"><div class="element-ring" style="--pct:18;--element-color:#9A9DB7" role="img" aria-label="Air 18 percent"><span class="alchemy-symbol" aria-hidden="true">🜁</span></div><b>Air</b><span>18%</span></div>
+        <div class="element element-water"><div class="element-ring" style="--pct:42;--element-color:#3D91D7" role="img" aria-label="Water 42 percent"><span class="alchemy-symbol" aria-hidden="true">🜄</span></div><b>Water</b><span>42%</span></div>
+        <div class="element element-fire"><div class="element-ring" style="--pct:12;--element-color:#E9784B" role="img" aria-label="Fire 12 percent"><span class="alchemy-symbol" aria-hidden="true">🜂</span></div><b>Fire</b><span>12%</span></div>
+        <div class="element element-earth"><div class="element-ring" style="--pct:28;--element-color:#73A36A" role="img" aria-label="Earth 28 percent"><span class="alchemy-symbol" aria-hidden="true">🜃</span></div><b>Earth</b><span>28%</span></div>
+      </div>
+
+      <div class="section-title"><h2>All your systems</h2><span>Example profile data</span></div>
+      <div class="profile-systems">
+        <span>◈ MBTI · INFP</span><span>☉ Astrology · Pisces</span>
+        <span>⑦ Numerology · 7</span><span>♠ Tarot · Hermit</span>
+        <span>◇ Cardology · Exploring</span><span>☯ Ayurveda · Vata</span>
+        <span>◉ Blood group · A+</span><span>◐ Elements · Water</span>
+        <span>△ Enneagram · Pending</span><span>✧ Human Design · Pending</span>
+      </div>
+
+      <div class="section-title">
+        <h2>What your map says</h2>
+        <span>Early synthesis</span>
+      </div>
+
+      <article class="insight-card">
+        <div class="insight-top">
+          <div class="insight-icon">✦</div>
+          <div>
+            <h3>Deep inner processing</h3>
+            <p>
+              Several systems point toward reflection, imagination and meaning-making.
+              You may thrive when you have enough space to process before acting.
+            </p>
+          </div>
+        </div>
+        <div class="progress-wrap">
+          <div class="progress-row">
+            <span>Reflection</span>
+            <span>High</span>
+          </div>
+          <div class="progress"><span style="width:84%"></span></div>
+        </div>
+      </article>
+
+      <article class="insight-card">
+        <div class="insight-top">
+          <div class="insight-icon">♡</div>
+          <div>
+            <h3>Relationships matter deeply</h3>
+            <p>
+              Your current profile suggests that authentic connection and shared values
+              can strongly influence motivation and life satisfaction.
+            </p>
+          </div>
+        </div>
+        <div class="progress-wrap">
+          <div class="progress-row">
+            <span>Connection</span>
+            <span>High</span>
+          </div>
+          <div class="progress"><span style="width:76%"></span></div>
+        </div>
+      </article>
+
+      <article class="insight-card">
+        <div class="insight-top">
+          <div class="insight-icon">→</div>
+          <div>
+            <h3>Growth edge: execution</h3>
+            <p>
+              The next useful experiment is turning insight into small commitments,
+              especially when the perfect direction is not yet clear.
+            </p>
+          </div>
+        </div>
+        <div class="progress-wrap">
+          <div class="progress-row">
+            <span>Action</span>
+            <span>Developing</span>
+          </div>
+          <div class="progress"><span style="width:58%"></span></div>
+        </div>
+      </article>
+    </section>
+  </main>
+
+
+  <div class="report-overlay" id="reportOverlay" role="dialog" aria-modal="true" aria-label="Personal analysis report" hidden>
+    <div class="report-dialog">
+      <div class="report-toolbar">
+        <strong>✧ NATALA · Your personal report</strong>
+        <button id="closeReport" aria-label="Close report">✕</button>
+      </div>
+      <article class="report-paper" id="reportPaper">
+        <div class="report-kicker">NATALA / PERSONAL MAP / DEMO REPORT</div>
+        <h1>Know your<br>inner universe.</h1>
+        <p class="report-intro">An illustrative cross-system reflection for Alex Morgan. Generated from placeholder profile information, not a live AI analysis.</p>
+        <div class="report-chips"><span>INFP</span><span>Life Path 7</span><span>Pisces</span><span>Water dominant</span></div>
+        <h2>01 / The inner landscape</h2>
+        <p>Your MBTI example suggests a preference for meaning, imagination and personal values. The numerology and elemental lenses symbolically echo introspection and emotional depth. These are prompts for reflection rather than validated conclusions about personality.</p>
+        <h2>02 / Recurring themes</h2>
+        <p><b>Authenticity:</b> Finding spaces where you can speak freely. <b>Curiosity:</b> Exploring ideas without needing immediate certainty. <b>Action:</b> Turning reflection into small, observable experiments.</p>
+        <h2>03 / Your symbolic systems</h2>
+        <p>Astrology: Pisces Sun (example). Tarot: The Hermit. Ayurveda: Vata (example questionnaire result). Elements: Water 42%, Earth 28%, Air 18%, Fire 12%. Blood group: A+ is stored as optional personal information and is not used to infer psychological traits.</p>
+        <h2>04 / A question for this week</h2>
+        <p>“Which one idea deserves a small action today, even before I feel completely ready?”</p>
+        <div class="report-footnote">Prototype report · Not a diagnosis, prediction, or scientific personality assessment.</div>
+      </article>
+      <div class="report-actions">
+        <button id="shareReport">↗ Share report</button>
+        <button id="exportReport">↓ Export PDF</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- =======================================================
+       SUBSCRIPTION UPGRADE SHEET
+       ======================================================= -->
+  <div class="plan-sheet" id="planSheet">
+    <div class="plan-sheet-card">
+      <button class="close-plan" id="closePlan" aria-label="Close">×</button>
+      <div class="eyebrow">Go deeper</div>
+      <h2>Your map has more to reveal.</h2>
+      <p>
+        Free keeps the daily habit alive. Paid plans unlock the depth that makes
+        the personal map genuinely useful over time.
+      </p>
+
+      <div class="upgrade-options">
+        <div class="upgrade-option">
+          <div>
+            <strong>Explorer+</strong>
+            <span>Unlimited daily discoveries · deeper reports</span>
+          </div>
+          <button onclick="alert('Future: open checkout')">Upgrade</button>
+        </div>
+
+        <div class="upgrade-option">
+          <div>
+            <strong>Inner Atlas Pro</strong>
+            <span>All systems · advanced synthesis · compatibility insights</span>
+          </div>
+          <button onclick="alert('Future: open checkout')">Go Pro</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="qr-overlay" id="qrOverlay" hidden role="dialog" aria-modal="true" aria-label="Profile QR code">
+    <div class="qr-sheet"><button class="qr-close" id="closeQR" aria-label="Close">✕</button><div class="eyebrow">NATALA · PROFILE</div><h2>Find me on NATALA</h2><p>Scan to open Alex Morgan's example profile.</p><img id="profileQRCode" alt="QR code for sample profile" src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAARgAAAEYCAIAAAAI7H7bAAAFaklEQVR4nO3dwY0cNxQAUa+hRJyCc3JUzkkpKJTxxVcaoFwfJIX3zoue1uwWCOiD5Nfn8/kN+H9+P/0C8CsQEgSEBAEhQUBIEBASBIQEASFBQEgQEBIEhAQBIUFASBAQEgSEBAEhQUBIEBASBIQEASFBQEgQEBIEhASBb9WD/vzjr+pRo77/+Hv0+avvofrc3e959bm3vecp1b/XigQBIUFASBAQEgSEBAEhQUBIEMjmSCvTc5uV3TlGNVfZ/fnpudDuc1ZOfT+V6bmWFQkCQoKAkCAgJAgICQJCgoCQIDA+R1qp/l//9f1FK9P7iHafc+p73nVqTmVFgoCQICAkCAgJAkKCgJAgICQIHJsjvaLa/7P7/N2ff2U/0q/KigQBIUFASBAQEgSEBAEhQUBIEDBH+tep/T+7Tp2Dx3+zIkFASBAQEgSEBAEhQUBIEBASBI7NkV7fx3Lb/pzb7nHa9frfgxUJAkKCgJAgICQICAkCQoKAkCAwPkd6Zd/L7lxo+t9Vvc/0Pqtdr/w97LIiQUBIEBASBIQEASFBQEgQEBIEsjnS6/tJKtPzmel7mU7d+/Q6KxIEhAQBIUFASBAQEgSEBAEhQSCbI912ztup96n2/1TnzlXfQzV3OnWe3vTv3YoEASFBQEgQEBIEhAQBIUFASBC4bj9SNZd4ZV502/xtpXrP6vd72/l4ViQICAkCQoKAkCAgJAgICQJCgsDz+5Fu2w/z+vl11dxmes5z25zNigQBIUFASBAQEgSEBAEhQUBIEMjmSCvT57lVbptL3PY+u247l2+aFQkCQoKAkCAgJAgICQJCgoCQIPD1+XxGP+DU/TbT+22mz1u77T1f2ce1Mj2PsiJBQEgQEBIEhAQBIUFASBAQEgSyOdLr85NTc6rbzsHbdWqetnJqfmVFgoCQICAkCAgJAkKCgJAgICQIjM+Rpuckr8ydXnfb/qXqcytWJAgICQJCgoCQICAkCAgJAkKCwLFz7V6Zw9w233h9Xrermu851w4eICQICAkCQoKAkCAgJAgICQLfqgdNnxe3Mj03qOYn0+8z/bm7puc/1ftUrEgQEBIEhAQBIUFASBAQEgSEBIFj9yPdNje4bV/N7nNWXv8+b/s7WbEiQUBIEBASBIQEASFBQEgQEBIEjs2Rdp26B6l6zvS5c7tOzbVWTs3TzJHgIkKCgJAgICQICAkCQoKAkCCQnWu38sqcoXrObfON6fdfOXWO3/RzVqxIEBASBIQEASFBQEgQEBIEhASB8TnSyvT+n1P7gqbvBTo1p6r2Qd32HPuR4CJCgoCQICAkCAgJAkKCgJAgkJ1r97pT58Xddl7frtf3m1WsSBAQEgSEBAEhQUBIEBASBIQEgWw/0vS8orKaP5zan7NS7b+qnr/rtv1g06xIEBASBIQEASFBQEgQEBIEhASBZ+5H2vXKXGvltjnJrlfuNapYkSAgJAgICQJCgoCQICAkCAgJAs/cj7QyPWeYPo9u+udPfT/Tz58+D3CXFQkCQoKAkCAgJAgICQJCgoCQIHBsjvSK6r6jXaf2U1Xn+01/D9PzpV1WJAgICQJCgoCQICAkCAgJAkKCgDnST5q+T+nUfqfX52CnzgO0IkFASBAQEgSEBAEhQUBIEBASBI7NkV6592Z6HnLqHqFqn8/0fq3p+Ztz7eAiQoKAkCAgJAgICQJCgoCQIDA+Rzq1L2XX9L6dV/bnTN9bNT2n2n2fihUJAkKCgJAgICQICAkCQoKAkCDw9fl8Tr8DPM+KBAEhQUBIEBASBIQEASFBQEgQEBIEhAQBIUFASBAQEgSEBAEhQUBIEBASBIQEASFBQEgQEBIEhAQBIUFASBD4B2AoOEesN6Z+AAAAAElFTkSuQmCC"><strong>Alex Morgan · @alex-morgan</strong><small>Demo QR · the destination is not live yet</small><button id="qrShareButton">↗ Share profile link</button></div>
+  </div>
+  <div class="qr-overlay" id="scanOverlay" hidden role="dialog" aria-modal="true" aria-label="Scan QR code">
+    <div class="qr-sheet"><button class="qr-close" id="closeScanner" aria-label="Close">✕</button><div class="eyebrow">NATALA · PEOPLE</div><h2>Scan a profile</h2><p>Point your camera at a NATALA QR code, or choose an image.</p><video id="qrVideo" playsinline muted autoplay></video><p id="scanStatus">Camera access requires HTTPS or localhost and a compatible browser.</p><button id="startScan">▦ Start camera</button><label class="scan-upload">Choose QR image<input id="qrImageUpload" type="file" accept="image/*" hidden></label><div id="scanResult" class="scan-result" hidden></div></div>
+  </div>
+  <!-- =======================================================
+       FLOATING TRANSPARENT NAVIGATION
+       ======================================================= -->
+  <div class="bottom-nav-wrap">
+    <nav class="bottom-nav" aria-label="Main navigation"><span class="nav-indicator" aria-hidden="true"></span>
+      <button class="nav-btn active" data-page="home" aria-label="Home">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+          <path d="M3 10.8 12 3l9 7.8"></path>
+          <path d="M5.5 9.5V21h13V9.5"></path>
+          <path d="M9.5 21v-6.5h5V21"></path>
+        </svg>
+        <span>Home</span>
+      </button>
+
+      <button class="nav-btn" data-page="explore" aria-label="Explore">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+          <circle cx="11" cy="11" r="6.5"></circle>
+          <path d="m16 16 5 5"></path>
+        </svg>
+        <span>Explore</span>
+      </button>
+
+      <button class="nav-btn" data-page="chat" aria-label="Chat">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M20 11.5a8 8 0 0 1-8 8 9 9 0 0 1-4-.9L3 20l1.4-4.6a8 8 0 1 1 15.6-3.9Z"/><path d="M8 11.5h8M8 14.5h5"/></svg>
+        <span>Chat</span><span class="chat-notification" aria-label="1 unread message">1</span>
+      </button>
+
+      <button class="nav-btn" data-page="matches" aria-label="People">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+          <path d="M20.8 8.9c0 5.2-8.8 10-8.8 10s-8.8-4.8-8.8-10A4.7 4.7 0 0 1 8 4.2c1.7 0 3.1.8 4 2 0.9-1.2 2.3-2 4-2a4.7 4.7 0 0 1 4.8 4.7Z"></path>
+        </svg>
+        <span>People</span>
+      </button>
+
+      <button class="nav-btn" data-page="profile" aria-label="Profile">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+          <circle cx="12" cy="8" r="3.5"></circle>
+          <path d="M5 21c.8-4 3.1-6 7-6s6.2 2 7 6"></path>
+        </svg>
+        <span>Profile</span>
+      </button>
+    </nav>
+  </div>
+
+  <script>
+    /* =========================================================
+       SIMPLE PAGE ROUTER
+       Kept deliberately small so the next developer/AI can
+       replace it with React, React Native, Flutter, etc.
+       ========================================================= */
+
+    const pages = document.querySelectorAll(".page");
+    const navButtons = document.querySelectorAll(".nav-btn");
+
+    function showPage(pageId) {
+      pages.forEach(page => {
+        page.classList.toggle("active", page.id === pageId);
+      });
+
+      navButtons.forEach(button => {
+        button.classList.toggle("active", button.dataset.page === pageId);
+      });
+
+      window.scrollTo({ top: 0, behavior: "smooth" });
+    }
+
+    navButtons.forEach(button => {
+      button.addEventListener("click", () => showPage(button.dataset.page));
+    });
+
+    /* Animated nav indicator: geometry from real button positions. */
+    const navIndicator = document.querySelector(".nav-indicator");
+    function updateNavIndicator(animate=true) {
+      const selected = document.querySelector(".nav-btn.active");
+      const nav = document.querySelector(".bottom-nav");
+      if (!selected || !nav) return;
+      navIndicator.style.transition = animate ? "transform .34s cubic-bezier(.2,.85,.2,1), width .34s cubic-bezier(.2,.85,.2,1)" : "none";
+      navIndicator.style.width = selected.offsetWidth + "px";
+      navIndicator.style.transform = `translateX(${selected.offsetLeft}px)`;
+    }
+    requestAnimationFrame(() => updateNavIndicator(false));
+    window.addEventListener("resize", () => updateNavIndicator(false));
+    navButtons.forEach(button => button.addEventListener("click", () => updateNavIndicator()));
+    const oldShowPage = showPage;
+    showPage = function(pageId) { oldShowPage(pageId); updateNavIndicator(); };
+
+    /* Potential match deck: swipe gestures, keyboard and explicit buttons. */
+    const matchProfiles = [
+      {name:"Maya, 29",emoji:"🌙",meta:"INFJ · Libra · Life Path 2",align:92,tags:["Creativity","Spirituality","Slow living"],reason:"Shared curiosity and a love of meaningful conversations."},
+      {name:"Theo, 27",emoji:"☀️",meta:"ENFP · Leo · Life Path 3",align:89,tags:["Adventure","Art","Mindfulness"],reason:"An exploratory spirit and complementary ways of communicating."},
+      {name:"Iris, 30",emoji:"🌸",meta:"INTJ · Virgo · Life Path 7",align:86,tags:["Books","Nature","Philosophy"],reason:"A shared interest in reflection and learning."},
+      {name:"Kai, 28",emoji:"🌊",meta:"ISFP · Cancer · Life Path 6",align:83,tags:["Music","Wellness","Travel"],reason:"A common appreciation for creativity and quieter moments."}
+    ];
+    let matchIndex=0, matchTouchX=null;
+    const matchCard=document.getElementById("peopleMatchCard");
+    function renderMatch(){
+      const item=matchProfiles[matchIndex%matchProfiles.length];
+      document.getElementById("matchName").textContent=item.name;
+      document.getElementById("matchEmoji").textContent=item.emoji;
+      document.getElementById("matchMeta").textContent=item.meta;
+      document.getElementById("matchAlignment").textContent="✦ "+item.align+"% alignment";
+      document.getElementById("matchReason").textContent=item.reason;
+      const tags=document.getElementById("matchTags");tags.replaceChildren();
+      item.tags.forEach(t=>{const el=document.createElement("span");el.className="match-tag";el.textContent=t;tags.append(el);});
+      document.getElementById("matchCounter").textContent=(matchIndex%matchProfiles.length+1)+" / "+matchProfiles.length;
+    }
+    function nextMatch(direction){
+      matchCard.classList.remove("swipe-left","swipe-right");
+      void matchCard.offsetWidth;
+      matchCard.classList.add(direction==="right"?"swipe-right":"swipe-left");
+      setTimeout(()=>{matchIndex++;renderMatch();matchCard.classList.remove("swipe-left","swipe-right");},230);
+    }
+    document.getElementById("matchPass").addEventListener("click",()=>nextMatch("left"));
+    document.getElementById("matchLike").addEventListener("click",()=>nextMatch("right"));
+    document.getElementById("matchInfo").addEventListener("click",()=>alert(document.getElementById("matchReason").textContent+"\\n\\nCompatibility is illustrative, not scientifically calculated."));
+    matchCard.addEventListener("touchstart",e=>{matchTouchX=e.changedTouches[0].clientX;},{passive:true});
+    matchCard.addEventListener("touchend",e=>{if(matchTouchX===null)return;const delta=e.changedTouches[0].clientX-matchTouchX;if(Math.abs(delta)>55)nextMatch(delta>0?"right":"left");matchTouchX=null;},{passive:true});
+    matchCard.addEventListener("keydown",e=>{if(e.key==="ArrowLeft")nextMatch("left");if(e.key==="ArrowRight")nextMatch("right");});
+    document.querySelectorAll(".discover-connect").forEach(btn=>btn.addEventListener("click",()=>{btn.textContent="✓ Requested";btn.disabled=true;}));
+    document.querySelectorAll(".friend-row").forEach(btn=>btn.addEventListener("click",()=>{
+      showPage("chat");
+      const chatPerson=document.querySelector(`.chat-person[data-person="${btn.dataset.friend}"]`);
+      if(chatPerson)chatPerson.click();
+    }));
+
+    /* People search: filters visible friends, suggestions and match preview. */
+    const peopleSearch = document.getElementById("peopleSearch");
+    peopleSearch.addEventListener("input", () => {
+      const query = peopleSearch.value.trim().toLocaleLowerCase();
+      let visibleCount = 0;
+      document.querySelectorAll(".friend-row, .discover-person").forEach(person => {
+        const matches = person.textContent.toLocaleLowerCase().includes(query);
+        person.hidden = !matches;
+        if (matches) visibleCount++;
+      });
+      const match = matchProfiles[matchIndex % matchProfiles.length];
+      const matchVisible = !query || [match.name, match.meta, match.reason, ...match.tags].join(" ").toLocaleLowerCase().includes(query);
+      document.getElementById("swipeDeck").hidden = !matchVisible;
+      document.getElementById("peopleSearchEmpty").hidden = visibleCount > 0 || matchVisible;
+    });
+
+    /* QR profile display and optional scanning. QR image is embedded, works offline.
+       Scanner uses native BarcodeDetector when supported, never uploads images. */
+    const qrOverlay=document.getElementById("qrOverlay");
+    const scanOverlay=document.getElementById("scanOverlay");
+    const scanStatus=document.getElementById("scanStatus");
+    const scanResult=document.getElementById("scanResult");
+    const qrVideo=document.getElementById("qrVideo");
+    let cameraStream=null, scanning=false;
+    const demoProfileUrl="https://natala.app/u/alex-morgan";
+    document.getElementById("showProfileQR").addEventListener("click",()=>qrOverlay.hidden=false);
+    document.getElementById("closeQR").addEventListener("click",()=>qrOverlay.hidden=true);
+    document.getElementById("shareProfile").addEventListener("click",()=>shareText("NATALA · Alex Morgan",demoProfileUrl));
+    document.getElementById("qrShareButton").addEventListener("click",()=>shareText("NATALA · Alex Morgan",demoProfileUrl));
+    document.getElementById("openScanner").addEventListener("click",()=>{scanOverlay.hidden=false;scanResult.hidden=true;});
+    function stopCamera(){scanning=false;if(cameraStream){cameraStream.getTracks().forEach(t=>t.stop());cameraStream=null;}qrVideo.srcObject=null;}
+    document.getElementById("closeScanner").addEventListener("click",()=>{stopCamera();scanOverlay.hidden=true;});
+    function foundQR(value){stopCamera();scanResult.hidden=false;scanResult.textContent=value.startsWith("https://natala.app/u/")?"NATALA profile found: "+value:"QR content: "+value;scanStatus.textContent="Scan complete. Demo: no profile navigation is connected.";}
+    document.getElementById("startScan").addEventListener("click",async()=>{
+      if(!("BarcodeDetector" in window)){scanStatus.textContent="This browser does not support built-in QR scanning. Try a compatible browser or the device's camera app.";return;}
+      try{
+        cameraStream=await navigator.mediaDevices.getUserMedia({video:{facingMode:"environment"},audio:false});
+        qrVideo.srcObject=cameraStream;await qrVideo.play();
+        const detector=new BarcodeDetector({formats:["qr_code"]});
+        scanning=true;scanStatus.textContent="Scanning…";
+        async function scanFrame(){
+          if(!scanning)return;
+          try{const codes=await detector.detect(qrVideo);if(codes.length){foundQR(codes[0].rawValue);return;}}catch(e){}
+          if(scanning)setTimeout(scanFrame,250);
+        }
+        scanFrame();
+      }catch(e){scanStatus.textContent="Camera unavailable or permission denied.";stopCamera();}
+    });
+    document.getElementById("qrImageUpload").addEventListener("change",async e=>{
+      const file=e.target.files[0];if(!file)return;
+      if(!("BarcodeDetector" in window)){scanStatus.textContent="QR image decoding isn't supported by this browser.";return;}
+      try{const bmp=await createImageBitmap(file);const codes=await new BarcodeDetector({formats:["qr_code"]}).detect(bmp);bmp.close();if(codes.length)foundQR(codes[0].rawValue);else scanStatus.textContent="No QR code detected in the image.";}catch(e){scanStatus.textContent="Could not read QR image.";}
+    });
+
+
+    /* Theme preference: system follows live OS changes; manual overrides persist. */
+    const rootTheme = document.documentElement;
+    const themeModes = ["system","light","dark"];
+    const themeButton = document.getElementById("themeToggle");
+    const themeChoice = document.getElementById("themeChoice");
+    const themeDescription = document.getElementById("themeDescription");
+    const themeMedia = window.matchMedia("(prefers-color-scheme: dark)");
+    let themeMode = "system";
+    try {
+      const saved = localStorage.getItem("natala-theme");
+      if (themeModes.includes(saved)) themeMode = saved;
+    } catch (_) {}
+    function renderTheme() {
+      if(themeMode === "system") rootTheme.removeAttribute("data-theme");
+      else rootTheme.setAttribute("data-theme",themeMode);
+      const effectiveDark = themeMode === "dark" || (themeMode === "system" && themeMedia.matches);
+      const icon = effectiveDark
+        ? '<path d="M20.5 14.2A8.7 8.7 0 0 1 9.8 3.5 8.7 8.7 0 1 0 20.5 14.2Z"/>'
+        : '<circle cx="12" cy="12" r="4"/><path d="M12 2v2m0 16v2M4.93 4.93l1.41 1.41m11.32 11.32 1.41 1.41M2 12h2m16 0h2M4.93 19.07l1.41-1.41M17.66 6.34l1.41-1.41"/>';
+      themeButton.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true">' + icon + '</svg>';
+      themeButton.setAttribute("aria-label","Appearance: "+themeMode+". Click to change.");
+      themeButton.title = "Theme: " + themeMode;
+      themeChoice.textContent = themeMode === "system" ? "System · Auto" : themeMode === "light" ? "Light" : "Dark";
+      themeDescription.textContent = themeMode === "system" ? "Following your device setting" : "Manual " + themeMode + " appearance";
+    }
+    function cycleTheme() {
+      themeMode = themeModes[(themeModes.indexOf(themeMode)+1)%themeModes.length];
+      try { localStorage.setItem("natala-theme",themeMode); } catch (_) {}
+      renderTheme();
+    }
+    themeButton.addEventListener("click",cycleTheme);
+    themeChoice.addEventListener("click",cycleTheme);
+    if (themeMedia.addEventListener) themeMedia.addEventListener("change",renderTheme);
+    else if(themeMedia.addListener) themeMedia.addListener(renderTheme);
+    renderTheme();
+
+    /* Demo chat: local-only messages; replace with backend when ready. */
+    const chatThread = document.getElementById("chatThread");
+    const chatMessages = document.getElementById("chatMessages");
+    const chatName = document.getElementById("chatThreadName");
+    let activeChat = "";
+    const demoMessages = {};
+    document.querySelectorAll(".chat-person").forEach(person => {
+      person.addEventListener("click", () => {
+        activeChat = person.dataset.person;
+        chatName.textContent = activeChat;
+        if (!demoMessages[activeChat]) demoMessages[activeChat] = [{from:"them",text:person.dataset.message}];
+        renderChat();
+        chatThread.hidden = false;
+      });
+    });
+    function renderChat() {
+      chatMessages.innerHTML = "";
+      demoMessages[activeChat].forEach(msg => {
+        const bubble = document.createElement("div");
+        bubble.className = "chat-bubble " + (msg.from === "me" ? "mine" : "theirs");
+        bubble.textContent = msg.text;
+        chatMessages.appendChild(bubble);
+      });
+      chatMessages.scrollTop = chatMessages.scrollHeight;
+    }
+    document.getElementById("chatBack").addEventListener("click", () => {chatThread.hidden=true;});
+    document.getElementById("chatCompose").addEventListener("submit", e => {
+      e.preventDefault();
+      const input = document.getElementById("chatInput");
+      const value = input.value.trim();
+      if (!value) return;
+      demoMessages[activeChat].push({from:"me",text:value});
+      input.value = "";
+      renderChat();
+    });
+    document.getElementById("chatSearch").addEventListener("input", e => {
+      const q = e.target.value.toLowerCase();
+      let shown = 0;
+      document.querySelectorAll(".chat-person").forEach(p => {
+        const visible = p.textContent.toLowerCase().includes(q);
+        p.hidden = !visible;
+        if(visible) shown++;
+      });
+      document.getElementById("chatEmpty").hidden = shown > 0;
+    });
+
+    /* Instagram-style daily story modal */
+    const storyContent = [
+      {
+        title: "Your sky",
+        text: "The Moon is moving through a sensitive part of your chart today. Notice what feels emotionally louder than usual — it may be asking for attention, not a solution."
+      },
+      {
+        title: "Hidden side",
+        text: "Your profile has a strong imagination signal. Today's experiment: give one idea ten uninterrupted minutes before judging whether it is useful."
+      },
+      {
+        title: "Lucky number",
+        text: "7 is your number for today. Use it as a tiny ritual: take seven breaths, write seven words, or give yourself seven minutes of quiet."
+      },
+      {
+        title: "Love lens",
+        text: "Connection becomes easier when you say what you actually need instead of hoping someone will infer it."
+      },
+      {
+        title: "Tonight",
+        text: "Before sleep, write one thing you learned about yourself today. Small observations compound into a much richer personal map."
+      }
+    ];
+
+    storyContent[5] = {title:"Maya's moon ritual",text:"Maya shared her moon reflection: 'I'm giving myself space to reset and listen to what matters.'",owner:"Maya"};
+    storyContent[6] = {title:"Alex drew The Star",text:"Alex shared a Tarot card from NATALA. The Star invites hope, renewal and an open mind.",owner:"Alex"};
+    storyContent[7] = {title:"Sofia's elements",text:"Sofia shared her symbolic element profile: Water leads, followed by Earth. What does yours look like?",owner:"Sofia"};
+    storyContent[8] = {title:"Daniel's life path",text:"Daniel shared a numerology reflection on Life Path 7: curiosity, study and introspection.",owner:"Daniel"};
+
+    const storyModal = document.createElement("div");
+    storyModal.className = "story-modal";
+    storyModal.setAttribute("role", "dialog");
+    storyModal.setAttribute("aria-modal", "true");
+    storyModal.setAttribute("aria-label", "Daily story");
+    storyModal.innerHTML = `
+      <div class="story-modal-card" id="storyViewer">
+        <div class="story-progress" id="storyProgress"></div>
+        <div class="story-view-top">
+          <span class="story-view-brand">✦ NATALA STORIES</span>
+          <button class="close-story" id="closeStory" aria-label="Close story">×</button>
+        </div>
+        <div class="story-view-content">
+          <div class="story-big-icon" id="storyBigIcon">☾</div>
+          <div class="eyebrow" id="storyKicker">DAILY DISCOVERY</div>
+          <h2 id="storyTitle"></h2>
+          <p id="storyText"></p>
+        </div>
+        <div class="story-view-actions">
+          <button id="storyShare">↗ Share story</button>
+          <button id="storyNext">Next story →</button>
+        </div>
+        <button class="story-hit story-hit-left" id="storyPrevTap" aria-label="Previous story"></button>
+        <button class="story-hit story-hit-right" id="storyNextTap" aria-label="Next story"></button>
+      </div>
+    `;
+    document.body.appendChild(storyModal);
+    const storyOrder = [0, 1, 3, 5, 6, 7, 8];
+    const storyIcons = ["☾", "✧", "⑦", "♡", "✦", "🌙", "🃏", "🌊", "✨"];
+    let storyPosition = 0;
+    function renderStory() {
+      const item = storyContent[storyOrder[storyPosition]];
+      document.getElementById("storyTitle").textContent = item.title;
+      document.getElementById("storyKicker").textContent = item.owner ? item.owner.toUpperCase() + " · SHARED STORY" : "YOUR DAILY STORY";
+      document.getElementById("storyText").textContent = item.text;
+      document.getElementById("storyBigIcon").textContent = storyIcons[storyOrder[storyPosition]];
+      document.getElementById("storyProgress").innerHTML = storyOrder.map((_,i) => `<span class="${i <= storyPosition ? "filled" : ""}"></span>`).join("");
+      document.getElementById("storyViewer").style.setProperty("--story-hue", [255, 290, 340, 215, 275, 195, 310][storyPosition] + "deg");
+    }
+    function openStory(index) {
+      const pos = storyOrder.indexOf(index);
+      storyPosition = pos < 0 ? 0 : pos;
+      renderStory();
+      storyModal.classList.add("open");
+      document.body.classList.add("story-open");
+    }
+    function closeStory() {
+      storyModal.classList.remove("open");
+      document.body.classList.remove("story-open");
+    }
+    function stepStory(delta) {
+      const next = storyPosition + delta;
+      if (next >= storyOrder.length) return closeStory();
+      storyPosition = Math.max(0, next);
+      renderStory();
+    }
+    document.querySelectorAll(".story-tile").forEach(tile => {
+      tile.addEventListener("click", () => openStory(Number(tile.dataset.story)));
+    });
+    document.getElementById("closeStory").addEventListener("click", closeStory);
+    document.getElementById("storyNext").addEventListener("click", () => stepStory(1));
+    document.getElementById("storyPrevTap").addEventListener("click", () => stepStory(-1));
+    document.getElementById("storyNextTap").addEventListener("click", () => stepStory(1));
+    document.getElementById("storyShare").addEventListener("click", () => {
+      const item = storyContent[storyOrder[storyPosition]];
+      shareText("NATALA · " + item.title, item.text);
+    });
+    let touchX = 0, touchY = 0;
+    const viewer = document.getElementById("storyViewer");
+    viewer.addEventListener("touchstart", e => {
+      touchX = e.changedTouches[0].screenX;
+      touchY = e.changedTouches[0].screenY;
+    }, {passive:true});
+    viewer.addEventListener("touchend", e => {
+      const dx = e.changedTouches[0].screenX - touchX;
+      const dy = e.changedTouches[0].screenY - touchY;
+      if (Math.abs(dx) > 45 && Math.abs(dx) > Math.abs(dy)) stepStory(dx < 0 ? 1 : -1);
+    }, {passive:true});
+    storyModal.addEventListener("click", e => { if(e.target === storyModal) closeStory(); });
+    document.addEventListener("keydown", e => {
+      if (storyModal.classList.contains("open")) {
+        if (e.key === "Escape") closeStory();
+        if (e.key === "ArrowRight") stepStory(1);
+        if (e.key === "ArrowLeft") stepStory(-1);
+      }
+    });
+
+    /* Subscription upgrade sheet */
+    const planSheet = document.getElementById("planSheet");
+    const upgradeButton = document.getElementById("upgradeButton");
+
+    function openPlan() {
+      planSheet.classList.add("open");
+    }
+
+    if (upgradeButton) {
+      upgradeButton.addEventListener("click", openPlan);
+    }
+
+    document.getElementById("closePlan").addEventListener("click", () => {
+      planSheet.classList.remove("open");
+    });
+
+    planSheet.addEventListener("click", event => {
+      if (event.target === planSheet) planSheet.classList.remove("open");
+    });
+
+
+
+    /* Share: native share sheet where available, clipboard fallback otherwise. */
+    async function shareText(title, body) {
+      const payload = {title, text: title + "\n\n" + body + "\n\nNATALA"};
+      try {
+        if (navigator.share) { await navigator.share(payload); return; }
+        if (navigator.clipboard && window.isSecureContext) {
+          await navigator.clipboard.writeText(payload.text);
+          alert("Copied to clipboard — ready to share!");
+          return;
+        }
+        const temp = document.createElement("textarea");
+        temp.value = payload.text;
+        document.body.appendChild(temp);
+        temp.select();
+        const copied = document.execCommand("copy");
+        temp.remove();
+        alert(copied ? "Copied to clipboard — ready to share!" : payload.text);
+      } catch(e) {
+        if (e.name !== "AbortError") alert("Sharing is unavailable in this browser.");
+      }
+    }
+    const reportOverlay = document.getElementById("reportOverlay");
+    document.getElementById("openAnalysis").addEventListener("click", () => { reportOverlay.hidden=false; document.body.classList.add("report-open"); });
+    function closeReport() { reportOverlay.hidden=true; document.body.classList.remove("report-open"); }
+    document.getElementById("closeReport").addEventListener("click", closeReport);
+    reportOverlay.addEventListener("click", e => { if(e.target === reportOverlay) closeReport(); });
+    document.getElementById("shareReport").addEventListener("click", () => {
+      shareText("NATALA · Personal analysis report", document.getElementById("reportPaper").innerText);
+    });
+    document.getElementById("exportReport").addEventListener("click", () => window.print());
+    document.getElementById("shareFortune").addEventListener("click", () => shareText("NATALA · Daily fortune", document.getElementById("fortuneTitle").textContent + "\n" + document.getElementById("fortuneText").textContent));
+    document.getElementById("shareTarot").addEventListener("click", () => shareText("NATALA · Daily tarot", document.getElementById("tarotTitle").textContent + "\n" + document.getElementById("tarotMeaning").textContent + "\n" + document.getElementById("tarotPrompt").textContent));
+
+    /* NATALA v6: local daily reveal state (demo only; no backend). */
+    const dailyKey = new Date().toLocaleDateString("en-CA");
+    const fortunePool = [
+      {title:"A door is opening",text:"Something small you notice today may become the beginning of a bigger change. Follow curiosity."},
+      {title:"Trust your rhythm",text:"You don't need to move at someone else's pace. A quiet moment may bring clarity."},
+      {title:"Say the true thing",text:"A sincere conversation can shift more than a perfectly rehearsed answer."},
+      {title:"Notice the unexpected",text:"The best idea may arrive when you stop looking for it."},
+      {title:"Begin before you're ready",text:"One small step will teach you more than another hour of planning."}
+    ];
+    const tarotPool = [
+      {glyph:"✺",title:"The Sun",meaning:"Clarity, confidence and warmth. A symbolic invitation to celebrate what is already working.",prompt:"Reflection: Where could you allow yourself to be seen?"},
+      {glyph:"✧",title:"The Star",meaning:"Hope, renewal and trust. Give yourself room to imagine a kinder next chapter.",prompt:"Reflection: What would you pursue if you trusted the process?"},
+      {glyph:"☾",title:"The Moon",meaning:"Intuition, uncertainty and the unseen. You do not need every answer immediately.",prompt:"Reflection: What feeling deserves your attention?"},
+      {glyph:"⌁",title:"The Hermit",meaning:"Reflection and inner guidance. Sometimes stepping away helps you see more clearly.",prompt:"Reflection: What do you hear when things get quiet?"},
+      {glyph:"♜",title:"The Magician",meaning:"Agency and creativity. You may already have more resources than you realize.",prompt:"Reflection: Which skill could you put to use today?"}
+    ];
+    function stableDailyIndex(salt, size) {
+      let n = 0;
+      for (const ch of dailyKey + salt) n = ((n * 31) + ch.charCodeAt(0)) >>> 0;
+      return n % size;
+    }
+    function revealDaily(type) {
+      const isTarot = type === "tarot";
+      const key = "natala-v6-" + type + "-" + dailyKey;
+      const item = isTarot ? tarotPool[stableDailyIndex("tarot", tarotPool.length)] : fortunePool[stableDailyIndex("fortune", fortunePool.length)];
+      document.getElementById(type === "tarot" ? "tarotPanel" : "fortunePanel").classList.add("is-revealed");
+      if (isTarot) {
+        document.getElementById("tarotGlyph").textContent = item.glyph;
+        document.getElementById("tarotTitle").textContent = item.title;
+        document.getElementById("tarotMeaning").textContent = item.meaning;
+        document.getElementById("tarotPrompt").textContent = item.prompt;
+      } else {
+        document.getElementById("fortuneTitle").textContent = item.title;
+        document.getElementById("fortuneText").textContent = item.text;
+      }
+      /* Always start sealed on page load; each reveal is an intentional user action. */
+    }
+    document.getElementById("drawFortune").addEventListener("click", () => revealDaily("fortune"));
+    document.getElementById("drawTarot").addEventListener("click", () => revealDaily("tarot"));
+
+    document.getElementById("homeDate").textContent = new Date().toLocaleDateString("en-GB",{day:"numeric",month:"short"});
+
+    /* Zodiac season and illustrative moon phase for the visual prototype.
+       Production: replace with ephemeris-based calculations and timezone-aware dates. */
+    const today = new Date();
+    const m = today.getMonth()+1, d=today.getDate();
+    const zodiac = [
+      [1,20,"Aquarius","♒"],[2,19,"Pisces","♓"],[3,21,"Aries","♈"],
+      [4,20,"Taurus","♉"],[5,21,"Gemini","♊"],[6,21,"Cancer","♋"],
+      [7,23,"Leo","♌"],[8,23,"Virgo","♍"],[9,23,"Libra","♎"],
+      [10,23,"Scorpio","♏"],[11,22,"Sagittarius","♐"],[12,22,"Capricorn","♑"]
+    ];
+    let season = zodiac[11];
+    for (const z of zodiac) if (m > z[0] || (m===z[0] && d>=z[1])) season=z;
+    document.getElementById("seasonName").textContent=season[2]+" season";
+    document.getElementById("seasonGlyph").textContent=season[3];
+    document.getElementById("seasonDates").textContent="A symbolic theme for this season";
+    document.getElementById("homeMoonTitle").textContent="Waxing crescent";
+    document.getElementById("homeMoonSubtitle").textContent="A visual preview of the lunar cycle. Live moon calculations will come later.";
+    document.getElementById("moonIllumination").textContent="Demo phase";
+
+    /* Daily Sky page */
+    const skyPage = document.getElementById("sky");
+    const homePage = document.getElementById("home");
+
+    function openSky() {
+      document.querySelectorAll(".page").forEach(p => p.classList.remove("active"));
+      skyPage.classList.add("active");
+      window.scrollTo({ top: 0, behavior: "smooth" });
+    }
+
+    document.getElementById("openSkyPage").addEventListener("click", openSky);
+
+    document.getElementById("backFromSky").addEventListener("click", () => {
+      skyPage.classList.remove("active");
+      homePage.classList.add("active");
+      document.querySelectorAll(".nav-btn").forEach(b => b.classList.remove("active"));
+      document.querySelector('.nav-btn[data-page="home"]').classList.add("active"); updateNavIndicator();
+      window.scrollTo({ top: 0, behavior: "smooth" });
+    });
+
+    /* Simple search for the Explore screen */
+    const searchInput = document.getElementById("systemSearch");
+    const systemCards = document.querySelectorAll(".system-card");
+
+    searchInput.addEventListener("input", event => {
+      const query = event.target.value.toLowerCase().trim();
+
+      systemCards.forEach(card => {
+        const searchableText = (card.dataset.search + " " + card.innerText).toLowerCase();
+        card.style.display = searchableText.includes(query) ? "flex" : "none";
+      });
+    });
+
+    /* Placeholder interaction for system cards */
+    systemCards.forEach(card => {
+      card.addEventListener("click", () => {
+        const title = card.querySelector("h3").innerText;
+        alert(title + " module — placeholder for the future system detail screen.");
+      });
+    });
+
+    /* v18: Start on Home automatically, with a brief branded splash. */
+    showPage('home');
+    requestAnimationFrame(() => updateNavIndicator(false));
+    const natalaSplash = document.getElementById('natalaSplash');
+    const splashDuration = window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 450 : 1550;
+    window.setTimeout(() => {
+      natalaSplash.classList.add('splash-gone');
+      window.setTimeout(() => { natalaSplash.hidden = true; }, 650);
+    }, splashDuration);
+    /* Fullscreen requires a user gesture; unsupported browsers keep normal layout. */
+    const fullscreenToggle = document.getElementById('fullscreenToggle');
+    function syncFullscreenButton(){
+      const active = Boolean(document.fullscreenElement || document.webkitFullscreenElement);
+      fullscreenToggle.setAttribute('aria-label', active ? 'Exit fullscreen' : 'Enter fullscreen');
+      fullscreenToggle.title = active ? 'Exit fullscreen' : 'Fullscreen';
+      fullscreenToggle.querySelector('svg').innerHTML = active
+        ? '<path d="M3 9h6V3m6 0v6h6M9 21v-6H3m18 0h-6v6"/>'
+        : '<path d="M8 3H3v5m13-5h5v5M3 16v5h5m13-5v5h-5"/>';
+    }
+    fullscreenToggle.addEventListener('click', async () => {
+      try {
+        if (document.fullscreenElement || document.webkitFullscreenElement) {
+          if(document.exitFullscreen) await document.exitFullscreen();
+          else if(document.webkitExitFullscreen) document.webkitExitFullscreen();
+        } else {
+          const target = document.documentElement;
+          if(target.requestFullscreen) await target.requestFullscreen();
+          else if(target.webkitRequestFullscreen) target.webkitRequestFullscreen();
+          else { fullscreenToggle.title='Fullscreen not supported in this browser'; return; }
+        }
+        syncFullscreenButton();
+      } catch(err) { fullscreenToggle.title = 'Fullscreen is unavailable in this browser'; }
+    });
+    document.addEventListener('fullscreenchange', syncFullscreenButton);
+    document.addEventListener('webkitfullscreenchange', syncFullscreenButton);
+  
+    /* v19: animate only when sections are visible; refresh when opening Profile. */
+    (() => {
+      const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+      const moon = document.querySelector('#home .moon-feature');
+      const profile = document.getElementById('profile');
+      const scoreGrid = profile.querySelector('.hero-grid');
+      const progressBars = [...profile.querySelectorAll('.progress')];
+      const rings = [...profile.querySelectorAll('.element-ring')];
+      const scoreValues = [...scoreGrid.querySelectorAll('.score-value')];
+      let scorePlayed = false;
+      let scoreFrame = 0;
+      const isVisible = el => !!el && !!el.getClientRects().length && (() => {const r=el.getBoundingClientRect();return r.top < innerHeight*.9 && r.bottom > 0})();
+      function animateScores(){
+        if(scorePlayed || !isVisible(scoreGrid) || !profile.classList.contains('active')) return;
+        scorePlayed = true;
+        const targets = [84,8,82.3];
+        const starts = [24,1,25];
+        const duration = reduceMotion ? 0 : 950;
+        const start = performance.now();
+        scoreGrid.classList.add('scores-animated');
+        function tick(now){
+          const t = duration ? Math.min(1,(now-start)/duration) : 1;
+          const ease = 1-Math.pow(1-t,3);
+          scoreValues.forEach((node,i)=>{
+            const value = starts[i]+(targets[i]-starts[i])*ease;
+            const formatted = i===2 ? value.toFixed(1) : String(Math.round(value));
+            if(i===1) node.innerHTML=formatted+' <small>/ 10</small>';
+            else if(i===2) node.innerHTML=formatted+'<small>%</small>';
+            else node.textContent=formatted;
+          });
+          if(t<1) scoreFrame=requestAnimationFrame(tick);
+        }
+        scoreFrame=requestAnimationFrame(tick);
+      }
+      function checkAnimations(){
+        if(isVisible(moon)) moon.classList.add('moon-animated');
+        if(profile.classList.contains('active')){
+          animateScores();
+          progressBars.forEach(el=>{if(isVisible(el)) el.classList.add('progress-animated')});
+          rings.forEach(el=>{if(isVisible(el)) el.classList.add('ring-animated')});
+        }
+      }
+      let pending=false;
+      function scheduleCheck(){if(pending)return;pending=true;requestAnimationFrame(()=>{pending=false;checkAnimations()})}
+      addEventListener('scroll',scheduleCheck,{passive:true});
+      addEventListener('resize',scheduleCheck,{passive:true});
+      document.querySelectorAll('.nav-btn').forEach(btn=>btn.addEventListener('click',()=>setTimeout(scheduleCheck,80)));
+      const observer = new IntersectionObserver(()=>scheduleCheck(),{threshold:[0,.1,.35]});
+      [moon,scoreGrid,...progressBars,...rings].forEach(el=>{if(el)observer.observe(el)});
+      scheduleCheck();
+    })();
+</script>
+</body>
+</html>
