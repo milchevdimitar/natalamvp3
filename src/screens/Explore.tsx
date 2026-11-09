@@ -82,6 +82,11 @@ export default function Explore() {
                         Open MBTI Test
                       </Pill>
                     )}
+                    {s.name.toLowerCase() === "tarot" && (
+                      <Pill onPress={() => setPage("tarot" as any)}>
+                        Open Tarot Deck
+                      </Pill>
+                    )}
                     <Pill onPress={() => setSelected(null)}>Close details</Pill>
                   </View>
                 </View>

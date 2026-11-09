@@ -22,6 +22,7 @@ import People from "./src/screens/People";
 import Profile from "./src/screens/Profile";
 import Astrology from "./src/screens/Astrology";
 import MBTI from "./src/screens/MBTI";
+import Tarot from "./src/screens/Tarot";
 
 function Shell() {
   const { page, colors, theme } = useApp();
@@ -51,6 +52,7 @@ function Shell() {
     explore: <Explore />,
     astrology: <Astrology />,
     mbti: <MBTI />,
+    tarot: <Tarot />,
     chat: <Chat />,
     people: <People />,
     profile: <Profile />,
