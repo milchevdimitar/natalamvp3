@@ -92,6 +92,11 @@ export default function Explore() {
                         Open Numerology
                       </Pill>
                     )}
+                    {s.name.toLowerCase() === "cardology" && (
+                      <Pill onPress={() => setPage("cardology" as any)}>
+                        Open Cardology
+                      </Pill>
+                    )}
                     <Pill onPress={() => setSelected(null)}>Close details</Pill>
                   </View>
                 </View>

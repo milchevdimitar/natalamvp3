@@ -1,1 +1,28 @@
-{"expo":{"name":"Natala","slug":"natala","scheme":"natala","version":"0.21.0","orientation":"portrait","userInterfaceStyle":"automatic","newArchEnabled":true,"ios":{"supportsTablet":true,"bundleIdentifier":"app.natala.prototype"},"android":{"package":"app.natala.prototype","edgeToEdgeEnabled":true},"web":{"name":"Natala","bundler":"metro"},"plugins":["expo-font","expo-splash-screen"]}}
+{
+  "expo": {
+    "name": "Natala",
+    "slug": "natala",
+    "scheme": "natala",
+    "version": "0.21.0",
+    "orientation": "portrait",
+    "userInterfaceStyle": "automatic",
+    "newArchEnabled": true,
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "app.natala.prototype"
+    },
+    "android": {
+      "package": "app.natala.prototype",
+      "edgeToEdgeEnabled": true
+    },
+    "web": {
+      "name": "Natala",
+      "bundler": "metro"
+    },
+    "plugins": [
+      "expo-font",
+      "expo-splash-screen",
+      "expo-asset"
+    ]
+  }
+}

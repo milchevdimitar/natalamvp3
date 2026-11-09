@@ -24,6 +24,7 @@ import Astrology from "./src/screens/Astrology";
 import MBTI from "./src/screens/MBTI";
 import Tarot from "./src/screens/Tarot";
 import Numerology from "./src/screens/Numerology";
+import Cardology from "./src/screens/Cardology";
 
 function Shell() {
   const { page, colors, theme } = useApp();
@@ -55,6 +56,7 @@ function Shell() {
     mbti: <MBTI />,
     tarot: <Tarot />,
     numerology: <Numerology />,
+    cardology: <Cardology />,
     chat: <Chat />,
     people: <People />,
     profile: <Profile />,
