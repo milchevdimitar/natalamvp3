@@ -20,64 +20,10 @@ import {
 } from 'lucide-react-native';
 import { useApp } from '../context/AppContext';
 import { Card, T, Section, Pill, Hero, Progress } from '../components/UI';
+import { TestResult, useSubmitTest, useTest } from '../api/hooks';
 
-// 40 MBTI въпроса
-interface Question {
-  id: number;
-  text: string;
-  dimension: 'EI' | 'SN' | 'TF' | 'JP';
-  direction: 1 | -1; // 1 = към първата буква (E, S, T, J), -1 = към втората (I, N, F, P)
-}
-
-const QUESTIONS: Question[] = [
-  // E vs I (1-10)
-  { id: 1, text: 'Зареждате се с енергия, когато прекарвате време сред много хора.', dimension: 'EI', direction: 1 },
-  { id: 2, text: 'Предчитате спокойна среда у дома пред шумно парти.', dimension: 'EI', direction: -1 },
-  { id: 3, text: 'Обичате да започвате разговори с нови и непознати хора.', dimension: 'EI', direction: 1 },
-  { id: 4, text: 'Често се чувствате изцедени след продължително общуване.', dimension: 'EI', direction: -1 },
-  { id: 5, text: 'Лесно изразявате мислите си гласно в група.', dimension: 'EI', direction: 1 },
-  { id: 6, text: 'Предпочитате няколко много близки приятели пред широк кръг познати.', dimension: 'EI', direction: -1 },
-  { id: 7, text: 'Вълнуват ви социални събития и динамични срещи.', dimension: 'EI', direction: 1 },
-  { id: 8, text: 'Нуждаете се от време насаме, за да презаредите след дълъг ден.', dimension: 'EI', direction: -1 },
-  { id: 9, text: 'Действате бързо и спонтанно в социални ситуации.', dimension: 'EI', direction: 1 },
-  { id: 10, text: 'Предпочитате писмената комуникация пред телефонните разговори.', dimension: 'EI', direction: -1 },
-
-  // S vs N (11-20)
-  { id: 11, text: 'Фокусирате се повече върху конкретните факти, отколкото върху абстрактни теории.', dimension: 'SN', direction: 1 },
-  { id: 12, text: 'Често се увличате в мечти и теории за бъдещето.', dimension: 'SN', direction: -1 },
-  { id: 13, text: 'Доверявате се на практическия си опит повече, отколкото на интуицията.', dimension: 'SN', direction: 1 },
-  { id: 14, text: 'Вълнуват ви скритите значения и символиката зад нещата.', dimension: 'SN', direction: -1 },
-  { id: 15, text: 'Предпочитате ясно дефинирани инструкции стъпка по стъпка.', dimension: 'SN', direction: 1 },
-  { id: 16, text: 'Обичате да търсите нови, нестандартни начини за решаване на познати проблеми.', dimension: 'SN', direction: -1 },
-  { id: 17, text: 'Забелязвате детайли в средата си, които другите изпускат.', dimension: 'SN', direction: 1 },
-  { id: 18, text: 'Интересувате се повече от големи идеи, отколкото от детайлното им изпълнение.', dimension: 'SN', direction: -1 },
-  { id: 19, text: 'Смятате се за реалист с практичен поглед над живота.', dimension: 'SN', direction: 1 },
-  { id: 20, text: 'Често имате силни интуитивни прозрения, които се оказват верни.', dimension: 'SN', direction: -1 },
-
-  // T vs F (21-30)
-  { id: 21, text: 'При вземане на решение разчитате предимно на логика и обективен анализ.', dimension: 'TF', direction: 1 },
-  { id: 22, text: 'За вас е по-важно да запазите хармонията и чувствата на хората.', dimension: 'TF', direction: -1 },
-  { id: 23, text: 'Смятате, че истината е по-важна от това да спестите нечии чувства.', dimension: 'TF', direction: 1 },
-  { id: 24, text: 'Лесно се съпреживявате с емоциите и преживяванията на другите.', dimension: 'TF', direction: -1 },
-  { id: 25, text: 'Оценявате ситуациите отстрани, без да влагате лични емоции.', dimension: 'TF', direction: 1 },
-  { id: 26, text: 'Често вземате решения въз основа на личните си ценности и морал.', dimension: 'TF', direction: -1 },
-  { id: 27, text: 'Конструктивната критика трябва да бъде директна, дори да е болезнена.', dimension: 'TF', direction: 1 },
-  { id: 28, text: 'Винаги се съобразявате с това как решенията ви ще повлияят на околните.', dimension: 'TF', direction: -1 },
-  { id: 29, text: 'Убеждавате с факти и аргументи, а не с емоционални апели.', dimension: 'TF', direction: 1 },
-  { id: 30, text: 'Съчувствието и прошката са по-важни от строгата справедливост.', dimension: 'TF', direction: -1 },
-
-  // J vs P (31-40)
-  { id: 31, text: 'Обичате да имате ясен график и планирани задачи за деня.', dimension: 'JP', direction: 1 },
-  { id: 32, text: 'Предпочитате да оставяте възможностите отворени и да действате според ситуацията.', dimension: 'JP', direction: -1 },
-  { id: 33, text: 'Приключвате задачите си много преди крайния срок.', dimension: 'JP', direction: 1 },
-  { id: 34, text: 'Работите най-добре под прилив на вдъхновение в последния момент.', dimension: 'JP', direction: -1 },
-  { id: 35, text: 'Чувствате се спокойни, когато всичко е подредено и организирано.', dimension: 'JP', direction: 1 },
-  { id: 36, text: 'Импровизацията е една от най-силните ви страни.', dimension: 'JP', direction: -1 },
-  { id: 37, text: 'Планирате почивките и пътуванията си детайлно предварително.', dimension: 'JP', direction: 1 },
-  { id: 38, text: 'Дразните се от прекалено строги правила и стриктни рамки.', dimension: 'JP', direction: -1 },
-  { id: 39, text: 'Винаги следвате ясна система и структура в работата си.', dimension: 'JP', direction: 1 },
-  { id: 40, text: 'Лесно променяте плановете си в движение без стрес.', dimension: 'JP', direction: -1 },
-];
+// The 40 questions now live in the database (backend/db/seeds/02_mbti_bg.sql)
+// and are scored on the server, so results can't be changed from the app.
 
 const TYPE_DESCRIPTIONS: Record<string, { title: string; subtitle: string; desc: string; traits: string[] }> = {
   INFP: { title: "Медиаторът", subtitle: "Поетичен, мил и алтруистичен дух", desc: "Вие сте идеалисти, водени от дълбоки лични ценности и желание за автентичност.", traits: ["Емпатичност", "Креативност", "Идеализъм", "Гъвкавост"] },
@@ -102,67 +48,49 @@ const ITEMS_PER_PAGE = 5;
 
 export default function MBTI() {
   const { colors, setPage } = useApp();
-  const [answers, setAnswers] = useState<Record<number, number>>({});
+  const test = useTest('mbti', 'bg');
+  const submit = useSubmitTest('mbti');
+  const questions = test.data?.questions ?? [];
+
+  const [answers, setAnswers] = useState<Record<string, number>>({});
   const [currentPage, setCurrentPage] = useState(0);
   const [isFinished, setIsFinished] = useState(false);
 
-  const totalPages = Math.ceil(QUESTIONS.length / ITEMS_PER_PAGE);
-  const currentQuestions = QUESTIONS.slice(
+  const totalPages = Math.max(1, Math.ceil(questions.length / ITEMS_PER_PAGE));
+  const currentQuestions = questions.slice(
     currentPage * ITEMS_PER_PAGE,
     (currentPage + 1) * ITEMS_PER_PAGE
   );
 
   const answeredCount = Object.keys(answers).length;
-  const progressPercent = Math.round((answeredCount / QUESTIONS.length) * 100);
+  const progressPercent = questions.length ? Math.round((answeredCount / questions.length) * 100) : 0;
 
-  const handleSelect = (questionId: number, value: number) => {
+  const handleSelect = (questionId: string, value: number) => {
     setAnswers((prev) => ({ ...prev, [questionId]: value }));
   };
 
-  const calculateResult = () => {
-    let scores = { E: 0, I: 0, S: 0, N: 0, T: 0, F: 0, J: 0, P: 0 };
-
-    QUESTIONS.forEach((q) => {
-      const val = answers[q.id] || 4; // 1 to 7 scale
-      const scoreWeight = val - 4; // range: -3 to +3
-
-      if (q.dimension === 'EI') {
-        if (q.direction === 1) scoreWeight > 0 ? (scores.E += scoreWeight) : (scores.I += Math.abs(scoreWeight));
-        else scoreWeight > 0 ? (scores.I += scoreWeight) : (scores.E += Math.abs(scoreWeight));
-      } else if (q.dimension === 'SN') {
-        if (q.direction === 1) scoreWeight > 0 ? (scores.S += scoreWeight) : (scores.N += Math.abs(scoreWeight));
-        else scoreWeight > 0 ? (scores.N += scoreWeight) : (scores.S += Math.abs(scoreWeight));
-      } else if (q.dimension === 'TF') {
-        if (q.direction === 1) scoreWeight > 0 ? (scores.T += scoreWeight) : (scores.F += Math.abs(scoreWeight));
-        else scoreWeight > 0 ? (scores.F += scoreWeight) : (scores.T += Math.abs(scoreWeight));
-      } else if (q.dimension === 'JP') {
-        if (q.direction === 1) scoreWeight > 0 ? (scores.J += scoreWeight) : (scores.P += Math.abs(scoreWeight));
-        else scoreWeight > 0 ? (scores.P += scoreWeight) : (scores.J += Math.abs(scoreWeight));
-      }
+  // Scoring happens on the server; this only shapes its answer for the result screen.
+  const toDisplay = (r: TestResult) => {
+    const ratio = (d: keyof TestResult['dimensions']) => ({
+      first: r.dimensions[d].pct,
+      second: 100 - r.dimensions[d].pct,
     });
-
-    const type = [
-      scores.E >= scores.I ? 'E' : 'I',
-      scores.N >= scores.S ? 'N' : 'S',
-      scores.F >= scores.T ? 'F' : 'T',
-      scores.P >= scores.J ? 'P' : 'J',
-    ].join('');
-
-    const getPct = (a: number, b: number) => {
-      const total = a + b || 1;
-      return { first: Math.round((a / total) * 100), second: Math.round((b / total) * 100) };
-    };
-
     return {
-      type,
-      details: TYPE_DESCRIPTIONS[type] || TYPE_DESCRIPTIONS.INFP,
-      ratios: {
-        EI: getPct(scores.E, scores.I),
-        SN: getPct(scores.S, scores.N),
-        TF: getPct(scores.T, scores.F),
-        JP: getPct(scores.J, scores.P),
-      },
+      type: r.type,
+      details: TYPE_DESCRIPTIONS[r.type] || TYPE_DESCRIPTIONS.INFP,
+      ratios: { EI: ratio('EI'), SN: ratio('SN'), TF: ratio('TF'), JP: ratio('JP') },
     };
+  };
+
+  const finish = () => {
+    if (!test.data || submit.isPending) return;
+    submit.mutate(
+      {
+        testId: test.data.id,
+        answers: Object.entries(answers).map(([questionId, value]) => ({ questionId, value })),
+      },
+      { onSuccess: () => setIsFinished(true) }
+    );
   };
 
   const isPageComplete = currentQuestions.every((q) => answers[q.id] !== undefined);
@@ -186,13 +114,23 @@ export default function MBTI() {
         description="40 въпроса с 7-степенна скала за оценка на вашите когнитивни предпочитания."
       />
 
-      {!isFinished ? (
+      {test.isLoading ? (
+        <Card>
+          <T muted size={13}>Зареждане на въпросите…</T>
+        </Card>
+      ) : test.isError || !test.data ? (
+        <Card style={{ gap: 10 }}>
+          <T bold size={14}>Въпросите не могат да се заредят</T>
+          <T muted size={12}>Проверете дали API сървърът работи (backend: npm run dev).</T>
+          <Pill onPress={() => test.refetch()}>Опитай отново</Pill>
+        </Card>
+      ) : !isFinished ? (
         <>
           {/* Индикатор за Прогрес */}
           <Card style={{ marginBottom: 18, gap: 10 }}>
             <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
               <T bold size={13}>
-                Прогрес: {answeredCount} от {QUESTIONS.length} въпроса
+                Прогрес: {answeredCount} от {questions.length} въпроса
               </T>
               <T bold size={12} style={{ color: colors.purple }}>
                 {progressPercent}%
@@ -222,7 +160,7 @@ export default function MBTI() {
                       }}
                     >
                       <T bold size={12} style={{ color: colors.purple }}>
-                        {q.id}
+                        {q.position}
                       </T>
                     </View>
                     <T bold size={14} style={{ flex: 1, lineHeight: 20 }}>
@@ -296,6 +234,12 @@ export default function MBTI() {
             })}
           </View>
 
+          {submit.isError && (
+            <T muted size={12} style={{ marginTop: 14 }}>
+              Резултатът не можа да се изчисли: {submit.error?.message}
+            </T>
+          )}
+
           {/* Навигация на страниците */}
           <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginTop: 20, marginBottom: 40 }}>
             {currentPage > 0 ? (
@@ -319,16 +263,16 @@ export default function MBTI() {
               </Pill>
             ) : (
               <Pill
-                selected={answeredCount === QUESTIONS.length}
+                selected={answeredCount === questions.length}
                 onPress={() => {
-                  if (answeredCount === QUESTIONS.length) {
-                    setIsFinished(true);
+                  if (answeredCount === questions.length) {
+                    finish();
                   } else {
                     alert('Моля, отговорете на всички 40 въпроса, за да видите резултата!');
                   }
                 }}
               >
-                ✦ Завърши и виж резултата
+                {submit.isPending ? 'Изчисляване…' : '✦ Завърши и виж резултата'}
               </Pill>
             )}
           </View>
@@ -336,7 +280,8 @@ export default function MBTI() {
       ) : (
         /* РЕЗУЛТАТЕН ЕКРАН ПРИ ЗАВЪРШВАНЕ (PLACEHOLDERS И КАРТИ) */
         (() => {
-          const res = calculateResult();
+          if (!submit.data) return null;
+          const res = toDisplay(submit.data);
           return (
             <View style={{ gap: 18, marginBottom: 40 }}>
               {/* Главен Placeholder за Резултат */}
@@ -457,6 +402,7 @@ export default function MBTI() {
                     setAnswers({});
                     setCurrentPage(0);
                     setIsFinished(false);
+                    submit.reset();
                   }}
                 >
                   <RotateCcw size={14} color={colors.purple} /> Направи отново

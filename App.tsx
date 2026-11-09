@@ -13,7 +13,9 @@ import {
   useFonts,
   DancingScript_700Bold,
 } from "@expo-google-fonts/dancing-script";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { AppProvider, useApp } from "./src/context/AppContext";
+import { AuthProvider } from "./src/lib/auth";
 import BottomNav from "./src/components/BottomNav";
 import Home from "./src/screens/Home";
 import Explore from "./src/screens/Explore";
@@ -26,6 +28,9 @@ import Tarot from "./src/screens/Tarot";
 import Numerology from "./src/screens/Numerology";
 import Cardology from "./src/screens/Cardology";
 import Ayurveda from "./src/screens/Ayurveda";
+
+// One cache for all API data (React Query). Retries a failed request once.
+const queryClient = new QueryClient({ defaultOptions: { queries: { retry: 1 } } });
 
 function Shell() {
   const { page, colors, theme } = useApp();
@@ -135,8 +140,12 @@ export default function App() {
       </View>
     );
   return (
-    <AppProvider>
-      <Shell />
-    </AppProvider>
+    <QueryClientProvider client={queryClient}>
+      <AuthProvider>
+        <AppProvider>
+          <Shell />
+        </AppProvider>
+      </AuthProvider>
+    </QueryClientProvider>
   );
 }

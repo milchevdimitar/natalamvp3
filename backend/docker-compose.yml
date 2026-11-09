@@ -1,0 +1,44 @@
+# Local development stack for the Natala backend.
+#   npm run db:setup   → start Postgres + Redis, apply migrations, load seed data
+#   npm run db:test    → run the smoke test
+services:
+  postgres:
+    image: postgis/postgis:16-3.5
+    # The official PostGIS image is published for amd64; on Apple Silicon
+    # Docker runs it through Rosetta. Remove this line on Intel/Linux machines.
+    platform: linux/amd64
+    environment:
+      POSTGRES_USER: natala
+      POSTGRES_PASSWORD: natala
+      POSTGRES_DB: natala
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U natala -d natala"]
+      interval: 2s
+      timeout: 3s
+      retries: 30
+
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+
+  # Migration runner (only started on demand: `docker compose run --rm dbmate up`)
+  dbmate:
+    image: ghcr.io/amacneil/dbmate:2
+    profiles: ["tools"]
+    environment:
+      DATABASE_URL: postgres://natala:natala@postgres:5432/natala?sslmode=disable
+      DBMATE_MIGRATIONS_DIR: /db/migrations
+      DBMATE_NO_DUMP_SCHEMA: "true"
+    volumes:
+      - ./db:/db
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+volumes:
+  pgdata:
