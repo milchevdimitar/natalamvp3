@@ -87,6 +87,11 @@ export default function Explore() {
                         Open Tarot Deck
                       </Pill>
                     )}
+                    {s.name.toLowerCase() === "numerology" && (
+                      <Pill onPress={() => setPage("numerology" as any)}>
+                        Open Numerology
+                      </Pill>
+                    )}
                     <Pill onPress={() => setSelected(null)}>Close details</Pill>
                   </View>
                 </View>
