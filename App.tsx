@@ -25,6 +25,7 @@ import MBTI from "./src/screens/MBTI";
 import Tarot from "./src/screens/Tarot";
 import Numerology from "./src/screens/Numerology";
 import Cardology from "./src/screens/Cardology";
+import Ayurveda from "./src/screens/Ayurveda";
 
 function Shell() {
   const { page, colors, theme } = useApp();
@@ -38,7 +39,7 @@ function Shell() {
         Animated.timing(fade, {
           toValue: 0,
           duration: 350,
-          useNativeDriver: true,
+          useNativeDriver: Platform.OS !== "web",
         }).start(() => setShowSplash(false)),
       1050
     );
@@ -57,6 +58,7 @@ function Shell() {
     tarot: <Tarot />,
     numerology: <Numerology />,
     cardology: <Cardology />,
+    ayurveda: <Ayurveda />,
     chat: <Chat />,
     people: <People />,
     profile: <Profile />,

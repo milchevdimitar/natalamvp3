@@ -97,6 +97,11 @@ export default function Explore() {
                         Open Cardology
                       </Pill>
                     )}
+                    {s.name.toLowerCase() === "ayurveda" && (
+                      <Pill onPress={() => setPage("ayurveda" as any)}>
+                        Open Ayurveda Test
+                      </Pill>
+                    )}
                     <Pill onPress={() => setSelected(null)}>Close details</Pill>
                   </View>
                 </View>
