@@ -24,6 +24,11 @@
       "expo-splash-screen",
       "expo-asset",
       "expo-status-bar"
-    ]
+    ],
+    "extra": {
+      "eas": {
+        "projectId": "62b88db7-75a7-49ff-974f-b6775165b842"
+      }
+    }
   }
 }

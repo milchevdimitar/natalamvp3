@@ -1,11 +1,13 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import {
   View,
   TouchableOpacity,
   TextInput,
   Image,
   Alert,
+  ActivityIndicator,
 } from 'react-native';
+import { captureRef } from 'react-native-view-shot';
 import {
   ArrowLeft,
   RotateCcw,
@@ -15,6 +17,8 @@ import {
   Eye,
   Shuffle,
   PlusCircle,
+  Share2,
+  Check,
 } from 'lucide-react-native';
 import { useApp } from '../context/AppContext';
 import { Card, T, Section, Pill, Hero } from '../components/UI';
@@ -22,7 +26,7 @@ import { Card, T, Section, Pill, Hero } from '../components/UI';
 // Гръб на картата
 const CARD_BACK_PNG = require('../data/tarotpng/card back.png');
 
-// Точно съответствие с имената на файловете във вашата папка src/data/tarotpng/
+// Точно съответствие с имената на файловете в папка src/data/tarotpng/
 const TAROT_PNG_MAP: Record<string, any> = {
   // Major Arcana
   "00 The Fool": require('../data/tarotpng/00 The Fool.png'),
@@ -177,7 +181,6 @@ const getMinorArcana = (): TarotCardData[] => {
   let idCounter = 22;
   SUITS.forEach((suit) => {
     RANKS.forEach((rank) => {
-      // Името отговаря на вида "Coins Ace", "Cups 10" и т.н.
       const pngKey = `${suit.key} ${rank.rankKey}`;
       cards.push({
         id: idCounter++,
@@ -281,9 +284,14 @@ function LocalPngTarotCard({
 }
 
 export default function Tarot() {
-  const { colors, setPage } = useApp();
+  const { colors, setPage, addStory } = useApp();
   const [mode, setMode] = useState<'daily' | 'spread'>('daily');
   const [useFullDeck, setUseFullDeck] = useState(true);
+
+  // Ref за заснемане на компонента в PNG
+  const storyCardRef = useRef<View>(null);
+  const [isCapturing, setIsCapturing] = useState(false);
+  const [shared, setShared] = useState(false);
 
   // Spread configuration
   const [rowsInput, setRowsInput] = useState("3");
@@ -300,6 +308,32 @@ export default function Tarot() {
   // Daily card mode
   const [dailyDrawn, setDailyDrawn] = useState(false);
   const [dailyCard, setDailyCard] = useState<TarotCardData | null>(null);
+
+  // Генерира чист Base64 стринг (съвместим и с мобилни устройства, и с уеб)
+  const handleShareToStory = async () => {
+    try {
+      setIsCapturing(true);
+
+      const base64Image = await captureRef(storyCardRef, {
+        format: 'png',
+        quality: 0.9,
+        result: 'base64',
+      });
+
+      await addStory(base64Image);
+
+      setShared(true);
+      setTimeout(() => setShared(false), 2000);
+    } catch (error) {
+      console.error("Грешка при заснемане или качване на снимката:", error);
+      Alert.alert(
+        "Грешка",
+        "Не съумяхме да споделим сторито. Моля, проверете връзката си със сървъра."
+      );
+    } finally {
+      setIsCapturing(false);
+    }
+  };
 
   const getDeck = () => {
     if (useFullDeck) {
@@ -433,32 +467,57 @@ export default function Tarot() {
           ) : (
             dailyCard && (
               <Card style={{ alignItems: 'center', paddingVertical: 26, gap: 14 }}>
-                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-                  <Calendar size={14} color={colors.gold} />
-                  <T muted size={11} style={{ letterSpacing: 1.5 }}>
-                    DAILY TAROT GUIDANCE
+                {/* Рамка, която се заснема като Снимка за Story */}
+                <View
+                  ref={storyCardRef}
+                  collapsable={false}
+                  style={{
+                    alignItems: 'center',
+                    padding: 16,
+                    backgroundColor: colors.surfaceAlt,
+                    borderRadius: 16,
+                    width: '100%',
+                  }}
+                >
+                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 8 }}>
+                    <Calendar size={14} color={colors.gold} />
+                    <T muted size={11} style={{ letterSpacing: 1.5 }}>
+                      NATALA TAROT GUIDANCE
+                    </T>
+                  </View>
+
+                  <LocalPngTarotCard
+                    card={dailyCard}
+                    isRevealed={true}
+                    colors={colors}
+                    size="large"
+                  />
+
+                  <T bold size={22} style={{ color: colors.purple, marginTop: 12 }}>
+                    {dailyCard.name}
+                  </T>
+                  <Pill>{dailyCard.arcana} Arcana {dailyCard.suit ? `· ${dailyCard.suit}` : ''}</Pill>
+
+                  <T muted size={13} style={{ textAlign: 'center', maxWidth: 330, lineHeight: 20, marginTop: 8 }}>
+                    {dailyCard.message}
                   </T>
                 </View>
 
-                <LocalPngTarotCard
-                  card={dailyCard}
-                  isRevealed={true}
-                  colors={colors}
-                  size="large"
-                />
-
-                <T bold size={22} style={{ color: colors.purple, marginTop: 4 }}>
-                  {dailyCard.name}
-                </T>
-                <Pill>{dailyCard.arcana} Arcana {dailyCard.suit ? `· ${dailyCard.suit}` : ''}</Pill>
-
-                <T muted size={13} style={{ textAlign: 'center', maxWidth: 330, lineHeight: 20 }}>
-                  {dailyCard.message}
-                </T>
-
-                <View style={{ marginTop: 10 }}>
+                {/* Управление и Споделяне */}
+                <View style={{ flexDirection: 'row', gap: 10, marginTop: 10 }}>
                   <Pill onPress={handleDrawDaily}>
                     <RotateCcw size={14} color={colors.purple} /> Draw Another Card
+                  </Pill>
+
+                  <Pill selected onPress={handleShareToStory}>
+                    {isCapturing ? (
+                      <ActivityIndicator size="small" color="#FFF" />
+                    ) : shared ? (
+                      <Check size={14} color="#FFF" />
+                    ) : (
+                      <Share2 size={14} color="#FFF" />
+                    )}
+                    {shared ? 'Added!' : 'Add to Story'}
                   </Pill>
                 </View>
               </Card>
@@ -535,143 +594,163 @@ export default function Tarot() {
 
           {spreadDrawn && (
             <>
-              {question.trim().length > 0 && (
-                <Card style={{ gap: 6, backgroundColor: colors.purpleSoft }}>
-                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-                    <HelpCircle size={16} color={colors.purple} />
-                    <T bold size={13} style={{ color: colors.purple }}>
-                      Intention Focus:
-                    </T>
-                  </View>
-                  <T bold size={15}>"{question}"</T>
-                </Card>
-              )}
+              {/* Рамка за заснемане на пълната подредба */}
+              <View
+                ref={storyCardRef}
+                collapsable={false}
+                style={{ gap: 14, padding: 10, backgroundColor: '#120C1F', borderRadius: 16 }}
+              >
+                {question.trim().length > 0 && (
+                  <Card style={{ gap: 6, backgroundColor: colors.purpleSoft }}>
+                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                      <HelpCircle size={16} color={colors.purple} />
+                      <T bold size={13} style={{ color: colors.purple }}>
+                        Intention Focus:
+                      </T>
+                    </View>
+                    <T bold size={15}>"{question}"</T>
+                  </Card>
+                )}
 
-              <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
-                <Section>Spread Grid ({rCount}×{cCount})</Section>
-                <TouchableOpacity onPress={handleRevealAll} style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+                <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <Section>Spread Grid ({rCount}×{cCount})</Section>
+                </View>
+
+                <View style={{ gap: 14 }}>
+                  {Array.from({ length: rCount }).map((_, rIdx) => (
+                    <View key={`row-${rIdx}`} style={{ flexDirection: 'row', gap: 10 }}>
+                      {Array.from({ length: cCount }).map((_, cIdx) => {
+                        const cardIdx = rIdx * cCount + cIdx;
+                        const card = drawnCards[cardIdx];
+                        const isRevealed = !!revealedIndices[cardIdx];
+                        const clarifications = clarifyingCards[cardIdx] || [];
+
+                        if (!card) return null;
+
+                        return (
+                          <View key={`card-container-${cardIdx}`} style={{ flex: 1, gap: 6 }}>
+                            <TouchableOpacity activeOpacity={0.88} onPress={() => toggleRevealCard(cardIdx)}>
+                              <LocalPngTarotCard
+                                card={card}
+                                isRevealed={isRevealed}
+                                cardIndex={cardIdx}
+                                colors={colors}
+                                size="medium"
+                              />
+                            </TouchableOpacity>
+
+                            {isRevealed && (
+                              <T bold size={11} style={{ textAlign: 'center', marginTop: 2, color: colors.text }}>
+                                {card.name}
+                              </T>
+                            )}
+
+                            <TouchableOpacity
+                              onPress={() => handleAddClarification(cardIdx)}
+                              style={{
+                                flexDirection: 'row',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                gap: 4,
+                                backgroundColor: colors.purpleSoft,
+                                borderRadius: 8,
+                                paddingVertical: 6,
+                              }}
+                            >
+                              <PlusCircle size={12} color={colors.purple} />
+                              <T bold size={9} style={{ color: colors.purple }}>
+                                Clarify
+                              </T>
+                            </TouchableOpacity>
+
+                            {/* Clarification Cards */}
+                            {clarifications.length > 0 && (
+                              <View style={{ gap: 6, marginTop: 4 }}>
+                                {clarifications.map((cCard, cI) => (
+                                  <View
+                                    key={`clarify-${cI}`}
+                                    style={{
+                                      backgroundColor: colors.surfaceAlt,
+                                      padding: 4,
+                                      borderRadius: 8,
+                                      borderWidth: 1,
+                                      borderColor: colors.gold,
+                                      alignItems: 'center',
+                                    }}
+                                  >
+                                    <LocalPngTarotCard
+                                      card={cCard}
+                                      isRevealed={true}
+                                      colors={colors}
+                                      size="small"
+                                    />
+                                  </View>
+                                ))}
+                              </View>
+                            )}
+                          </View>
+                        );
+                      })}
+                    </View>
+                  ))}
+                </View>
+
+                {/* Subconscious Foundation */}
+                <Section>Subconscious Foundation</Section>
+                {bottomCard && (
+                  <Card style={{ gap: 12, borderWidth: 1.5, borderColor: colors.gold, backgroundColor: colors.goldSoft }}>
+                    <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+                      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                        <Layers size={18} color={colors.gold} />
+                        <T bold size={14} style={{ color: colors.gold }}>
+                          Bottom of the Deck
+                        </T>
+                      </View>
+                      <Pill>Foundation</Pill>
+                    </View>
+
+                    <View style={{ flexDirection: 'row', gap: 14, alignItems: 'center' }}>
+                      <LocalPngTarotCard
+                        card={bottomCard}
+                        isRevealed={true}
+                        colors={colors}
+                        size="small"
+                      />
+                      <View style={{ flex: 1 }}>
+                        <T bold size={16}>
+                          {bottomCard.name}
+                        </T>
+                        <T muted size={12} style={{ marginTop: 4, lineHeight: 18 }}>
+                          {bottomCard.message}
+                        </T>
+                      </View>
+                    </View>
+                  </Card>
+                )}
+              </View>
+
+              {/* Бутони за управление и Споделяне в Стори */}
+              <View style={{ flexDirection: 'row', gap: 10, alignSelf: 'center', marginTop: 14 }}>
+                <TouchableOpacity onPress={handleRevealAll} style={{ flexDirection: 'row', alignItems: 'center', gap: 4, backgroundColor: colors.purpleSoft, paddingHorizontal: 12, paddingVertical: 8, borderRadius: 20 }}>
                   <Eye size={14} color={colors.purple} />
                   <T bold size={12} style={{ color: colors.purple }}>
-                    Reveal All Cards
+                    Reveal All
                   </T>
                 </TouchableOpacity>
-              </View>
 
-              <View style={{ gap: 14 }}>
-                {Array.from({ length: rCount }).map((_, rIdx) => (
-                  <View key={`row-${rIdx}`} style={{ flexDirection: 'row', gap: 10 }}>
-                    {Array.from({ length: cCount }).map((_, cIdx) => {
-                      const cardIdx = rIdx * cCount + cIdx;
-                      const card = drawnCards[cardIdx];
-                      const isRevealed = !!revealedIndices[cardIdx];
-                      const clarifications = clarifyingCards[cardIdx] || [];
-
-                      if (!card) return null;
-
-                      return (
-                        <View key={`card-container-${cardIdx}`} style={{ flex: 1, gap: 6 }}>
-                          <TouchableOpacity activeOpacity={0.88} onPress={() => toggleRevealCard(cardIdx)}>
-                            <LocalPngTarotCard
-                              card={card}
-                              isRevealed={isRevealed}
-                              cardIndex={cardIdx}
-                              colors={colors}
-                              size="medium"
-                            />
-                          </TouchableOpacity>
-
-                          {isRevealed && (
-                            <T bold size={11} style={{ textAlign: 'center', marginTop: 2, color: colors.text }}>
-                              {card.name}
-                            </T>
-                          )}
-
-                          <TouchableOpacity
-                            onPress={() => handleAddClarification(cardIdx)}
-                            style={{
-                              flexDirection: 'row',
-                              alignItems: 'center',
-                              justifyContent: 'center',
-                              gap: 4,
-                              backgroundColor: colors.purpleSoft,
-                              borderRadius: 8,
-                              paddingVertical: 6,
-                            }}
-                          >
-                            <PlusCircle size={12} color={colors.purple} />
-                            <T bold size={9} style={{ color: colors.purple }}>
-                              Clarify
-                            </T>
-                          </TouchableOpacity>
-
-                          {/* Clarification Cards */}
-                          {clarifications.length > 0 && (
-                            <View style={{ gap: 6, marginTop: 4 }}>
-                              {clarifications.map((cCard, cI) => (
-                                <View
-                                  key={`clarify-${cI}`}
-                                  style={{
-                                    backgroundColor: colors.surfaceAlt,
-                                    padding: 4,
-                                    borderRadius: 8,
-                                    borderWidth: 1,
-                                    borderColor: colors.gold,
-                                    alignItems: 'center',
-                                  }}
-                                >
-                                  <LocalPngTarotCard
-                                    card={cCard}
-                                    isRevealed={true}
-                                    colors={colors}
-                                    size="small"
-                                  />
-                                </View>
-                              ))}
-                            </View>
-                          )}
-                        </View>
-                      );
-                    })}
-                  </View>
-                ))}
-              </View>
-
-              {/* Bottom of the Deck */}
-              <Section>Subconscious Foundation</Section>
-              {bottomCard && (
-                <Card style={{ gap: 12, borderWidth: 1.5, borderColor: colors.gold, backgroundColor: colors.goldSoft }}>
-                  <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
-                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-                      <Layers size={18} color={colors.gold} />
-                      <T bold size={14} style={{ color: colors.gold }}>
-                        Bottom of the Deck
-                      </T>
-                    </View>
-                    <Pill>Foundation</Pill>
-                  </View>
-
-                  <View style={{ flexDirection: 'row', gap: 14, alignItems: 'center' }}>
-                    <LocalPngTarotCard
-                      card={bottomCard}
-                      isRevealed={true}
-                      colors={colors}
-                      size="small"
-                    />
-                    <View style={{ flex: 1 }}>
-                      <T bold size={16}>
-                        {bottomCard.name}
-                      </T>
-                      <T muted size={12} style={{ marginTop: 4, lineHeight: 18 }}>
-                        {bottomCard.message}
-                      </T>
-                    </View>
-                  </View>
-                </Card>
-              )}
-
-              <View style={{ marginTop: 10, alignSelf: 'center' }}>
                 <Pill onPress={handleDrawSpread}>
                   <Shuffle size={14} color={colors.purple} /> Deal New Spread
+                </Pill>
+
+                <Pill selected onPress={handleShareToStory}>
+                  {isCapturing ? (
+                    <ActivityIndicator size="small" color="#FFF" />
+                  ) : shared ? (
+                    <Check size={14} color="#FFF" />
+                  ) : (
+                    <Share2 size={14} color="#FFF" />
+                  )}
+                  {shared ? 'Added!' : 'Add to story'}
                 </Pill>
               </View>
             </>
