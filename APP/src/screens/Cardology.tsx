@@ -1,11 +1,16 @@
 import React, { useState, useEffect } from 'react';
 import {
   View,
-  TextInput,
   TouchableOpacity,
   ActivityIndicator,
 } from 'react-native';
-import { ArrowLeft, Calendar, BookOpen, Search, CloudUpload } from 'lucide-react-native';
+import {
+  ArrowLeft,
+  Calendar,
+  BookOpen,
+  CloudUpload,
+  User,
+} from 'lucide-react-native';
 import { useApp } from '../context/AppContext';
 import { Card, T, Section, Pill, Hero } from '../components/UI';
 import { CARDOLOGY_TABLE } from '../data/cardologyData';
@@ -81,30 +86,81 @@ const CARD_META: Record<string, { nameBg: string; symbol: string }> = {
   J: { nameBg: "Жокер", symbol: "🃏" },
 };
 
-export default function Cardology() {
-  const { colors, setPage, user, setUser } = useApp();
+// Извличане на ден и месец от потребителския профил (ISODate, string или Date)
+const getUserDayAndMonth = (user: any): { day: number; month: number; formattedDate: string } | null => {
+  if (!user) return null;
 
-  const getInitialDateInput = (): string => {
-    if (user?.birthdate) {
-      try {
-        const d = new Date(user.birthdate);
-        const day = String(d.getUTCDate()).padStart(2, '0');
-        const month = String(d.getUTCMonth() + 1).padStart(2, '0');
-        return `${day}.${month}`;
-      } catch (e) {
-        // Fallback
+  const rawDate =
+    user.birthdate ||
+    user.birthDate ||
+    user.dateOfBirth ||
+    user.dob ||
+    user.birth_date ||
+    user.profile?.birthDate ||
+    user.profile?.dateOfBirth ||
+    user.profile?.dob ||
+    user.profile?.birth_date;
+
+  if (!rawDate) return null;
+
+  if (typeof rawDate === 'string') {
+    // Ако е ISO Date (напр. "2000-08-31T00:00:00.000Z")
+    if (rawDate.includes('-')) {
+      const dateOnly = rawDate.split('T')[0];
+      const partsISO = dateOnly.split('-');
+      if (partsISO.length === 3) {
+        const month = parseInt(partsISO[1], 10);
+        const day = parseInt(partsISO[2], 10);
+        if (!isNaN(day) && !isNaN(month)) {
+          return {
+            day,
+            month,
+            formattedDate: `${String(day).padStart(2, '0')}.${String(month).padStart(2, '0')}`,
+          };
+        }
       }
     }
-    return "31.08";
-  };
 
-  const [dateInput, setDateInput] = useState(getInitialDateInput());
-  const [cardsDeck, setCardsDeck] = useState<CardItem[]>([]);
+    // Ако е във формат DD.MM.YYYY или DD.MM
+    const trimmed = rawDate.trim().replace(/[\/\-\s]/g, '.');
+    const parts = trimmed.split('.').map((p) => parseInt(p, 10));
+    if (parts.length >= 2 && !isNaN(parts[0]) && !isNaN(parts[1])) {
+      const day = parts[0];
+      const month = parts[1];
+      if (day >= 1 && day <= 31 && month >= 1 && month <= 12) {
+        return {
+          day,
+          month,
+          formattedDate: `${String(day).padStart(2, '0')}.${String(month).padStart(2, '0')}`,
+        };
+      }
+    }
+  }
+
+  // JS Date обект или Timestamp
+  const d = new Date(rawDate);
+  if (!isNaN(d.getTime())) {
+    const day = d.getUTCDate();
+    const month = d.getUTCMonth() + 1;
+    return {
+      day,
+      month,
+      formattedDate: `${String(day).padStart(2, '0')}.${String(month).padStart(2, '0')}`,
+    };
+  }
+
+  return null;
+};
+
+export default function Cardology() {
+  const { colors, setPage, user, setUser } = useApp();
   const [selectedCard, setSelectedCard] = useState<CardItem | null>(null);
+  const [userDateStr, setUserDateStr] = useState<string | null>(null);
   const [isSyncing, setIsSyncing] = useState(false);
   const [syncStatus, setSyncStatus] = useState<string | null>(null);
 
   useEffect(() => {
+    // 1. Зареждане на картата от таблицата
     const loadedDeck: CardItem[] = [];
 
     (CARDOLOGY_TABLE as any[]).forEach((row, index) => {
@@ -140,34 +196,34 @@ export default function Cardology() {
       });
     });
 
-    setCardsDeck(loadedDeck);
+    // 2. Извличане на рождената дата от потребителя
+    const userDate = getUserDayAndMonth(user);
 
-    const initialDate = getInitialDateInput();
-    findCardByDateInput(initialDate, loadedDeck);
-  }, [user?.birthdate]);
+    if (!userDate) {
+      setSelectedCard(null);
+      setUserDateStr(null);
+      return;
+    }
 
-  const findCardByDateInput = async (input: string, deckToSearch = cardsDeck) => {
-    const clean = input.trim().replace(/[\/\-\s]/g, '.');
-    const parts = clean.split('.').map((p) => parseInt(p.trim(), 10));
+    setUserDateStr(userDate.formattedDate);
 
-    if (parts.length >= 2 && !isNaN(parts[0]) && !isNaN(parts[1])) {
-      const day = parts[0];
-      const month = parts[1];
+    // 3. Намиране на рождената карта
+    const foundCard = loadedDeck.find((card) =>
+      card.dates.some((d) => d.day === userDate.day && d.month === userDate.month)
+    );
 
-      const found = deckToSearch.find((card) =>
-        card.dates.some((d) => d.day === day && d.month === month)
-      );
+    setSelectedCard(foundCard || null);
 
-      setSelectedCard(found || null);
-
-      if (found && user && user.email) {
+    // 4. Автоматична синхронизация с MongoDB Atlas
+    if (foundCard && user && user.email) {
+      const syncCard = async () => {
         setIsSyncing(true);
         setSyncStatus('Синхронизиране с MongoDB Atlas...');
 
         const updatedUser: UserProfile = {
           ...user,
           cardology: {
-            birthCard: found.code,
+            birthCard: foundCard.code,
           },
         };
 
@@ -181,11 +237,16 @@ export default function Cardology() {
         } finally {
           setIsSyncing(false);
         }
-      }
-    } else {
-      setSelectedCard(null);
+      };
+
+      syncCard();
     }
-  };
+  }, [
+    user?.birthdate,
+    (user as any)?.birthDate,
+    (user as any)?.dateOfBirth,
+    (user as any)?.dob,
+  ]);
 
   return (
     <>
@@ -205,36 +266,6 @@ export default function Cardology() {
         accent="Рождена Карта."
         description="Открийте значението на вашата соларна рождена карта."
       />
-
-      <Card style={{ marginBottom: 20 }}>
-        <View style={{ gap: 6, marginBottom: 14 }}>
-          <T muted size={11}>ВЪВЕДЕТЕ ДЕН И МЕСЕЦ (НАПР. 31.08, 29.09 ИЛИ 1.01)</T>
-          <View
-            style={{
-              height: 48,
-              backgroundColor: colors.surfaceAlt,
-              borderRadius: 14,
-              justifyContent: 'center',
-              paddingHorizontal: 14,
-            }}
-          >
-            <TextInput
-              style={{ color: colors.text, fontSize: 16, fontWeight: '600' }}
-              value={dateInput}
-              onChangeText={(val) => {
-                setDateInput(val);
-                findCardByDateInput(val);
-              }}
-              placeholder="31.08"
-              placeholderTextColor={colors.muted}
-            />
-          </View>
-        </View>
-
-        <Pill selected onPress={() => findCardByDateInput(dateInput)}>
-          <Search size={14} color="#FFF" style={{ marginRight: 6 }} /> Търси
-        </Pill>
-      </Card>
 
       {syncStatus && (
         <View
@@ -262,13 +293,22 @@ export default function Cardology() {
 
       {selectedCard ? (
         <View style={{ gap: 18, marginBottom: 40 }}>
-          <Card style={{ alignItems: 'center', paddingVertical: 26, gap: 12 }}>
-            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-              <Calendar size={14} color={colors.gold} />
-              <T muted size={11} style={{ letterSpacing: 1.5 }}>
-                ВАШАТА РОЖДЕНА КАРТА ({user?.name || 'Потребител'})
-              </T>
+          {/* Информационна лента с датата от базата */}
+          <Card style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingVertical: 12 }}>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+              <Calendar size={16} color={colors.purple} />
+              <T muted size={12}>Рождена дата от профила:</T>
             </View>
+            <T bold size={13} style={{ color: colors.purple }}>
+              {userDateStr}
+            </T>
+          </Card>
+
+          {/* Визуализация на рождената карта */}
+          <Card style={{ alignItems: 'center', paddingVertical: 26, gap: 12 }}>
+            <T muted size={11} style={{ letterSpacing: 1.5 }}>
+              ВАШАТА РОЖДЕНА КАРТА ({user?.name || 'Потребител'})
+            </T>
 
             <View
               style={{
@@ -296,6 +336,7 @@ export default function Cardology() {
             </T>
           </Card>
 
+          {/* Тълкуване */}
           <Section>Значение и характеристика</Section>
           <Card style={{ gap: 12 }}>
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
@@ -308,13 +349,27 @@ export default function Cardology() {
           </Card>
         </View>
       ) : (
-        <Card style={{ alignItems: 'center', paddingVertical: 30, gap: 8 }}>
-          <T bold size={15} style={{ color: colors.purple }}>
-            Няма намерена карта за тази дата
+        /* При липса на записана рождена дата в профила */
+        <Card style={{ alignItems: 'center', paddingVertical: 30, gap: 12, marginBottom: 40 }}>
+          <View
+            style={{
+              width: 64,
+              height: 64,
+              borderRadius: 32,
+              backgroundColor: colors.purpleSoft,
+              alignItems: 'center',
+              justifyContent: 'center',
+            }}
+          >
+            <Calendar size={32} color={colors.purple} />
+          </View>
+          <T bold size={16}>Липсва рождена дата в профила</T>
+          <T muted size={13} style={{ textAlign: 'center', maxWidth: 280, lineHeight: 18 }}>
+            В базата данни за вашия профил не е открита записана дата. Моля, добавете я в настройките.
           </T>
-          <T muted size={12} style={{ textAlign: 'center' }}>
-            Въведете дата във формат ДД.ММ (напр. 31.08, 29.09, 25.11, 1.01).
-          </T>
+          <Pill selected onPress={() => setPage('profile')}>
+            <User size={14} color="#FFFFFF" /> Към Профила
+          </Pill>
         </Card>
       )}
     </>
