@@ -19,183 +19,104 @@ import {
 import { useApp } from '../context/AppContext';
 import { Card, T, Section, Pill, Hero } from '../components/UI';
 
-// Импорти от src/data/tarotsvg
-import FoolSvg from '../data/tarotsvg/00 The fool.svg';
-import MagicianSvg from '../data/tarotsvg/01 The magician.svg';
-import HighPriestessSvg from '../data/tarotsvg/02 The high priestess.svg';
-import EmpressSvg from '../data/tarotsvg/03 The empress.svg';
-import EmperorSvg from '../data/tarotsvg/04 The emperor.svg';
-import HierophantSvg from '../data/tarotsvg/05 Hierophant.svg';
-import LoversSvg from '../data/tarotsvg/06 The lovers.svg';
-import ChariotSvg from '../data/tarotsvg/07 The chariot.svg';
-import StrengthSvg from '../data/tarotsvg/08 Strength.svg';
-import HermitSvg from '../data/tarotsvg/09 The hermit.svg';
-import WheelOfFortuneSvg from '../data/tarotsvg/10 Wheel of fortune.svg';
-import JusticeSvg from '../data/tarotsvg/11 Justice.svg';
-import HangedManSvg from '../data/tarotsvg/12 The hanged man.svg';
-import DeathSvg from '../data/tarotsvg/13 Death.svg';
-import TemperanceSvg from '../data/tarotsvg/14 Temperance.svg';
-import DevilSvg from '../data/tarotsvg/15 The Devil.svg';
-import TowerSvg from '../data/tarotsvg/16 The Tower.svg';
-import StarSvg from '../data/tarotsvg/17 The star.svg';
-import MoonSvg from '../data/tarotsvg/18 The moon.svg';
-import SunSvg from '../data/tarotsvg/19 The sun.svg';
-import JudgementSvg from '../data/tarotsvg/20 Judgement.svg';
-import WorldSvg from '../data/tarotsvg/21 The world.svg';
+// Гръб на картата
+const CARD_BACK_PNG = require('../data/tarotpng/card back.png');
 
-// Minor Arcana - Coins
-import AceCoinsSvg from '../data/tarotsvg/Ace Coins.svg';
-import TwoCoinsSvg from '../data/tarotsvg/2 Coins.svg';
-import ThreeCoinsSvg from '../data/tarotsvg/3 Coins.svg';
-import FourCoinsSvg from '../data/tarotsvg/4 Coins.svg';
-import FiveCoinsSvg from '../data/tarotsvg/5 Coins.svg';
-import SixCoinsSvg from '../data/tarotsvg/6 Coins.svg';
-import SevenCoinsSvg from '../data/tarotsvg/7 Coins.svg';
-import EightCoinsSvg from '../data/tarotsvg/8 Coins.svg';
-import NineCoinsSvg from '../data/tarotsvg/9 Coins.svg';
-import TenCoinsSvg from '../data/tarotsvg/10 Coins.svg';
-import PrincessCoinsSvg from '../data/tarotsvg/Princess Coins.svg';
-import KnightCoinsSvg from '../data/tarotsvg/Knight Coins.svg';
-import QueenCoinsSvg from '../data/tarotsvg/Queen Coins.svg';
-import KingCoinsSvg from '../data/tarotsvg/King Coins.svg';
+// Точно съответствие с имената на файловете във вашата папка src/data/tarotpng/
+const TAROT_PNG_MAP: Record<string, any> = {
+  // Major Arcana
+  "00 The Fool": require('../data/tarotpng/00 The Fool.png'),
+  "01 The Magician": require('../data/tarotpng/01 The Magician.png'),
+  "02 The High Priestess": require('../data/tarotpng/02 The High Priestess.png'),
+  "03 The Empress": require('../data/tarotpng/03 The Empress.png'),
+  "04 The Emperor": require('../data/tarotpng/04 The Emperor.png'),
+  "05 The Hierophant": require('../data/tarotpng/05 The Hierophant.png'),
+  "06 The Lovers": require('../data/tarotpng/06 The Lovers.png'),
+  "07 The Chariot": require('../data/tarotpng/07 The Chariot.png'),
+  "08 Strength": require('../data/tarotpng/08 Strength.png'),
+  "09 The Hermit": require('../data/tarotpng/09 The Hermit.png'),
+  "10 Wheel of Fortune": require('../data/tarotpng/10 Wheel of Fortune.png'),
+  "11 Justice": require('../data/tarotpng/11 Justice.png'),
+  "12 Hanged Man": require('../data/tarotpng/12 Hanged Man.png'),
+  "13 Death": require('../data/tarotpng/13 Death.png'),
+  "14 Temperance": require('../data/tarotpng/14 Temperance.png'),
+  "15 The devil": require('../data/tarotpng/15 The devil.png'),
+  "16 The tower": require('../data/tarotpng/16 The tower.png'),
+  "17 The star": require('../data/tarotpng/17 The star.png'),
+  "18 The moon": require('../data/tarotpng/18 The moon.png'),
+  "19 The sun": require('../data/tarotpng/19 The sun.png'),
+  "20 judgement": require('../data/tarotpng/20 judgement.png'),
+  "21 The world": require('../data/tarotpng/21 The world.png'),
 
-// Minor Arcana - Cups
-import AceCupsSvg from '../data/tarotsvg/Ace Cups.svg';
-import TwoCupsSvg from '../data/tarotsvg/2 Cups.svg';
-import ThreeCupsSvg from '../data/tarotsvg/3 Cups.svg';
-import FourCupsSvg from '../data/tarotsvg/4 Cups.svg';
-import FiveCupsSvg from '../data/tarotsvg/5 Cups.svg';
-import SixCupsSvg from '../data/tarotsvg/6 Cups.svg';
-import SevenCupsSvg from '../data/tarotsvg/7 Cups.svg';
-import EightCupsSvg from '../data/tarotsvg/8 Cups.svg';
-import NineCupsSvg from '../data/tarotsvg/9 Cups.svg';
-import TenCupsSvg from '../data/tarotsvg/10 Cups.svg';
-import PrincessCupsSvg from '../data/tarotsvg/Princess Cups.svg';
-import KnightCupsSvg from '../data/tarotsvg/Knight Cups.svg';
-import QueenCupsSvg from '../data/tarotsvg/Queen Cups.svg';
-import KingCupsSvg from '../data/tarotsvg/King Cups.svg';
+  // Minor Arcana - Coins
+  "Coins Ace": require('../data/tarotpng/Coins Ace.png'),
+  "Coins 2": require('../data/tarotpng/Coins 2.png'),
+  "Coins 3": require('../data/tarotpng/Coins 3.png'),
+  "Coins 4": require('../data/tarotpng/Coins 4.png'),
+  "Coins 5": require('../data/tarotpng/Coins 5.png'),
+  "Coins 6": require('../data/tarotpng/Coins 6.png'),
+  "Coins 7": require('../data/tarotpng/Coins 7.png'),
+  "Coins 8": require('../data/tarotpng/Coins 8.png'),
+  "Coins 9": require('../data/tarotpng/Coins 9.png'),
+  "Coins 10": require('../data/tarotpng/Coins 10.png'),
+  "Coins Princess": require('../data/tarotpng/Coins Princess.png'),
+  "Coins Knight": require('../data/tarotpng/Coins Knight.png'),
+  "Coins Queen": require('../data/tarotpng/Coins Queen.png'),
+  "Coins King": require('../data/tarotpng/Coins King.png'),
 
-// Minor Arcana - Swords
-import AceSwordsSvg from '../data/tarotsvg/Ace Swords.svg';
-import TwoSwordsSvg from '../data/tarotsvg/2 Swords.svg';
-import ThreeSwordsSvg from '../data/tarotsvg/3 Swords.svg';
-import FourSwordsSvg from '../data/tarotsvg/4 Swords.svg';
-import FiveSwordsSvg from '../data/tarotsvg/5 Swords.svg';
-import SixSwordsSvg from '../data/tarotsvg/6 Swords.svg';
-import SevenSwordsSvg from '../data/tarotsvg/7 Swords.svg';
-import EightSwordsSvg from '../data/tarotsvg/8 Swords.svg';
-import NineSwordsSvg from '../data/tarotsvg/9 Swords.svg';
-import TenSwordsSvg from '../data/tarotsvg/10 Swords.svg';
-import PrincessSwordsSvg from '../data/tarotsvg/Princess Swords.svg';
-import KnightSwordsSvg from '../data/tarotsvg/Knight Swords.svg';
-import QueenSwordsSvg from '../data/tarotsvg/Queen Swords.svg';
-import KingSwordsSvg from '../data/tarotsvg/King Swords.svg';
+  // Minor Arcana - Cups
+  "Cups Ace": require('../data/tarotpng/Cups Ace.png'),
+  "Cups 2": require('../data/tarotpng/Cups 2.png'),
+  "Cups 3": require('../data/tarotpng/Cups 3.png'),
+  "Cups 4": require('../data/tarotpng/Cups 4.png'),
+  "Cups 5": require('../data/tarotpng/Cups 5.png'),
+  "Cups 6": require('../data/tarotpng/Cups 6.png'),
+  "Cups 7": require('../data/tarotpng/Cups 7.png'),
+  "Cups 8": require('../data/tarotpng/Cups 8.png'),
+  "Cups 9": require('../data/tarotpng/Cups 9.png'),
+  "Cups 10": require('../data/tarotpng/Cups 10.png'),
+  "Cups Princess": require('../data/tarotpng/Cups Princess.png'),
+  "Cups Knight": require('../data/tarotpng/Cups Knight.png'),
+  "Cups Queen": require('../data/tarotpng/Cups Queen.png'),
+  "Cups King": require('../data/tarotpng/Cups King.png'),
 
-// Minor Arcana - Wands
-import AceWandsSvg from '../data/tarotsvg/Ace Wands.svg';
-import TwoWandsSvg from '../data/tarotsvg/2 Wands.svg';
-import ThreeWandsSvg from '../data/tarotsvg/3 Wands.svg';
-import FourWandsSvg from '../data/tarotsvg/4 Wands.svg';
-import FiveWandsSvg from '../data/tarotsvg/5 Wands.svg';
-import SixWandsSvg from '../data/tarotsvg/6 Wands.svg';
-import SevenWandsSvg from '../data/tarotsvg/7 Wands.svg';
-import EightWandsSvg from '../data/tarotsvg/8 Wands.svg';
-import NineWandsSvg from '../data/tarotsvg/9 Wands.svg';
-import TenWandsSvg from '../data/tarotsvg/10 Wands.svg';
-import PrincessWandsSvg from '../data/tarotsvg/Princess Wands.svg';
-import KnightWandsSvg from '../data/tarotsvg/Knight Wands.svg';
-import QueenWandsSvg from '../data/tarotsvg/Queen Wands.svg';
-import KingWandsSvg from '../data/tarotsvg/King Wands.svg';
+  // Minor Arcana - Swords
+  "Swords Ace": require('../data/tarotpng/Swords Ace.png'),
+  "Swords 2": require('../data/tarotpng/Swords 2.png'),
+  "Swords 3": require('../data/tarotpng/Swords 3.png'),
+  "Swords 4": require('../data/tarotpng/Swords 4.png'),
+  "Swords 5": require('../data/tarotpng/Swords 5.png'),
+  "Swords 6": require('../data/tarotpng/Swords 6.png'),
+  "Swords 7": require('../data/tarotpng/Swords 7.png'),
+  "Swords 8": require('../data/tarotpng/Swords 8.png'),
+  "Swords 9": require('../data/tarotpng/Swords 9.png'),
+  "Swords 10": require('../data/tarotpng/Swords 10.png'),
+  "Swords Princess": require('../data/tarotpng/Swords Princess.png'),
+  "Swords Knight": require('../data/tarotpng/Swords Knight.png'),
+  "Swords Queen": require('../data/tarotpng/Swords Queen.png'),
+  "Swords King": require('../data/tarotpng/Swords King.png'),
 
-const TAROT_SVG_MAP: Record<string, any> = {
-  "00 The fool": FoolSvg,
-  "01 The magician": MagicianSvg,
-  "02 The high priestess": HighPriestessSvg,
-  "03 The empress": EmpressSvg,
-  "04 The emperor": EmperorSvg,
-  "05 Hierophant": HierophantSvg,
-  "06 The lovers": LoversSvg,
-  "07 The chariot": ChariotSvg,
-  "08 Strength": StrengthSvg,
-  "09 The hermit": HermitSvg,
-  "10 Wheel of fortune": WheelOfFortuneSvg,
-  "11 Justice": JusticeSvg,
-  "12 The hanged man": HangedManSvg,
-  "13 Death": DeathSvg,
-  "14 Temperance": TemperanceSvg,
-  "15 The Devil": DevilSvg,
-  "16 The Tower": TowerSvg,
-  "17 The star": StarSvg,
-  "18 The moon": MoonSvg,
-  "19 The sun": SunSvg,
-  "20 Judgement": JudgementSvg,
-  "21 The world": WorldSvg,
-
-  "Ace Coins": AceCoinsSvg,
-  "2 Coins": TwoCoinsSvg,
-  "3 Coins": ThreeCoinsSvg,
-  "4 Coins": FourCoinsSvg,
-  "5 Coins": FiveCoinsSvg,
-  "6 Coins": SixCoinsSvg,
-  "7 Coins": SevenCoinsSvg,
-  "8 Coins": EightCoinsSvg,
-  "9 Coins": NineCoinsSvg,
-  "10 Coins": TenCoinsSvg,
-  "Princess Coins": PrincessCoinsSvg,
-  "Knight Coins": KnightCoinsSvg,
-  "Queen Coins": QueenCoinsSvg,
-  "King Coins": KingCoinsSvg,
-
-  "Ace Cups": AceCupsSvg,
-  "2 Cups": TwoCupsSvg,
-  "3 Cups": ThreeCupsSvg,
-  "4 Cups": FourCupsSvg,
-  "5 Cups": FiveCupsSvg,
-  "6 Cups": SixCupsSvg,
-  "7 Cups": SevenCupsSvg,
-  "8 Cups": EightCupsSvg,
-  "9 Cups": NineCupsSvg,
-  "10 Cups": TenCupsSvg,
-  "Princess Cups": PrincessCupsSvg,
-  "Knight Cups": KnightCupsSvg,
-  "Queen Cups": QueenCupsSvg,
-  "King Cups": KingCupsSvg,
-
-  "Ace Swords": AceSwordsSvg,
-  "2 Swords": TwoSwordsSvg,
-  "3 Swords": ThreeSwordsSvg,
-  "4 Swords": FourSwordsSvg,
-  "5 Swords": FiveSwordsSvg,
-  "6 Swords": SixSwordsSvg,
-  "7 Swords": SevenSwordsSvg,
-  "8 Swords": EightSwordsSvg,
-  "9 Swords": NineSwordsSvg,
-  "10 Swords": TenSwordsSvg,
-  "Princess Swords": PrincessSwordsSvg,
-  "Knight Swords": KnightSwordsSvg,
-  "Queen Swords": QueenSwordsSvg,
-  "King Swords": KingSwordsSvg,
-
-  "Ace Wands": AceWandsSvg,
-  "2 Wands": TwoWandsSvg,
-  "3 Wands": ThreeWandsSvg,
-  "4 Wands": FourWandsSvg,
-  "5 Wands": FiveWandsSvg,
-  "6 Wands": SixWandsSvg,
-  "7 Wands": SevenWandsSvg,
-  "8 Wands": EightWandsSvg,
-  "9 Wands": NineWandsSvg,
-  "10 Wands": TenWandsSvg,
-  "Princess Wands": PrincessWandsSvg,
-  "Knight Wands": KnightWandsSvg,
-  "Queen Wands": QueenWandsSvg,
-  "King Wands": KingWandsSvg,
+  // Minor Arcana - Wands
+  "Wands Ace": require('../data/tarotpng/Wands Ace.png'),
+  "Wands 2": require('../data/tarotpng/Wands 2.png'),
+  "Wands 3": require('../data/tarotpng/Wands 3.png'),
+  "Wands 4": require('../data/tarotpng/Wands 4.png'),
+  "Wands 5": require('../data/tarotpng/Wands 5.png'),
+  "Wands 6": require('../data/tarotpng/Wands 6.png'),
+  "Wands 7": require('../data/tarotpng/Wands 7.png'),
+  "Wands 8": require('../data/tarotpng/Wands 8.png'),
+  "Wands 9": require('../data/tarotpng/Wands 9.png'),
+  "Wands 10": require('../data/tarotpng/Wands 10.png'),
+  "Wands Princess": require('../data/tarotpng/Wands Princess.png'),
+  "Wands Knight": require('../data/tarotpng/Wands Knight.png'),
+  "Wands Queen": require('../data/tarotpng/Wands Queen.png'),
+  "Wands King": require('../data/tarotpng/Wands King.png'),
 };
 
 interface TarotCardData {
   id: number;
   name: string;
-  svgKey: string;
+  pngKey: string;
   symbol: string;
   arcana: 'Major' | 'Minor';
   suit?: string;
@@ -203,28 +124,28 @@ interface TarotCardData {
 }
 
 const MAJOR_ARCANA: TarotCardData[] = [
-  { id: 0, name: "0. The Fool", svgKey: "00 The fool", symbol: "🃏", arcana: "Major", message: "New beginnings, innocence, spontaneity, and infinite potential." },
-  { id: 1, name: "I. The Magician", svgKey: "01 The magician", symbol: "🪄", arcana: "Major", message: "Manifestation, resourcefulness, power, and inspired action." },
-  { id: 2, name: "II. The High Priestess", svgKey: "02 The high priestess", symbol: "🌙", arcana: "Major", message: "Intuition, sacred knowledge, divine feminine, and subconscious wisdom." },
-  { id: 3, name: "III. The Empress", svgKey: "03 The empress", symbol: "👑", arcana: "Major", message: "Femininity, beauty, nature, nurturing, and abundant creativity." },
-  { id: 4, name: "IV. The Emperor", svgKey: "04 The emperor", symbol: "🏛️", arcana: "Major", message: "Authority, structure, control, leadership, and a solid foundation." },
-  { id: 5, name: "V. The Hierophant", svgKey: "05 Hierophant", symbol: "📜", arcana: "Major", message: "Spiritual wisdom, tradition, institutions, and core belief systems." },
-  { id: 6, name: "VI. The Lovers", svgKey: "06 The lovers", symbol: "💕", arcana: "Major", message: "Love, harmony, meaningful partnerships, and alignment of values." },
-  { id: 7, name: "VII. The Chariot", svgKey: "07 The chariot", symbol: "🛞", arcana: "Major", message: "Control, willpower, success, action, and overcoming obstacles." },
-  { id: 8, name: "VIII. Strength", svgKey: "08 Strength", symbol: "🦁", arcana: "Major", message: "Inner strength, courage, persuasion, compassion, and patience." },
-  { id: 9, name: "IX. The Hermit", svgKey: "09 The hermit", symbol: "🕯️", arcana: "Major", message: "Soul-searching, introspection, solitude, and inner enlightenment." },
-  { id: 10, name: "X. Wheel of Fortune", svgKey: "10 Wheel of fortune", symbol: "☸️", arcana: "Major", message: "Good luck, karma, life cycles, destiny, and pivotal turning points." },
-  { id: 11, name: "XI. Justice", svgKey: "11 Justice", symbol: "⚖️", arcana: "Major", message: "Fairness, truth, cause and effect, law, and accountability." },
-  { id: 12, name: "XII. The Hanged Man", svgKey: "12 The hanged man", symbol: "🙃", arcana: "Major", message: "Surrender, letting go, new perspectives, and deliberate pause." },
-  { id: 13, name: "XIII. Death", svgKey: "13 Death", symbol: "🦋", arcana: "Major", message: "Endings, deep transformation, transition, and making way for the new." },
-  { id: 14, name: "XIV. Temperance", svgKey: "14 Temperance", symbol: "🌊", arcana: "Major", message: "Balance, moderation, patience, purpose, and inner peace." },
-  { id: 15, name: "XV. The Devil", svgKey: "15 The Devil", symbol: "⛓️", arcana: "Major", message: "Shadow self, attachment, restriction, and breaking mental chains." },
-  { id: 16, name: "XVI. The Tower", svgKey: "16 The Tower", symbol: "⚡", arcana: "Major", message: "Sudden upheaval, broken illusions, awakening, and breakthrough." },
-  { id: 17, name: "XVII. The Star", svgKey: "17 The star", symbol: "⭐", arcana: "Major", message: "Hope, faith, purpose, renewal, and celestial guidance." },
-  { id: 18, name: "XVIII. The Moon", svgKey: "18 The moon", symbol: "🌕", arcana: "Major", message: "Illusion, fear, anxiety, intuition, and diving into the unknown." },
-  { id: 19, name: "XIX. The Sun", svgKey: "19 The sun", symbol: "☀️", arcana: "Major", message: "Positivity, fun, warmth, success, and radiant vitality." },
-  { id: 20, name: "XX. Judgement", svgKey: "20 Judgement", symbol: "🎺", arcana: "Major", message: "Judgement, rebirth, inner calling, absolution, and awakening." },
-  { id: 21, name: "XXI. The World", svgKey: "21 The world", symbol: "🌍", arcana: "Major", message: "Completion, integration, accomplishment, travel, and wholeness." },
+  { id: 0, name: "0. The Fool", pngKey: "00 The Fool", symbol: "🃏", arcana: "Major", message: "New beginnings, innocence, spontaneity, and infinite potential." },
+  { id: 1, name: "I. The Magician", pngKey: "01 The Magician", symbol: "🪄", arcana: "Major", message: "Manifestation, resourcefulness, power, and inspired action." },
+  { id: 2, name: "II. The High Priestess", pngKey: "02 The High Priestess", symbol: "🌙", arcana: "Major", message: "Intuition, sacred knowledge, divine feminine, and subconscious wisdom." },
+  { id: 3, name: "III. The Empress", pngKey: "03 The Empress", symbol: "👑", arcana: "Major", message: "Femininity, beauty, nature, nurturing, and abundant creativity." },
+  { id: 4, name: "IV. The Emperor", pngKey: "04 The Emperor", symbol: "🏛️", arcana: "Major", message: "Authority, structure, control, leadership, and a solid foundation." },
+  { id: 5, name: "V. The Hierophant", pngKey: "05 The Hierophant", symbol: "📜", arcana: "Major", message: "Spiritual wisdom, tradition, institutions, and core belief systems." },
+  { id: 6, name: "VI. The Lovers", pngKey: "06 The Lovers", symbol: "💕", arcana: "Major", message: "Love, harmony, meaningful partnerships, and alignment of values." },
+  { id: 7, name: "VII. The Chariot", pngKey: "07 The Chariot", symbol: "🛞", arcana: "Major", message: "Control, willpower, success, action, and overcoming obstacles." },
+  { id: 8, name: "VIII. Strength", pngKey: "08 Strength", symbol: "🦁", arcana: "Major", message: "Inner strength, courage, persuasion, compassion, and patience." },
+  { id: 9, name: "IX. The Hermit", pngKey: "09 The Hermit", symbol: "🕯️", arcana: "Major", message: "Soul-searching, introspection, solitude, and inner enlightenment." },
+  { id: 10, name: "X. Wheel of Fortune", pngKey: "10 Wheel of Fortune", symbol: "☸️", arcana: "Major", message: "Good luck, karma, life cycles, destiny, and pivotal turning points." },
+  { id: 11, name: "XI. Justice", pngKey: "11 Justice", symbol: "⚖️", arcana: "Major", message: "Fairness, truth, cause and effect, law, and accountability." },
+  { id: 12, name: "XII. The Hanged Man", pngKey: "12 Hanged Man", symbol: "🙃", arcana: "Major", message: "Surrender, letting go, new perspectives, and deliberate pause." },
+  { id: 13, name: "XIII. Death", pngKey: "13 Death", symbol: "🦋", arcana: "Major", message: "Endings, deep transformation, transition, and making way for the new." },
+  { id: 14, name: "XIV. Temperance", pngKey: "14 Temperance", symbol: "🌊", arcana: "Major", message: "Balance, moderation, patience, purpose, and inner peace." },
+  { id: 15, name: "XV. The Devil", pngKey: "15 The devil", symbol: "⛓️", arcana: "Major", message: "Shadow self, attachment, restriction, and breaking mental chains." },
+  { id: 16, name: "XVI. The Tower", pngKey: "16 The tower", symbol: "⚡", arcana: "Major", message: "Sudden upheaval, broken illusions, awakening, and breakthrough." },
+  { id: 17, name: "XVII. The Star", pngKey: "17 The star", symbol: "⭐", arcana: "Major", message: "Hope, faith, purpose, renewal, and celestial guidance." },
+  { id: 18, name: "XVIII. The Moon", pngKey: "18 The moon", symbol: "🌕", arcana: "Major", message: "Illusion, fear, anxiety, intuition, and diving into the unknown." },
+  { id: 19, name: "XIX. The Sun", pngKey: "19 The sun", symbol: "☀️", arcana: "Major", message: "Positivity, fun, warmth, success, and radiant vitality." },
+  { id: 20, name: "XX. Judgement", pngKey: "20 judgement", symbol: "🎺", arcana: "Major", message: "Judgement, rebirth, inner calling, absolution, and awakening." },
+  { id: 21, name: "XXI. The World", pngKey: "21 The world", symbol: "🌍", arcana: "Major", message: "Completion, integration, accomplishment, travel, and wholeness." },
 ];
 
 const SUITS = [
@@ -256,11 +177,12 @@ const getMinorArcana = (): TarotCardData[] => {
   let idCounter = 22;
   SUITS.forEach((suit) => {
     RANKS.forEach((rank) => {
-      const svgKey = `${rank.rankKey} ${suit.key}`;
+      // Името отговаря на вида "Coins Ace", "Cups 10" и т.н.
+      const pngKey = `${suit.key} ${rank.rankKey}`;
       cards.push({
         id: idCounter++,
         name: `${rank.name} of ${suit.name}`,
-        svgKey,
+        pngKey,
         symbol: suit.symbol,
         arcana: "Minor",
         suit: suit.name,
@@ -271,48 +193,7 @@ const getMinorArcana = (): TarotCardData[] => {
   return cards;
 };
 
-// Защитен компонент за безопасно рендиране на SVG / Картинки на уеб и мобайл
-function SafeSvgRender({ rawImport, card }: { rawImport: any; card?: TarotCardData }) {
-  if (!rawImport) {
-    return (
-      <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', padding: 8 }}>
-        <T size={32}>{card?.symbol || '☾'}</T>
-        <T bold size={11} style={{ textAlign: 'center', marginTop: 4, color: '#111' }}>
-          {card?.name || 'Tarot Card'}
-        </T>
-      </View>
-    );
-  }
-
-  // 1. Ако е React Component
-  const Component = typeof rawImport === 'function' ? rawImport : rawImport?.default;
-  if (typeof Component === 'function') {
-    return <Component width="100%" height="100%" />;
-  }
-
-  // 2. Ако уеб бандлърът го е превърнал в URL string или require() asset number
-  const imageSource = typeof rawImport === 'string' ? { uri: rawImport } : (rawImport?.default || rawImport);
-  if (imageSource) {
-    return (
-      <Image
-        source={imageSource}
-        style={{ width: '100%', height: '100%' }}
-        resizeMode="contain"
-      />
-    );
-  }
-
-  return (
-    <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', padding: 8 }}>
-      <T size={32}>{card?.symbol}</T>
-      <T bold size={11} style={{ textAlign: 'center', marginTop: 4, color: '#111' }}>
-        {card?.name}
-      </T>
-    </View>
-  );
-}
-
-function LocalSvgTarotCard({
+function LocalPngTarotCard({
   card,
   isRevealed,
   cardIndex,
@@ -331,7 +212,7 @@ function LocalSvgTarotCard({
     large: { width: 150, height: 256 },
   }[size];
 
-  const rawImport = card ? TAROT_SVG_MAP[card.svgKey] : null;
+  const imageSource = card ? TAROT_PNG_MAP[card.pngKey] : null;
 
   return (
     <View
@@ -351,22 +232,12 @@ function LocalSvgTarotCard({
       }}
     >
       {!isRevealed ? (
-        <View style={{ flex: 1, position: 'relative', backgroundColor: '#1A1423', alignItems: 'center', justifyContent: 'center' }}>
-          <View
-            style={{
-              width: '86%',
-              height: '90%',
-              borderRadius: 6,
-              borderWidth: 1,
-              borderColor: colors.gold,
-              borderStyle: 'dashed',
-              alignItems: 'center',
-              justifyContent: 'center',
-              backgroundColor: colors.purpleSoft,
-            }}
-          >
-            <T size={28} style={{ color: colors.gold }}>☾</T>
-          </View>
+        <View style={{ flex: 1, position: 'relative', backgroundColor: '#1A1423' }}>
+          <Image
+            source={CARD_BACK_PNG}
+            style={{ width: '100%', height: '100%' }}
+            resizeMode="cover"
+          />
           {cardIndex !== undefined && (
             <View
               style={{
@@ -389,7 +260,20 @@ function LocalSvgTarotCard({
         </View>
       ) : (
         <View style={{ flex: 1, backgroundColor: '#FFFFFF', padding: 2, alignItems: 'center', justifyContent: 'center' }}>
-          <SafeSvgRender rawImport={rawImport} card={card} />
+          {imageSource ? (
+            <Image
+              source={imageSource}
+              style={{ width: '100%', height: '100%' }}
+              resizeMode="contain"
+            />
+          ) : (
+            <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', padding: 8 }}>
+              <T size={32}>{card?.symbol || '🃏'}</T>
+              <T bold size={11} style={{ textAlign: 'center', marginTop: 4, color: '#111' }}>
+                {card?.name}
+              </T>
+            </View>
+          )}
         </View>
       )}
     </View>
@@ -401,7 +285,7 @@ export default function Tarot() {
   const [mode, setMode] = useState<'daily' | 'spread'>('daily');
   const [useFullDeck, setUseFullDeck] = useState(true);
 
-  // Spread config
+  // Spread configuration
   const [rowsInput, setRowsInput] = useState("3");
   const [colsInput, setColsInput] = useState("3");
   const [question, setQuestion] = useState("");
@@ -501,13 +385,13 @@ export default function Tarot() {
       </TouchableOpacity>
 
       <Hero
-        eyebrow="LOCAL VECTOR SVG DECK · 78 CARDS"
+        eyebrow="LOCAL PNG DECK · 78 CARDS"
         first="Tarot"
         accent="Sanctuary."
-        description="High-definition vector tarot cards rendered directly from local SVG files."
+        description="High-definition PNG tarot cards rendered directly from local image assets."
       />
 
-      {/* Deck selection */}
+      {/* Deck Selection */}
       <Card style={{ marginBottom: 14, paddingVertical: 12 }}>
         <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
           <T bold size={13}>Deck Selection:</T>
@@ -522,7 +406,7 @@ export default function Tarot() {
         </View>
       </Card>
 
-      {/* Mode switch */}
+      {/* Mode Switch */}
       <View style={{ flexDirection: 'row', gap: 10, marginBottom: 20 }}>
         <Pill selected={mode === 'daily'} onPress={() => setMode('daily')}>
           ✦ Daily Card
@@ -537,7 +421,7 @@ export default function Tarot() {
         <View style={{ gap: 18, marginBottom: 40 }}>
           {!dailyDrawn ? (
             <Card style={{ alignItems: 'center', paddingVertical: 32, gap: 16 }}>
-              <LocalSvgTarotCard isRevealed={false} colors={colors} size="large" />
+              <LocalPngTarotCard isRevealed={false} colors={colors} size="large" />
 
               <T bold size={18} style={{ textAlign: 'center' }}>
                 Draw Your Daily Card ({useFullDeck ? "78 Cards" : "22 Cards"})
@@ -556,7 +440,7 @@ export default function Tarot() {
                   </T>
                 </View>
 
-                <LocalSvgTarotCard
+                <LocalPngTarotCard
                   card={dailyCard}
                   isRevealed={true}
                   colors={colors}
@@ -687,7 +571,7 @@ export default function Tarot() {
                       return (
                         <View key={`card-container-${cardIdx}`} style={{ flex: 1, gap: 6 }}>
                           <TouchableOpacity activeOpacity={0.88} onPress={() => toggleRevealCard(cardIdx)}>
-                            <LocalSvgTarotCard
+                            <LocalPngTarotCard
                               card={card}
                               isRevealed={isRevealed}
                               cardIndex={cardIdx}
@@ -720,7 +604,7 @@ export default function Tarot() {
                             </T>
                           </TouchableOpacity>
 
-                          {/* Clarification cards */}
+                          {/* Clarification Cards */}
                           {clarifications.length > 0 && (
                             <View style={{ gap: 6, marginTop: 4 }}>
                               {clarifications.map((cCard, cI) => (
@@ -735,7 +619,7 @@ export default function Tarot() {
                                     alignItems: 'center',
                                   }}
                                 >
-                                  <LocalSvgTarotCard
+                                  <LocalPngTarotCard
                                     card={cCard}
                                     isRevealed={true}
                                     colors={colors}
@@ -752,7 +636,7 @@ export default function Tarot() {
                 ))}
               </View>
 
-              {/* BOTTOM OF THE DECK */}
+              {/* Bottom of the Deck */}
               <Section>Subconscious Foundation</Section>
               {bottomCard && (
                 <Card style={{ gap: 12, borderWidth: 1.5, borderColor: colors.gold, backgroundColor: colors.goldSoft }}>
@@ -767,7 +651,7 @@ export default function Tarot() {
                   </View>
 
                   <View style={{ flexDirection: 'row', gap: 14, alignItems: 'center' }}>
-                    <LocalSvgTarotCard
+                    <LocalPngTarotCard
                       card={bottomCard}
                       isRevealed={true}
                       colors={colors}
