@@ -28,14 +28,17 @@ import Cardology from './src/screens/Cardology';
 import Ayurveda from './src/screens/Ayurveda';
 import Login from './src/screens/Login';
 import { checkHealth } from './src/services/api';
+import { registerForPushNotificationsAsync } from './src/services/notifications';
 
 function Shell() {
   const { page, colors, theme, user } = useApp();
-  const scroll = useRef<ScrollView>(null);
   const [showSplash, setShowSplash] = useState(true);
   const fade = useRef(new Animated.Value(1)).current;
 
   useEffect(() => {
+    // Регистрация на права за нотификации в Android/iOS
+    registerForPushNotificationsAsync();
+
     checkHealth().then((status) => {
       if (status.dbConnected) {
         console.log('🟢 Свързан с MongoDB Atlas! DB:', status.databaseName);
@@ -56,10 +59,6 @@ function Shell() {
     return () => clearTimeout(timer);
   }, []);
 
-  useEffect(() => {
-    scroll.current?.scrollTo({ y: 0, animated: false });
-  }, [page]);
-
   const pages: Record<string, React.ReactNode> = {
     home: <Home />,
     explore: <Explore />,
@@ -75,29 +74,43 @@ function Shell() {
     login: <Login />,
   };
 
+  const activePageNode = !user ? <Login /> : pages[page] || <Home />;
+  const isHomePage = user && page === 'home';
+
   return (
     <View style={{ flex: 1, backgroundColor: colors.bg }}>
       <ExpoStatusBar style={theme === 'dark' ? 'light' : 'dark'} />
 
-      <ScrollView
-        ref={scroll}
+      <View
         key={user ? page : 'login'}
-        keyboardShouldPersistTaps="handled"
-        contentContainerStyle={{
+        style={{
+          flex: 1,
           paddingTop:
             Platform.OS === 'web'
               ? 30
               : Math.max((StatusBar.currentHeight || 0) + 16, 28),
           paddingHorizontal: 18,
-          paddingBottom: user ? 120 : 40,
           width: '100%',
           maxWidth: 720,
           alignSelf: 'center',
         }}
       >
-        {/* Ако потребителят не е влязъл, показваме единствено Login екрана */}
-        {!user ? <Login /> : pages[page] || <Home />}
-      </ScrollView>
+        {isHomePage ? (
+          // Home управлява собствен ScrollView с Pull-to-Refresh
+          activePageNode
+        ) : (
+          // Всички останали страници се обвиват в ScrollView, за да могат да се скролват
+          <ScrollView
+            showsVerticalScrollIndicator={false}
+            keyboardShouldPersistTaps="handled"
+            contentContainerStyle={{
+              paddingBottom: user ? 120 : 40,
+            }}
+          >
+            {activePageNode}
+          </ScrollView>
+        )}
+      </View>
 
       {/* Навигацията отдолу е видима само след успешен вход */}
       {user && <BottomNav />}

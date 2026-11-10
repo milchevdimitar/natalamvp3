@@ -1,14 +1,29 @@
-path = require('path');
+const path = require('path');
 require('dotenv').config({ path: path.join(__dirname, '.env') });
 const express = require('express');
 const mongoose = require('mongoose');
 const cors = require('cors');
+const fs = require('fs');
 
 const User = require('./models/User');
+const storiesRoutes = require('./routes/stories');
+const chatRoutes = require('./routes/chatRoutes'); // 👈 Добавен рут за чатовете
 
 const app = express();
 app.use(cors());
-app.use(express.json());
+
+// Увеличаване на лимита за заявките, за да се поддържа качването на Base64 снимки
+app.use(express.json({ limit: '10mb' }));
+app.use(express.urlencoded({ limit: '10mb', extended: true }));
+
+// Автоматично създаване на папката uploads, ако не съществува
+const uploadsDir = path.join(__dirname, 'uploads');
+if (!fs.existsSync(uploadsDir)) {
+  fs.mkdirSync(uploadsDir, { recursive: true });
+}
+
+// Статичен достъп до качените снимки (сторита)
+app.use('/uploads', express.static(uploadsDir));
 
 const MONGO_URI = process.env.MONGODB_URI;
 
@@ -28,6 +43,12 @@ app.get('/api/health', (req, res) => {
     databaseName: mongoose.connection.name || null,
   });
 });
+
+// Рутове за сторита (Stories API)
+app.use('/api/stories', storiesRoutes);
+
+// Рутове за чатове (Chat API)
+app.use('/api/chats', chatRoutes); // 👈 Регистриране на маршрута за чата
 
 // Запис и синхронизация на изчисления профил
 app.post('/api/users/profile', async (req, res) => {
@@ -60,7 +81,8 @@ app.get('/api/users/profile/:email', async (req, res) => {
     res.status(500).json({ success: false, error: error.message });
   }
 });
-// 5. Логин / Бърза регистрация само с имейл
+
+// Логин / Бърза регистрация само с имейл
 app.post('/api/users/login', async (req, res) => {
   try {
     const { email, name } = req.body;

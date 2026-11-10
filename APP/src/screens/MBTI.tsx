@@ -1,10 +1,11 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import {
   View,
   TouchableOpacity,
   ActivityIndicator,
   Alert,
 } from 'react-native';
+import { captureRef } from 'react-native-view-shot';
 import {
   ArrowLeft,
   Brain,
@@ -12,6 +13,8 @@ import {
   RotateCcw,
   Sparkles,
   CloudUpload,
+  Share2,
+  Check,
 } from 'lucide-react-native';
 import { useApp } from '../context/AppContext';
 import { Card, T, Section, Pill, Hero, Progress } from '../components/UI';
@@ -97,13 +100,18 @@ const TYPE_DESCRIPTIONS: Record<string, { title: string; subtitle: string; desc:
 const ITEMS_PER_PAGE = 5;
 
 export default function MBTI() {
-  const { colors, setPage, user, setUser } = useApp();
+  const { colors, setPage, user, setUser, addStory } = useApp();
   const [answers, setAnswers] = useState<Record<number, number>>({});
   const [currentPage, setCurrentPage] = useState(0);
   const [isFinished, setIsFinished] = useState(false);
   const [isRetaking, setIsRetaking] = useState(false);
   const [isSyncing, setIsSyncing] = useState(false);
   const [syncStatus, setSyncStatus] = useState<string | null>(null);
+
+  // Ref & State за заснемане на картата с резултати за Story
+  const resultCardRef = useRef<View>(null);
+  const [isCapturing, setIsCapturing] = useState(false);
+  const [shared, setShared] = useState(false);
 
   const totalPages = Math.ceil(QUESTIONS.length / ITEMS_PER_PAGE);
   const currentQuestions = QUESTIONS.slice(
@@ -225,6 +233,32 @@ export default function MBTI() {
     setSyncStatus(null);
   };
 
+  // Качване на резултатите от MBTI като Стори в MongoDB
+  const handleShareToStory = async () => {
+    try {
+      setIsCapturing(true);
+
+      const base64Image = await captureRef(resultCardRef, {
+        format: 'png',
+        quality: 0.9,
+        result: 'base64',
+      });
+
+      await addStory(base64Image);
+
+      setShared(true);
+      setTimeout(() => setShared(false), 2000);
+    } catch (error) {
+      console.error('Грешка при заснемане или качване на снимката:', error);
+      Alert.alert(
+        'Грешка',
+        'Не съумяхме да споделим сторито. Моля, проверете връзката си със сървъра.'
+      );
+    } finally {
+      setIsCapturing(false);
+    }
+  };
+
   const isPageComplete = currentQuestions.every((q) => answers[q.id] !== undefined);
 
   const renderResultView = () => {
@@ -279,97 +313,122 @@ export default function MBTI() {
           </View>
         )}
 
-        <Card style={{ alignItems: 'center', paddingVertical: 24, gap: 10 }}>
-          <View
-            style={{
-              width: 76,
-              height: 76,
-              borderRadius: 38,
-              backgroundColor: colors.purpleSoft,
-              alignItems: 'center',
-              justifyContent: 'center',
-            }}
-          >
-            <Brain size={38} color={colors.purple} />
-          </View>
-          <T muted size={11} style={{ letterSpacing: 2 }}>
-            YOUR PERSONALITY TYPE
-          </T>
-          <T bold size={36} style={{ color: colors.purple, letterSpacing: -1 }}>
-            {type}
-          </T>
-          <T bold size={20}>
-            {details.title}
-          </T>
-          <T muted size={13} style={{ textAlign: 'center', maxWidth: 320 }}>
-            {details.subtitle}
-          </T>
-        </Card>
-
-        <Card style={{ gap: 10 }}>
-          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-            <Sparkles size={16} color={colors.gold} />
-            <T bold size={15}>
-              Type Essence
+        {/* Заснемаща се рамка за споделяне към Story */}
+        <View
+          ref={resultCardRef}
+          collapsable={false}
+          style={{
+            backgroundColor: colors.bg,
+            borderRadius: 20,
+            padding: 12,
+            gap: 16,
+          }}
+        >
+          <Card style={{ alignItems: 'center', paddingVertical: 24, gap: 10 }}>
+            <View
+              style={{
+                width: 76,
+                height: 76,
+                borderRadius: 38,
+                backgroundColor: colors.purpleSoft,
+                alignItems: 'center',
+                justifyContent: 'center',
+              }}
+            >
+              <Brain size={38} color={colors.purple} />
+            </View>
+            <T muted size={11} style={{ letterSpacing: 2 }}>
+              YOUR PERSONALITY TYPE
             </T>
-          </View>
-          <T muted size={13} style={{ lineHeight: 20 }}>
-            {details.desc}
-          </T>
-        </Card>
+            <T bold size={36} style={{ color: colors.purple, letterSpacing: -1 }}>
+              {type}
+            </T>
+            <T bold size={20}>
+              {details.title}
+            </T>
+            <T muted size={13} style={{ textAlign: 'center', maxWidth: 320 }}>
+              {details.subtitle}
+            </T>
+          </Card>
 
-        <Section>Cognitive Balance</Section>
-        <Card style={{ gap: 14 }}>
-          <View style={{ gap: 6 }}>
-            <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
-              <T bold size={12}>Extraversion (E) {ratios.EI.first}%</T>
-              <T bold size={12}>{ratios.EI.second}% Introversion (I)</T>
-            </View>
-            <Progress value={ratios.EI.first} color={colors.purple} />
-          </View>
-
-          <View style={{ gap: 6 }}>
-            <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
-              <T bold size={12}>Sensing (S) {ratios.SN.first}%</T>
-              <T bold size={12}>{ratios.SN.second}% Intuition (N)</T>
-            </View>
-            <Progress value={ratios.SN.first} color={colors.gold} />
-          </View>
-
-          <View style={{ gap: 6 }}>
-            <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
-              <T bold size={12}>Thinking (T) {ratios.TF.first}%</T>
-              <T bold size={12}>{ratios.TF.second}% Feeling (F)</T>
-            </View>
-            <Progress value={ratios.TF.first} color={colors.purple} />
-          </View>
-
-          <View style={{ gap: 6 }}>
-            <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
-              <T bold size={12}>Judging (J) {ratios.JP.first}%</T>
-              <T bold size={12}>{ratios.JP.second}% Prospecting (P)</T>
-            </View>
-            <Progress value={ratios.JP.first} color={colors.gold} />
-          </View>
-        </Card>
-
-        <Section>Core Traits</Section>
-        <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 10 }}>
-          {details.traits.map((trait, i) => (
-            <Card key={i} style={{ width: '48%', alignItems: 'center', paddingVertical: 14, gap: 6 }}>
-              <CheckCircle2 size={20} color={colors.purple} />
-              <T bold size={13}>
-                {trait}
+          <Card style={{ gap: 10 }}>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+              <Sparkles size={16} color={colors.gold} />
+              <T bold size={15}>
+                Type Essence
               </T>
-            </Card>
-          ))}
+            </View>
+            <T muted size={13} style={{ lineHeight: 20 }}>
+              {details.desc}
+            </T>
+          </Card>
+
+          <Section>Cognitive Balance</Section>
+          <Card style={{ gap: 14 }}>
+            <View style={{ gap: 6 }}>
+              <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
+                <T bold size={12}>Extraversion (E) {ratios.EI.first}%</T>
+                <T bold size={12}>{ratios.EI.second}% Introversion (I)</T>
+              </View>
+              <Progress value={ratios.EI.first} color={colors.purple} />
+            </View>
+
+            <View style={{ gap: 6 }}>
+              <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
+                <T bold size={12}>Sensing (S) {ratios.SN.first}%</T>
+                <T bold size={12}>{ratios.SN.second}% Intuition (N)</T>
+              </View>
+              <Progress value={ratios.SN.first} color={colors.gold} />
+            </View>
+
+            <View style={{ gap: 6 }}>
+              <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
+                <T bold size={12}>Thinking (T) {ratios.TF.first}%</T>
+                <T bold size={12}>{ratios.TF.second}% Feeling (F)</T>
+              </View>
+              <Progress value={ratios.TF.first} color={colors.purple} />
+            </View>
+
+            <View style={{ gap: 6 }}>
+              <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
+                <T bold size={12}>Judging (J) {ratios.JP.first}%</T>
+                <T bold size={12}>{ratios.JP.second}% Prospecting (P)</T>
+              </View>
+              <Progress value={ratios.JP.first} color={colors.gold} />
+            </View>
+          </Card>
+
+          <Section>Core Traits</Section>
+          <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 10 }}>
+            {details.traits.map((trait, i) => (
+              <Card key={i} style={{ width: '48%', alignItems: 'center', paddingVertical: 14, gap: 6 }}>
+                <CheckCircle2 size={20} color={colors.purple} />
+                <T bold size={13}>
+                  {trait}
+                </T>
+              </Card>
+            ))}
+          </View>
         </View>
 
-        <View style={{ flexDirection: 'row', gap: 10, marginTop: 10 }}>
+        {/* Бутони за управление и Споделяне в Стори */}
+        <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 10, marginTop: 10, justifyContent: 'center' }}>
           <Pill onPress={handleRetake}>
             <RotateCcw size={14} color={colors.purple} /> Retake Test
           </Pill>
-          <Pill selected onPress={() => setPage('explore')}>
+
+          <Pill selected onPress={handleShareToStory}>
+            {isCapturing ? (
+              <ActivityIndicator size="small" color="#FFF" />
+            ) : shared ? (
+              <Check size={14} color="#FFF" />
+            ) : (
+              <Share2 size={14} color="#FFF" />
+            )}
+            {shared ? 'Added!' : 'Add to Story'}
+          </Pill>
+
+          <Pill onPress={() => setPage('explore')}>
             To Explore ↗
           </Pill>
         </View>

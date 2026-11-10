@@ -162,3 +162,102 @@ export async function saveReadingHistory(readingData: {
     throw error;
   }
 }
+
+/**
+ * Извлича всички активни разговори за даден потребител
+ */
+export async function fetchUserConversations(userEmail: string): Promise<any[]> {
+  try {
+    const response = await fetch(
+      `${API_BASE_URL}/chats?email=${encodeURIComponent(userEmail.toLowerCase().trim())}`
+    );
+    if (!response.ok) {
+      throw new Error(`Failed to fetch chats with status: ${response.status}`);
+    }
+    return await response.json();
+  } catch (error) {
+    console.warn('API Warning [fetchUserConversations]: Няма връзка с бекенда.', error);
+    return [];
+  }
+}
+
+/**
+ * Проверява за съществуващ потребител и стартира/взима разговор по имейл
+ */
+export async function createOrGetConversation(
+  userEmail: string,
+  partnerEmail: string
+): Promise<any> {
+  try {
+    const response = await fetch(`${API_BASE_URL}/chats/start`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        userEmail: userEmail.toLowerCase().trim(),
+        partnerEmail: partnerEmail.toLowerCase().trim(),
+      }),
+    });
+
+    if (!response.ok) {
+      const errData = await response.json().catch(() => ({}));
+      throw new Error(
+        errData.message || errData.error || 'Потребителят с този имейл не бе открит.'
+      );
+    }
+
+    return await response.json();
+  } catch (error) {
+    console.error('API Error [createOrGetConversation]:', error);
+    throw error;
+  }
+}
+
+/**
+ * Изпраща ново съобщение в конкретен чат
+ */
+export async function sendMessageApi(
+  chatId: string,
+  senderEmail: string,
+  text: string
+): Promise<any> {
+  try {
+    const response = await fetch(`${API_BASE_URL}/chats/${chatId}/messages`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        senderEmail: senderEmail.toLowerCase().trim(),
+        text: text.trim(),
+      }),
+    });
+
+    if (!response.ok) {
+      const errData = await response.json().catch(() => ({}));
+      throw new Error(errData.message || 'Грешка при изпращане на съобщението.');
+    }
+
+    return await response.json();
+  } catch (error) {
+    console.error('API Error [sendMessageApi]:', error);
+    throw error;
+  }
+}
+
+/**
+ * Взима списъка с нови съобщения за конкретен чат (за Polling / Real-time updates)
+ */
+export async function fetchChatMessages(chatId: string): Promise<any[] | null> {
+  try {
+    const response = await fetch(`${API_BASE_URL}/chats/${chatId}/messages`);
+    if (!response.ok) {
+      throw new Error(`Failed to fetch messages for chat ${chatId}`);
+    }
+    return await response.json();
+  } catch (error) {
+    console.warn('API Warning [fetchChatMessages]: Няма връзка с бекенда.', error);
+    return null;
+  }
+}
