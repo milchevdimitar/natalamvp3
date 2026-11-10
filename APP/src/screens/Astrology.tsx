@@ -1,17 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import {
-  StyleSheet,
   View,
-  Text,
-  TextInput,
   TouchableOpacity,
-  ScrollView,
   Dimensions,
   ActivityIndicator,
 } from 'react-native';
-import Svg, { Circle, Line, Text as SvgText, G } from 'react-native-svg';
+import Svg, { Circle, Line, Text as SvgText, G, Defs, LinearGradient, Stop } from 'react-native-svg';
 import * as Astronomy from 'astronomy-engine';
-import { ArrowLeft, Sparkles, MapPin, Clock, Calendar, CloudUpload } from 'lucide-react-native';
+import { ArrowLeft, Sparkles, MapPin, Clock, Calendar, CloudUpload, User } from 'lucide-react-native';
 import { useApp } from '../context/AppContext';
 import { Card, T, Section, Pill, Hero } from '../components/UI';
 import { saveUserProfile } from '../services/api';
@@ -21,28 +17,28 @@ const SOFIA_LAT = 42.6977;
 const SOFIA_LON = 23.3219;
 
 const ZODIAC_SIGNS = [
-  { name: "Овен", latin: "ARIES", symbol: "♈" },
-  { name: "Телец", latin: "TAURUS", symbol: "♉" },
-  { name: "Близнаци", latin: "GEMINI", symbol: "♊" },
-  { name: "Рак", latin: "CANCER", symbol: "♋" },
-  { name: "Лъв", latin: "LEO", symbol: "♌" },
-  { name: "Дева", latin: "VIRGO", symbol: "♍" },
-  { name: "Везни", latin: "LIBRA", symbol: "♎" },
-  { name: "Скорпион", latin: "SCORPIO", symbol: "♏" },
-  { name: "Стрелец", latin: "SAGITTARIUS", symbol: "♐" },
-  { name: "Козирог", latin: "CAPRICORN", symbol: "♑" },
-  { name: "Водолей", latin: "AQUARIUS", symbol: "♒" },
-  { name: "Риби", latin: "PISCES", symbol: "♓" },
+  { name: "Aries", latin: "ARIES", symbol: "♈" },
+  { name: "Taurus", latin: "TAURUS", symbol: "♉" },
+  { name: "Gemini", latin: "GEMINI", symbol: "♊" },
+  { name: "Cancer", latin: "CANCER", symbol: "♋" },
+  { name: "Leo", latin: "LEO", symbol: "♌" },
+  { name: "Virgo", latin: "VIRGO", symbol: "♍" },
+  { name: "Libra", latin: "LIBRA", symbol: "♎" },
+  { name: "Scorpio", latin: "SCORPIO", symbol: "♏" },
+  { name: "Sagittarius", latin: "SAGITTARIUS", symbol: "♐" },
+  { name: "Capricorn", latin: "CAPRICORN", symbol: "♑" },
+  { name: "Aquarius", latin: "AQUARIUS", symbol: "♒" },
+  { name: "Pisces", latin: "PISCES", symbol: "♓" },
 ];
 
 const PLANET_BODIES = [
-  { name: "Слънце", symbol: "☉", body: Astronomy.Body.Sun },
-  { name: "Луна", symbol: "☾", body: Astronomy.Body.Moon },
-  { name: "Меркурий", symbol: "☿", body: Astronomy.Body.Mercury },
-  { name: "Венера", symbol: "♀", body: Astronomy.Body.Venus },
-  { name: "Марс", symbol: "♂", body: Astronomy.Body.Mars },
-  { name: "Юпитер", symbol: "♃", body: Astronomy.Body.Jupiter },
-  { name: "Сатурн", symbol: "♄", body: Astronomy.Body.Saturn },
+  { name: "Sun", symbol: "☉", body: Astronomy.Body.Sun },
+  { name: "Moon", symbol: "☾", body: Astronomy.Body.Moon },
+  { name: "Mercury", symbol: "☿", body: Astronomy.Body.Mercury },
+  { name: "Venus", symbol: "♀", body: Astronomy.Body.Venus },
+  { name: "Mars", symbol: "♂", body: Astronomy.Body.Mars },
+  { name: "Jupiter", symbol: "♃", body: Astronomy.Body.Jupiter },
+  { name: "Saturn", symbol: "♄", body: Astronomy.Body.Saturn },
 ];
 
 const degToZodiac = (deg: number) => {
@@ -90,61 +86,60 @@ const calculateHouses = (date: Date) => {
   return { cusps, asc, mc };
 };
 
+const getUserBirthDateTime = (user: any): { date: Date; dStr: string; tStr: string } | null => {
+  if (!user) return null;
+
+  const rawDate =
+    user.birthdate ||
+    user.birthDate ||
+    user.dateOfBirth ||
+    user.dob ||
+    user.birth_date ||
+    user.profile?.birthDate ||
+    user.profile?.dateOfBirth ||
+    user.profile?.dob ||
+    user.profile?.birth_date;
+
+  if (!rawDate) return null;
+
+  try {
+    const d = new Date(rawDate);
+    if (!isNaN(d.getTime())) {
+      const day = String(d.getUTCDate()).padStart(2, '0');
+      const month = String(d.getUTCMonth() + 1).padStart(2, '0');
+      const year = d.getUTCFullYear();
+      const hour = String(d.getUTCHours()).padStart(2, '0');
+      const min = String(d.getUTCMinutes()).padStart(2, '0');
+      return {
+        date: d,
+        dStr: `${day}.${month}.${year}`,
+        tStr: `${hour}:${min}`,
+      };
+    }
+  } catch (e) {
+    // Parsing error
+  }
+
+  return null;
+};
+
 export default function Astrology() {
   const { colors, setPage, user, setUser } = useApp();
 
-  // Функция за извличане на дата и час от записания birthdate в потребителския профил
-  const getInitialBirthData = () => {
-    if (user?.birthdate) {
-      try {
-        const d = new Date(user.birthdate);
-        const day = String(d.getUTCDate()).padStart(2, '0');
-        const month = String(d.getUTCMonth() + 1).padStart(2, '0');
-        const year = d.getUTCFullYear();
-        const hour = String(d.getUTCHours()).padStart(2, '0');
-        const min = String(d.getUTCMinutes()).padStart(2, '0');
-        return {
-          dStr: `${day}.${month}.${year}`,
-          tStr: `${hour}:${min}`,
-        };
-      } catch (e) {
-        // Fallback при грешка
-      }
-    }
-    return { dStr: "15.06.2000", tStr: "14:30" };
-  };
-
-  const initialData = getInitialBirthData();
-  const [dateStr, setDateStr] = useState(initialData.dStr);
-  const [timeStr, setTimeStr] = useState(initialData.tStr);
+  const [results, setResults] = useState<any>(null);
+  const [userDateInfo, setUserDateInfo] = useState<{ dStr: string; tStr: string } | null>(null);
   const [isSyncing, setIsSyncing] = useState(false);
   const [syncStatus, setSyncStatus] = useState<string | null>(null);
 
-  const [results, setResults] = useState<any>(() => {
-    return computeChartData(initialData.dStr, initialData.tStr);
-  });
-
-  useEffect(() => {
-    const updated = getInitialBirthData();
-    setDateStr(updated.dStr);
-    setTimeStr(updated.tStr);
-    const computed = computeChartData(updated.dStr, updated.tStr);
-    if (computed) setResults(computed);
-  }, [user?.birthdate]);
-
-  function computeChartData(dStr: string, tStr: string) {
+  const computeChartData = (dateObj: Date, dStr: string, tStr: string) => {
     try {
-      const [day, month, year] = dStr.split('.').map(Number);
-      const [hour, minute] = tStr.split(':').map(Number);
-      const date = new Date(Date.UTC(year, month - 1, day, hour - 3, minute));
-
-      const { cusps, asc, mc } = calculateHouses(date);
+      const { cusps, asc, mc } = calculateHouses(dateObj);
       const planetPositions: any[] = [];
 
       PLANET_BODIES.forEach(({ name, symbol, body }) => {
         const equVector = Astronomy.Equator(
           body,
-          date,
+          dateObj,
           new Astronomy.Observer(SOFIA_LAT, SOFIA_LON, 0),
           true,
           true
@@ -159,61 +154,67 @@ export default function Astrology() {
     } catch (e) {
       return null;
     }
-  }
-
-  const handleCalculate = async () => {
-    const res = computeChartData(dateStr, timeStr);
-    if (!res) {
-      alert("Невалиден формат на датата или часа!");
-      return;
-    }
-
-    setResults(res);
-
-    if (!user || !user.email) {
-      setSyncStatus('Няма активна потребителска сесия!');
-      return;
-    }
-
-    setIsSyncing(true);
-    setSyncStatus('Синхронизиране с MongoDB Atlas...');
-
-    const sunD = degToZodiac(res.planetPositions.find((p: any) => p.name === "Слънце")?.deg || 0);
-    const moonD = degToZodiac(res.planetPositions.find((p: any) => p.name === "Луна")?.deg || 0);
-    const ascD = degToZodiac(res.asc);
-
-    const [day, month, year] = dateStr.split('.').map(Number);
-    const [hour, minute] = timeStr.split(':').map(Number);
-    const isoBirthDate = new Date(Date.UTC(year, month - 1, day, hour, minute)).toISOString();
-
-    const updatedUser: UserProfile = {
-      ...user,
-      birthdate: isoBirthDate,
-      natalChart: {
-        sunSign: sunD.sign,
-        moonSign: moonD.sign,
-        ascendant: ascD.sign,
-        planetPositions: res.planetPositions,
-        cusps: res.cusps,
-        asc: res.asc,
-        mc: res.mc,
-      },
-    };
-
-    try {
-      await setUser(updatedUser);
-      await saveUserProfile(updatedUser);
-      setSyncStatus('Наталната карта е записана в базата!');
-    } catch (error) {
-      console.warn('Офлайн режим: Резултатът е запазен локално.', error);
-      setSyncStatus('Запазено локално на устройството.');
-    } finally {
-      setIsSyncing(false);
-    }
   };
 
-  const sunData = results ? degToZodiac(results.planetPositions.find((p: any) => p.name === "Слънце")?.deg || 0) : null;
-  const moonData = results ? degToZodiac(results.planetPositions.find((p: any) => p.name === "Луна")?.deg || 0) : null;
+  useEffect(() => {
+    const birthInfo = getUserBirthDateTime(user);
+
+    if (!birthInfo) {
+      setResults(null);
+      setUserDateInfo(null);
+      return;
+    }
+
+    setUserDateInfo({ dStr: birthInfo.dStr, tStr: birthInfo.tStr });
+
+    const chartRes = computeChartData(birthInfo.date, birthInfo.dStr, birthInfo.tStr);
+    setResults(chartRes);
+
+    if (chartRes && user && user.email) {
+      const syncNatalChart = async () => {
+        setIsSyncing(true);
+        setSyncStatus('Syncing with MongoDB Atlas...');
+
+        const sunD = degToZodiac(chartRes.planetPositions.find((p: any) => p.name === "Sun")?.deg || 0);
+        const moonD = degToZodiac(chartRes.planetPositions.find((p: any) => p.name === "Moon")?.deg || 0);
+        const ascD = degToZodiac(chartRes.asc);
+
+        const updatedUser: UserProfile = {
+          ...user,
+          natalChart: {
+            sunSign: sunD.sign,
+            moonSign: moonD.sign,
+            ascendant: ascD.sign,
+            planetPositions: chartRes.planetPositions,
+            cusps: chartRes.cusps,
+            asc: chartRes.asc,
+            mc: chartRes.mc,
+          },
+        };
+
+        try {
+          await setUser(updatedUser);
+          await saveUserProfile(updatedUser);
+          setSyncStatus('Natal chart saved to database!');
+        } catch (error) {
+          console.warn('Offline mode: Result saved locally.', error);
+          setSyncStatus('Saved locally on device.');
+        } finally {
+          setIsSyncing(false);
+        }
+      };
+
+      syncNatalChart();
+    }
+  }, [
+    user?.birthdate,
+    (user as any)?.birthDate,
+    (user as any)?.dateOfBirth,
+    (user as any)?.dob,
+  ]);
+
+  const sunData = results ? degToZodiac(results.planetPositions.find((p: any) => p.name === "Sun")?.deg || 0) : null;
+  const moonData = results ? degToZodiac(results.planetPositions.find((p: any) => p.name === "Moon")?.deg || 0) : null;
   const ascData = results ? degToZodiac(results.asc) : null;
 
   return (
@@ -224,55 +225,16 @@ export default function Astrology() {
       >
         <ArrowLeft size={18} color={colors.purple} />
         <T bold size={13} style={{ color: colors.purple }}>
-          Назад към Explore
+          Back to Explore
         </T>
       </TouchableOpacity>
 
       <Hero
-        eyebrow="NATALA CELESTIAL ENGINE"
-        first="Вашата"
-        accent="Натална Карта."
-        description="Въведете рождени данни за прецизен астрономически изчислителен анализ."
+        eyebrow="NATAL CELESTIAL ENGINE"
+        first="Your"
+        accent="Natal Chart."
+        description="Astronomical calculation and precision analysis of your natal chart."
       />
-
-      {/* Форма за въвеждане */}
-      <Card style={{ marginBottom: 20 }}>
-        <View style={{ flexDirection: 'row', gap: 12, marginBottom: 14 }}>
-          <View style={{ flex: 1 }}>
-            <T muted size={11} style={{ marginBottom: 4 }}>
-              ДАТА (ДД.ММ.ГГГГ)
-            </T>
-            <View style={{ height: 44, backgroundColor: colors.surfaceAlt, borderRadius: 12, justifyContent: 'center', paddingHorizontal: 12 }}>
-              <TextInput
-                style={{ color: colors.text, fontSize: 14, fontWeight: '600' }}
-                value={dateStr}
-                onChangeText={setDateStr}
-                placeholder="15.06.2000"
-                placeholderTextColor={colors.muted}
-              />
-            </View>
-          </View>
-
-          <View style={{ flex: 1 }}>
-            <T muted size={11} style={{ marginBottom: 4 }}>
-              ЧАС (ЧЧ:ММ)
-            </T>
-            <View style={{ height: 44, backgroundColor: colors.surfaceAlt, borderRadius: 12, justifyContent: 'center', paddingHorizontal: 12 }}>
-              <TextInput
-                style={{ color: colors.text, fontSize: 14, fontWeight: '600' }}
-                value={timeStr}
-                onChangeText={setTimeStr}
-                placeholder="14:30"
-                placeholderTextColor={colors.muted}
-              />
-            </View>
-          </View>
-        </View>
-
-        <Pill onPress={handleCalculate} selected>
-          ✦ Изчисли и Запази Натална Карта
-        </Pill>
-      </Card>
 
       {syncStatus && (
         <View
@@ -298,10 +260,10 @@ export default function Astrology() {
         </View>
       )}
 
-      {results && (
+      {results ? (
         <>
-          {/* Top Placements Highlight (Слънце, Луна, Асцендент) */}
-          <Section>Основни Аспекти</Section>
+          {/* Key Placements */}
+          <Section>Primary Placements</Section>
           <View style={{ flexDirection: 'row', gap: 8, marginBottom: 20 }}>
             <Card style={{ flex: 1, padding: 12, alignItems: 'center' }}>
               <T size={20} style={{ color: colors.gold }}>☉</T>
@@ -325,17 +287,17 @@ export default function Astrology() {
             </Card>
           </View>
 
-          {/* Графика на Наталното Колело */}
-          <Section>Астрономическа Графика</Section>
+          {/* Astronomical Chart Graphic */}
+          <Section>Astronomical Chart</Section>
           <Card style={{ alignItems: 'center', paddingVertical: 20, marginBottom: 20 }}>
             <NatalChartSvg results={results} colors={colors} />
           </Card>
 
-          {/* Данни за раждането */}
+          {/* Birth Details */}
           <Card style={{ marginBottom: 20, gap: 10 }}>
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
               <Sparkles size={16} color={colors.purple} />
-              <T bold size={14}>Детайли на раждане ({user?.name || 'Текущ потребител'})</T>
+              <T bold size={14}>Birth Details ({user?.name || 'User'})</T>
             </View>
             <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 16, marginTop: 4 }}>
               <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
@@ -348,31 +310,31 @@ export default function Astrology() {
               </View>
               <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
                 <MapPin size={14} color={colors.muted} />
-                <T muted size={12}>{user?.birthCity?.name || 'София'}, {user?.birthCity?.country || 'България'}</T>
+                <T muted size={12}>{user?.birthCity?.name || 'Sofia'}, {user?.birthCity?.country || 'Bulgaria'}</T>
               </View>
             </View>
           </Card>
 
-          {/* Позиции на Планетите */}
-          <Section>Планетарни Позиции</Section>
+          {/* Planetary Positions List */}
+          <Section>Planetary Positions</Section>
           <View style={{ gap: 10, marginBottom: 40 }}>
-            {/* Асцендент */}
+            {/* Ascendant */}
             <Card style={{ paddingVertical: 14 }}>
               <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
                 <View style={{ width: 42, height: 42, borderRadius: 14, backgroundColor: colors.purpleSoft, alignItems: 'center', justifyContent: 'center' }}>
                   <T bold size={14} style={{ color: colors.purple }}>ASC</T>
                 </View>
                 <View style={{ flex: 1 }}>
-                  <T bold size={15}>Асцендент (ASC)</T>
+                  <T bold size={15}>Ascendant (ASC)</T>
                   <T muted size={12}>{ascData?.sign} {ascData?.symbol} · {ascData?.degFormatted}</T>
                 </View>
                 <View style={{ backgroundColor: colors.goldSoft, borderRadius: 99, paddingHorizontal: 10, paddingVertical: 4 }}>
-                  <T bold size={10} style={{ color: colors.gold }}>Дом 1</T>
+                  <T bold size={10} style={{ color: colors.gold }}>House 1</T>
                 </View>
               </View>
             </Card>
 
-            {/* Зенит MC */}
+            {/* Midheaven MC */}
             {(() => {
               const mcData = degToZodiac(results.mc);
               return (
@@ -382,18 +344,18 @@ export default function Astrology() {
                       <T bold size={14} style={{ color: colors.purple }}>MC</T>
                     </View>
                     <View style={{ flex: 1 }}>
-                      <T bold size={15}>Зенит (MC)</T>
+                      <T bold size={15}>Midheaven (MC)</T>
                       <T muted size={12}>{mcData.sign} {mcData.symbol} · {mcData.degFormatted}</T>
                     </View>
                     <View style={{ backgroundColor: colors.purpleSoft, borderRadius: 99, paddingHorizontal: 10, paddingVertical: 4 }}>
-                      <T bold size={10} style={{ color: colors.purple }}>Дом 10</T>
+                      <T bold size={10} style={{ color: colors.purple }}>House 10</T>
                     </View>
                   </View>
                 </Card>
               );
             })()}
 
-            {/* Списък Планети */}
+            {/* Planets */}
             {results.planetPositions.map((p: any, idx: number) => {
               const pInfo = degToZodiac(p.deg);
               return (
@@ -407,7 +369,7 @@ export default function Astrology() {
                       <T muted size={12}>{pInfo.sign} {pInfo.symbol} · {pInfo.degFormatted}</T>
                     </View>
                     <View style={{ backgroundColor: colors.surfaceAlt, borderRadius: 99, paddingHorizontal: 10, paddingVertical: 4 }}>
-                      <T bold size={10} style={{ color: colors.muted }}>Дом {p.house}</T>
+                      <T bold size={10} style={{ color: colors.muted }}>House {p.house}</T>
                     </View>
                   </View>
                 </Card>
@@ -415,110 +377,165 @@ export default function Astrology() {
             })}
           </View>
         </>
+      ) : (
+        /* Empty State */
+        <Card style={{ alignItems: 'center', paddingVertical: 30, gap: 12, marginBottom: 40 }}>
+          <View
+            style={{
+              width: 64,
+              height: 64,
+              borderRadius: 32,
+              backgroundColor: colors.purpleSoft,
+              alignItems: 'center',
+              justifyContent: 'center',
+            }}
+          >
+            <Calendar size={32} color={colors.purple} />
+          </View>
+          <T bold size={16}>Missing Birth Date in Profile</T>
+          <T muted size={13} style={{ textAlign: 'center', maxWidth: 280, lineHeight: 18 }}>
+            No birth date and time found in your profile. Please add them in your settings.
+          </T>
+          <Pill selected onPress={() => setPage('profile')}>
+            <User size={14} color="#FFFFFF" /> Go to Profile
+          </Pill>
+        </Card>
       )}
     </>
   );
 }
 
-// Компонент за изчертаване на графиката с SVG
 function NatalChartSvg({ results, colors }: { results: any; colors: any }) {
-  const size = Math.min(Dimensions.get('window').width - 64, 330);
+  const size = Math.min(Dimensions.get('window').width - 48, 340);
   const center = size / 2;
 
-  const outerRadius = size * 0.46;
-  const zodiacRingInner = outerRadius * 0.78;
-  const houseInnerRadius = zodiacRingInner * 0.45;
+  const outerRadius = size * 0.47;
+  const zodiacInnerRadius = outerRadius * 0.77;
+  const houseInnerRadius = zodiacInnerRadius * 0.48;
+  const coreRadius = houseInnerRadius * 0.28;
 
   const toRad = (deg: number) => ((deg - results.asc + 180) % 360) * (Math.PI / 180);
 
   const planetPoints = results.planetPositions.map((p: any) => {
     const angle = toRad(p.deg);
+    const planetOrbitR = (zodiacInnerRadius + houseInnerRadius) / 2;
     return {
-      x: center + houseInnerRadius * Math.cos(angle),
-      y: center + houseInnerRadius * Math.sin(angle),
+      x: center + planetOrbitR * Math.cos(angle),
+      y: center + planetOrbitR * Math.sin(angle),
+      innerX: center + houseInnerRadius * Math.cos(angle),
+      innerY: center + houseInnerRadius * Math.sin(angle),
+      outerX: center + zodiacInnerRadius * Math.cos(angle),
+      outerY: center + zodiacInnerRadius * Math.sin(angle),
       deg: p.deg,
       name: p.name,
+      symbol: p.symbol,
     };
   });
 
-  const aspectLines: Array<{ x1: number; y1: number; x2: number; y2: number }> = [];
+  const aspectLines: Array<{ x1: number; y1: number; x2: number; y2: number; color: string; isMajor: boolean }> = [];
   for (let i = 0; i < planetPoints.length; i++) {
     for (let j = i + 1; j < planetPoints.length; j++) {
       const diff = Math.abs(planetPoints[i].deg - planetPoints[j].deg) % 360;
       const angleDiff = diff > 180 ? 360 - diff : diff;
-      if (
-        Math.abs(angleDiff - 60) < 6 ||
-        Math.abs(angleDiff - 90) < 6 ||
-        Math.abs(angleDiff - 120) < 6 ||
-        Math.abs(angleDiff - 180) < 6
-      ) {
+
+      let aspectColor = '';
+      let isMajor = false;
+
+      if (Math.abs(angleDiff - 120) < 6 || Math.abs(angleDiff - 60) < 5) {
+        aspectColor = colors.purple; // Trine / Sextile
+      } else if (Math.abs(angleDiff - 90) < 6 || Math.abs(angleDiff - 180) < 6) {
+        aspectColor = colors.gold; // Square / Opposition
+        isMajor = true;
+      }
+
+      if (aspectColor) {
         aspectLines.push({
-          x1: planetPoints[i].x,
-          y1: planetPoints[i].y,
-          x2: planetPoints[j].x,
-          y2: planetPoints[j].y,
+          x1: planetPoints[i].innerX,
+          y1: planetPoints[i].innerY,
+          x2: planetPoints[j].innerX,
+          y2: planetPoints[j].innerY,
+          color: aspectColor,
+          isMajor,
         });
       }
     }
   }
 
+  const ascRad = toRad(results.asc);
+  const dscRad = toRad(results.asc + 180);
+  const mcRad = toRad(results.mc);
+  const icRad = toRad(results.mc + 180);
+
   return (
     <Svg width={size} height={size}>
-      <Circle cx={center} cy={center} r={outerRadius} stroke={colors.line} strokeWidth="1.5" fill="none" />
-      <Circle cx={center} cy={center} r={zodiacRingInner} stroke={colors.line} strokeWidth="1.5" fill="none" />
-      <Circle cx={center} cy={center} r={houseInnerRadius} stroke={colors.line} strokeWidth="1" strokeDasharray="3,3" fill="none" />
+      <Defs>
+        <LinearGradient id="chartGlow" x1="0%" y1="0%" x2="100%" y2="100%">
+          <Stop offset="0%" stopColor={colors.purple} stopOpacity="0.12" />
+          <Stop offset="100%" stopColor={colors.gold} stopOpacity="0.04" />
+        </LinearGradient>
+      </Defs>
 
+      {/* Background Rings */}
+      <Circle cx={center} cy={center} r={outerRadius} fill="url(#chartGlow)" stroke={colors.purple} strokeWidth="1.8" />
+      <Circle cx={center} cy={center} r={zodiacInnerRadius} stroke={colors.line} strokeWidth="1.5" fill="none" />
+      <Circle cx={center} cy={center} r={houseInnerRadius} stroke={colors.line} strokeWidth="1.2" strokeDasharray="4,4" fill="none" />
+      <Circle cx={center} cy={center} r={coreRadius} stroke={colors.purple} strokeWidth="1" strokeDasharray="2,2" fill={colors.purpleSoft} opacity={0.6} />
+
+      {/* Zodiac Sectors & Symbols */}
       {ZODIAC_SIGNS.map((sign, idx) => {
         const startDeg = idx * 30;
         const midDeg = startDeg + 15;
         const startRad = toRad(startDeg);
         const midRad = toRad(midDeg);
 
-        const xLine1 = center + outerRadius * Math.cos(startRad);
-        const yLine1 = center + outerRadius * Math.sin(startRad);
-        const xLine2 = center + zodiacRingInner * Math.cos(startRad);
-        const yLine2 = center + zodiacRingInner * Math.sin(startRad);
+        const x1 = center + outerRadius * Math.cos(startRad);
+        const y1 = center + outerRadius * Math.sin(startRad);
+        const x2 = center + zodiacInnerRadius * Math.cos(startRad);
+        const y2 = center + zodiacInnerRadius * Math.sin(startRad);
 
-        const labelRadius = (outerRadius + zodiacRingInner) / 2;
-        const tx = center + labelRadius * Math.cos(midRad);
-        const ty = center + labelRadius * Math.sin(midRad);
+        const labelRadius = (outerRadius + zodiacInnerRadius) / 2;
+        const symbolX = center + labelRadius * Math.cos(midRad);
+        const symbolY = center + labelRadius * Math.sin(midRad);
 
         return (
-          <G key={sign.latin}>
-            <Line x1={xLine1} y1={yLine1} x2={xLine2} y2={yLine2} stroke={colors.line} strokeWidth="1" />
+          <G key={`zodiac-${sign.latin}`}>
+            <Line x1={x1} y1={y1} x2={x2} y2={y2} stroke={colors.line} strokeWidth="1" opacity={0.7} />
+            
             <SvgText
-              x={tx}
-              y={ty}
-              fill={colors.text}
-              fontSize="7.5"
+              x={symbolX}
+              y={symbolY + 1}
+              fill={idx % 2 === 0 ? colors.purple : colors.gold}
+              fontSize="12"
               fontWeight="bold"
               textAnchor="middle"
               alignmentBaseline="middle"
             >
-              {sign.latin}
+              {sign.symbol}
             </SvgText>
           </G>
         );
       })}
 
+      {/* House Cusps */}
       {results.cusps.slice(1).map((cuspDeg: number, idx: number) => {
         const rad = toRad(cuspDeg);
-        const x1 = center + zodiacRingInner * Math.cos(rad);
-        const y1 = center + zodiacRingInner * Math.sin(rad);
+        const x1 = center + zodiacInnerRadius * Math.cos(rad);
+        const y1 = center + zodiacInnerRadius * Math.sin(rad);
 
         const houseNumRad = toRad(cuspDeg + 15);
-        const numR = houseInnerRadius * 0.7;
+        const numR = houseInnerRadius * 0.72;
         const hx = center + numR * Math.cos(houseNumRad);
         const hy = center + numR * Math.sin(houseNumRad);
 
         return (
-          <G key={`house-${idx}`}>
-            <Line x1={center} y1={center} x2={x1} y2={y1} stroke={colors.line} strokeWidth="0.8" opacity={0.6} />
+          <G key={`house-cusp-${idx}`}>
+            <Line x1={center} y1={center} x2={x1} y2={y1} stroke={colors.line} strokeWidth="0.8" opacity={0.45} />
             <SvgText
               x={hx}
               y={hy}
               fill={colors.muted}
               fontSize="8"
+              fontWeight="bold"
               textAnchor="middle"
               alignmentBaseline="middle"
             >
@@ -528,6 +545,7 @@ function NatalChartSvg({ results, colors }: { results: any; colors: any }) {
         );
       })}
 
+      {/* Aspect Lines */}
       {aspectLines.map((line, idx) => (
         <Line
           key={`aspect-${idx}`}
@@ -535,40 +553,84 @@ function NatalChartSvg({ results, colors }: { results: any; colors: any }) {
           y1={line.y1}
           x2={line.x2}
           y2={line.y2}
-          stroke={idx % 2 === 0 ? colors.purple : colors.gold}
-          strokeWidth="0.8"
-          opacity={0.45}
+          stroke={line.color}
+          strokeWidth={line.isMajor ? "1.2" : "0.8"}
+          opacity={line.isMajor ? 0.65 : 0.4}
         />
       ))}
 
-      {results.planetPositions.map((p: any, idx: number) => {
-        const rad = toRad(p.deg);
-        const pR = (zodiacRingInner + houseInnerRadius) / 2;
-        const px = center + pR * Math.cos(rad);
-        const py = center + pR * Math.sin(rad);
+      {/* ASC - DSC & MC - IC Axes */}
+      <Line
+        x1={center + outerRadius * Math.cos(ascRad)}
+        y1={center + outerRadius * Math.sin(ascRad)}
+        x2={center + outerRadius * Math.cos(dscRad)}
+        y2={center + outerRadius * Math.sin(dscRad)}
+        stroke={colors.purple}
+        strokeWidth="2"
+      />
+      <Line
+        x1={center + outerRadius * Math.cos(mcRad)}
+        y1={center + outerRadius * Math.sin(mcRad)}
+        x2={center + outerRadius * Math.cos(icRad)}
+        y2={center + outerRadius * Math.sin(icRad)}
+        stroke={colors.gold}
+        strokeWidth="1.8"
+        strokeDasharray="5,3"
+      />
 
-        const tickX1 = center + zodiacRingInner * Math.cos(rad);
-        const tickY1 = center + zodiacRingInner * Math.sin(rad);
-        const tickX2 = center + (zodiacRingInner - 5) * Math.cos(rad);
-        const tickY2 = center + (zodiacRingInner - 5) * Math.sin(rad);
+      {/* ASC / MC Markers */}
+      <G>
+        <Circle cx={center + outerRadius * Math.cos(ascRad)} cy={center + outerRadius * Math.sin(ascRad)} r="4" fill={colors.purple} />
+        <SvgText
+          x={center + (outerRadius - 14) * Math.cos(ascRad)}
+          y={center + (outerRadius - 14) * Math.sin(ascRad)}
+          fill={colors.purple}
+          fontSize="9"
+          fontWeight="bold"
+          textAnchor="middle"
+          alignmentBaseline="middle"
+        >
+          ASC
+        </SvgText>
+      </G>
 
-        return (
-          <G key={`planet-symbol-${idx}`}>
-            <Line x1={tickX1} y1={tickY1} x2={tickX2} y2={tickY2} stroke={colors.purple} strokeWidth="1.5" />
-            <Circle cx={px} cy={py} r="3" fill={colors.purple} />
-            <SvgText
-              x={px}
-              y={py - 6}
-              fill={colors.text}
-              fontSize="10"
-              fontWeight="bold"
-              textAnchor="middle"
-            >
-              {p.symbol}
-            </SvgText>
-          </G>
-        );
-      })}
+      <G>
+        <Circle cx={center + outerRadius * Math.cos(mcRad)} cy={center + outerRadius * Math.sin(mcRad)} r="4" fill={colors.gold} />
+        <SvgText
+          x={center + (outerRadius - 14) * Math.cos(mcRad)}
+          y={center + (outerRadius - 14) * Math.sin(mcRad)}
+          fill={colors.gold}
+          fontSize="9"
+          fontWeight="bold"
+          textAnchor="middle"
+          alignmentBaseline="middle"
+        >
+          MC
+        </SvgText>
+      </G>
+
+      {/* Planetary Markers */}
+      {planetPoints.map((p, idx) => (
+        <G key={`planet-${idx}`}>
+          <Line x1={p.outerX} y1={p.outerY} x2={p.innerX} y2={p.innerY} stroke={colors.purple} strokeWidth="1" opacity={0.5} />
+          
+          <Circle cx={p.x} cy={p.y} r="9" fill={colors.surface} stroke={colors.purple} strokeWidth="1.2" />
+          <SvgText
+            x={p.x}
+            y={p.y + 1}
+            fill={colors.text}
+            fontSize="10"
+            fontWeight="bold"
+            textAnchor="middle"
+            alignmentBaseline="middle"
+          >
+            {p.symbol}
+          </SvgText>
+        </G>
+      ))}
+
+      {/* Chart Center */}
+      <Circle cx={center} cy={center} r="3" fill={colors.gold} />
     </Svg>
   );
 }

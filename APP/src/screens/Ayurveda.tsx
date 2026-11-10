@@ -2,12 +2,10 @@ import React, { useState } from 'react';
 import {
   View,
   TouchableOpacity,
-  ScrollView,
   ActivityIndicator,
 } from 'react-native';
 import {
   ArrowLeft,
-  Sparkles,
   RotateCcw,
   Wind,
   Flame,
@@ -37,127 +35,127 @@ interface Question {
 const AYURVEDA_QUESTIONS: Question[] = [
   {
     id: 1,
-    category: "ФИЗИКА И ГРАДЕЖ",
-    question: "Как бихте описали вашата физическа структура и костна система?",
+    category: "BODY & BUILD",
+    question: "How would you describe your physical structure and frame?",
     options: [
-      { label: "Фина, слаба, лека конструкция; трудно качвам килограми.", dosha: 'vata' },
-      { label: "Средно устройство, атлетично, мускулесто; лесно поддържам тегло.", dosha: 'pitta' },
-      { label: "Едра, здрава и широка костна структура; лесно качвам килограми.", dosha: 'kapha' },
+      { label: "Slender, thin, light build; hard to gain weight.", dosha: 'vata' },
+      { label: "Medium, athletic, muscular build; easy to maintain weight.", dosha: 'pitta' },
+      { label: "Large, sturdy, broad frame; gain weight easily.", dosha: 'kapha' },
     ],
   },
   {
     id: 2,
-    category: "КОЖА И КОСА",
-    question: "Какво е типичното състояние на вашата кожа и коса?",
+    category: "SKIN & HAIR",
+    question: "What is the typical condition of your skin and hair?",
     options: [
-      { label: "Суха, тънка или хладна кожа; чуплива, суха коса.", dosha: 'vata' },
-      { label: "Топла, чувствителна или склонна към зачервяване кожа; права, тънка коса.", dosha: 'pitta' },
-      { label: "Гладка, мека и влажна кожа; гъста, плътна и бляскава коса.", dosha: 'kapha' },
+      { label: "Dry, thin, or cool skin; brittle, dry hair.", dosha: 'vata' },
+      { label: "Warm, sensitive, or redness-prone skin; straight, fine hair.", dosha: 'pitta' },
+      { label: "Smooth, soft, moist skin; thick, full, lustrous hair.", dosha: 'kapha' },
     ],
   },
   {
     id: 3,
-    category: "МЕТАБОЛИЗЪМ И АПЕТИТ",
-    question: "Как реагира вашата храносмилателна система?",
+    category: "METABOLISM & APPETITE",
+    question: "How does your digestive system function?",
     options: [
-      { label: "Променлив апетит и газове; понякога забравям да ям.", dosha: 'vata' },
-      { label: "Силно храносмилане и силен апетит; ставам раздразнителен, ако огладнея.", dosha: 'pitta' },
-      { label: "Бавен метаболизъм; обичам да хапвам, но мога да пропускам хранения.", dosha: 'kapha' },
+      { label: "Variable appetite and bloating; sometimes forget to eat.", dosha: 'vata' },
+      { label: "Strong digestion and intense appetite; irritable if meals are delayed.", dosha: 'pitta' },
+      { label: "Slow metabolism; enjoy eating, but can easily skip meals.", dosha: 'kapha' },
     ],
   },
   {
     id: 4,
-    category: "УМ И ТЕМПЕРАМЕНТ",
-    question: "Как възприемате нова информация и как работи умът ви?",
+    category: "MIND & TEMPERAMENT",
+    question: "How do you process new information and how does your mind work?",
     options: [
-      { label: "Уча изключително бързо, но и бързо забравям; бърз и творчески ум.", dosha: 'vata' },
-      { label: "Остър, аналитичен, фокусиран и организиран ум; добра памет.", dosha: 'pitta' },
-      { label: "Уча методично и по-бавно, но имам дълбока, устойчива памет.", dosha: 'kapha' },
+      { label: "Learn very quickly but forget easily; fast and creative mind.", dosha: 'vata' },
+      { label: "Sharp, analytical, focused, and organized mind; good memory.", dosha: 'pitta' },
+      { label: "Learn methodically and slower, but have a deep, lasting memory.", dosha: 'kapha' },
     ],
   },
   {
     id: 5,
-    category: "СЪН И ПОЧИВКА",
-    question: "Какъв е характерът на вашия сън?",
+    category: "SLEEP & REST",
+    question: "What is the nature of your sleep?",
     options: [
-      { label: "Повърхностен, лек, с чести събуждания или безсъние.", dosha: 'vata' },
-      { label: "Умерено дълбок, кратък, но възстановяващ; събуждам се свеж.", dosha: 'pitta' },
-      { label: "Дълбок, тежък и продължителен; трудно се събуждам сутрин.", dosha: 'kapha' },
+      { label: "Light, shallow, with frequent awakenings or insomnia.", dosha: 'vata' },
+      { label: "Moderately deep, sound, resting well on fewer hours.", dosha: 'pitta' },
+      { label: "Deep, heavy, long sleep; hard to wake up in the morning.", dosha: 'kapha' },
     ],
   },
   {
     id: 6,
-    category: "РЕАКЦИЯ ПРИ СТРЕС",
-    question: "Как реагирате, когато сте под напрежение?",
+    category: "STRESS RESPONSE",
+    question: "How do you react under pressure or stress?",
     options: [
-      { label: "Изпитвам безпокойство, тревожност, страх или объркване.", dosha: 'vata' },
-      { label: "Ставам критичен, гневна, раздразнителен или доминиращ.", dosha: 'pitta' },
-      { label: "Затварям се в себе си, ставам инертен, бавен или упрям.", dosha: 'kapha' },
+      { label: "Feel anxious, worried, fearful, or confused.", dosha: 'vata' },
+      { label: "Become critical, angry, irritable, or aggressive.", dosha: 'pitta' },
+      { label: "Withdraw, become passive, sluggish, or stubborn.", dosha: 'kapha' },
     ],
   },
   {
     id: 7,
-    category: "КЛИМАТИЧНИ ПРЕДПОЧИТАНИЯ",
-    question: "Кое време и температура понасяте най-трудно?",
+    category: "CLIMATE PREFERENCES",
+    question: "Which climate or weather do you dislike most?",
     options: [
-      { label: "Мразя студа и вятъра; обичам топлина и слънце.", dosha: 'vata' },
-      { label: "Мразя жегата и горещото слънце; предпочитам прохлада.", dosha: 'pitta' },
-      { label: "Мразя влажното и студено време; предпочитам сухо и топло.", dosha: 'kapha' },
+      { label: "Dislike cold and windy weather; love warmth and sunshine.", dosha: 'vata' },
+      { label: "Dislike heat and hot sun; prefer cool environments.", dosha: 'pitta' },
+      { label: "Dislike damp, cold weather; prefer dry and warm climates.", dosha: 'kapha' },
     ],
   },
   {
     id: 8,
-    category: "ТЕМП НА ДЕЙСТВИЕ",
-    question: "Какъв е вашият ежедневен ритъм на движение и разговор?",
+    category: "PACE & ENERGY",
+    question: "What is your daily pace of action and speech?",
     options: [
-      { label: "Бърз, импулсивен, енергичен; постоянно съм в движение.", dosha: 'vata' },
-      { label: "Целенасочен, ефективен, точен и тона ми е убедителен.", dosha: 'pitta' },
-      { label: "Плавен, спокоен, умерено бавен и стабилен.", dosha: 'kapha' },
+      { label: "Fast, impulsive, energetic; constantly on the move.", dosha: 'vata' },
+      { label: "Goal-oriented, efficient, precise, persuasive tone.", dosha: 'pitta' },
+      { label: "Smooth, relaxed, steady, and deliberate.", dosha: 'kapha' },
     ],
   },
 ];
 
 const DOSHA_DETAILS = {
   vata: {
-    title: "Вата (Vata)",
-    element: "Въздух & Етер 💨",
+    title: "Vata",
+    element: "Air & Ether 💨",
     icon: Wind,
     color: "#7653AD",
     bg: "rgba(118, 83, 173, 0.12)",
-    traits: "Креативност, бързина, гъвкавост, артистичност.",
-    description: "Вие сте задвижвани от принципа на движението. Имате жив ум, богата фантазия и ентусиазъм. Когато сте в баланс, сте изключително вдъхновяващи. При дисбаланс сте склонни към безпокойство, суха кожа и безсъние.",
+    traits: "Creativity, speed, flexibility, artistry.",
+    description: "You are driven by the principle of movement. You have a lively mind, vivid imagination, and enthusiasm. In balance, you are inspiring and innovative. Out of balance, you are prone to anxiety, dry skin, and insomnia.",
     recommendations: [
-      "Консумирайте топла, маслена и сготвена храна.",
-      "Спазвайте строг дневен режим за сън и хранене.",
-      "Практикувайте успокояващи медитации и топла самомасаж (Абянга).",
+      "Consume warm, unctuous, and freshly cooked meals.",
+      "Maintain a consistent daily routine for sleep and meals.",
+      "Practice calming meditation and warm oil self-massage (Abhyanga).",
     ],
   },
   pitta: {
-    title: "Пита (Pitta)",
-    element: "Огън & Вода 💥",
+    title: "Pitta",
+    element: "Fire & Water 💥",
     icon: Flame,
     color: "#E65B63",
     bg: "rgba(230, 91, 99, 0.12)",
-    traits: "Интелект, лидерство, решителност, организираност.",
-    description: "Вие сте задвижвани от принципа на трансформацията и метаболизма. Имате ясен ум, остър аналитичен дух и естествена амбиция. При баланс сте отлични лидери. При дисбаланс сте склонни към гняв, зачервявания и киселини.",
+    traits: "Intellect, leadership, determination, organization.",
+    description: "You are driven by the principle of transformation and metabolism. You possess a clear mind, sharp intellect, and natural ambition. In balance, you make excellent leaders. Out of balance, you tend toward irritability, inflammation, and digestive heat.",
     recommendations: [
-      "Избягвайте прекалено люти, кисели и мазни храни.",
-      "Търсете прохлада, природа и разходки край вода.",
-      "Не прекалявайте с работохолизма и състезателния дух.",
+      "Avoid excessively spicy, acidic, or fried foods.",
+      "Seek cool environments, nature, and walks by water.",
+      "Avoid overworking and excessive competitiveness.",
     ],
   },
   kapha: {
-    title: "Кафа (Kapha)",
-    element: "Земя & Вода 💧",
+    title: "Kapha",
+    element: "Earth & Water 💧",
     icon: Droplets,
     color: "#AD7B3A",
     bg: "rgba(173, 123, 58, 0.12)",
-    traits: "Стабилност, състрадание, издръжливост, спокойствие.",
-    description: "Вие сте задвижвани от принципа на структурата и смазването. Имате голямо сърце, силен имунитет и дълбоко търпение. При баланс носите хармония и сигурност. При дисбаланс сте склонни към мудност, задържане на тегло и инерция.",
+    traits: "Stability, compassion, endurance, tranquility.",
+    description: "You are driven by the principle of structure and lubrication. You have a big heart, strong immunity, and deep patience. In balance, you bring harmony and grounding. Out of balance, you may experience lethargy, weight gain, and resistance to change.",
     recommendations: [
-      "Наблягайте на лека, топла, пикантна и горчива храна.",
-      "Включете редовни, динамични кардио тренировки.",
-      "Ставайте рано (преди 6:00 ч.) и избягвайте следобедния сън.",
+      "Focus on light, warm, spicy, and bitter foods.",
+      "Engage in regular, dynamic cardio exercise.",
+      "Wake up early (before 6:00 AM) and avoid daytime naps.",
     ],
   },
 };
@@ -171,8 +169,17 @@ export default function Ayurveda() {
     kapha: 0,
   });
   const [completed, setCompleted] = useState(false);
+  const [isRetaking, setIsRetaking] = useState(false);
   const [isSyncing, setIsSyncing] = useState(false);
   const [syncStatus, setSyncStatus] = useState<string | null>(null);
+
+  const savedAyurveda = user?.ayurveda || (user as any)?.ayurvedic;
+  const hasSavedResult = Boolean(savedAyurveda && (savedAyurveda.dominantDosha || savedAyurveda.scores));
+  const showSavedResult = hasSavedResult && !isRetaking && !completed;
+
+  const currentScores = showSavedResult && savedAyurveda?.scores
+    ? savedAyurveda.scores
+    : scores;
 
   const getDominantDoshaFromScores = (s: { vata: number; pitta: number; kapha: number }): DoshaType => {
     if (s.vata >= s.pitta && s.vata >= s.kapha) return 'vata';
@@ -180,23 +187,36 @@ export default function Ayurveda() {
     return 'kapha';
   };
 
+  const dominantKey: DoshaType = showSavedResult && savedAyurveda?.dominantDosha
+    ? (savedAyurveda.dominantDosha.toLowerCase() as DoshaType)
+    : getDominantDoshaFromScores(currentScores);
+
+  const dominant = DOSHA_DETAILS[dominantKey] || DOSHA_DETAILS.vata;
+  const IconComponent = dominant.icon;
+
+  const scoreSum = (currentScores.vata || 0) + (currentScores.pitta || 0) + (currentScores.kapha || 0) || AYURVEDA_QUESTIONS.length;
+  const vataPct = Math.round(((currentScores.vata || 0) / scoreSum) * 100);
+  const pittaPct = Math.round(((currentScores.pitta || 0) / scoreSum) * 100);
+  const kaphaPct = Math.round(((currentScores.kapha || 0) / scoreSum) * 100);
+
   const handleFinishAndSync = async (finalScores: { vata: number; pitta: number; kapha: number }) => {
     setCompleted(true);
+    setIsRetaking(false);
 
     if (!user || !user.email) {
-      setSyncStatus('Няма активна потребителска сесия!');
+      setSyncStatus('No active user session!');
       return;
     }
 
     setIsSyncing(true);
-    setSyncStatus('Синхронизиране с MongoDB Atlas...');
+    setSyncStatus('Syncing with MongoDB Atlas...');
 
-    const dominant = getDominantDoshaFromScores(finalScores);
+    const dominantDosha = getDominantDoshaFromScores(finalScores);
 
     const updatedUser: UserProfile = {
       ...user,
       ayurveda: {
-        dominantDosha: dominant,
+        dominantDosha,
         scores: finalScores,
       },
     };
@@ -204,10 +224,10 @@ export default function Ayurveda() {
     try {
       await setUser(updatedUser);
       await saveUserProfile(updatedUser);
-      setSyncStatus('Аюрведа конституцията е записана в базата!');
+      setSyncStatus('Ayurvedic constitution saved to database!');
     } catch (error) {
-      console.warn('Офлайн режим: Резултатът е запазен локално.', error);
-      setSyncStatus('Запазено локално на устройството.');
+      console.warn('Offline mode: Result saved locally.', error);
+      setSyncStatus('Saved locally on device.');
     } finally {
       setIsSyncing(false);
     }
@@ -224,23 +244,16 @@ export default function Ayurveda() {
     }
   };
 
-  const handleReset = () => {
+  const handleRetake = () => {
     setScores({ vata: 0, pitta: 0, kapha: 0 });
     setCurrentIndex(0);
     setCompleted(false);
+    setIsRetaking(true);
     setSyncStatus(null);
   };
 
   const total = AYURVEDA_QUESTIONS.length;
   const currentQ = AYURVEDA_QUESTIONS[currentIndex];
-
-  const dominantKey = getDominantDoshaFromScores(scores);
-  const dominant = DOSHA_DETAILS[dominantKey];
-  const IconComponent = dominant.icon;
-
-  const vataPct = Math.round((scores.vata / total) * 100);
-  const pittaPct = Math.round((scores.pitta / total) * 100);
-  const kaphaPct = Math.round((scores.kapha / total) * 100);
 
   return (
     <>
@@ -250,78 +263,18 @@ export default function Ayurveda() {
       >
         <ArrowLeft size={18} color={colors.purple} />
         <T bold size={13} style={{ color: colors.purple }}>
-          Назад към Explore
+          Back to Explore
         </T>
       </TouchableOpacity>
 
       <Hero
         eyebrow="AYURVEDA DOSHA DIAGNOSTICS"
-        first="Вашата"
-        accent="Аюрведа Конституция."
-        description="Открийте своя роден баланс между кардиналните енергии Вата, Пита и Кафа."
+        first="Your"
+        accent="Ayurvedic Constitution."
+        description="Discover your natural balance between Vata, Pitta, and Kapha energies."
       />
 
-      {!completed ? (
-        <View style={{ gap: 16, marginBottom: 40 }}>
-          {/* Прогрес бар */}
-          <Card style={{ paddingVertical: 14 }}>
-            <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 8 }}>
-              <T bold size={11} style={{ color: colors.purple, letterSpacing: 1 }}>
-                {currentQ.category}
-              </T>
-              <T muted size={11}>
-                Въпрос {currentIndex + 1} от {total}
-              </T>
-            </View>
-            <View
-              style={{
-                height: 6,
-                backgroundColor: colors.surfaceAlt,
-                borderRadius: 3,
-                overflow: 'hidden',
-              }}
-            >
-              <View
-                style={{
-                  height: '100%',
-                  width: `${((currentIndex + 1) / total) * 100}%`,
-                  backgroundColor: colors.purple,
-                  borderRadius: 3,
-                }}
-              />
-            </View>
-          </Card>
-
-          {/* Карта с въпрос */}
-          <Card style={{ gap: 16, paddingVertical: 20 }}>
-            <T bold size={17} style={{ lineHeight: 24 }}>
-              {currentQ.question}
-            </T>
-
-            <View style={{ gap: 10 }}>
-              {currentQ.options.map((opt, i) => (
-                <TouchableOpacity
-                  key={i}
-                  activeOpacity={0.8}
-                  onPress={() => handleSelectOption(opt.dosha)}
-                  style={{
-                    backgroundColor: colors.surfaceAlt,
-                    padding: 16,
-                    borderRadius: 14,
-                    borderWidth: 1,
-                    borderColor: colors.border,
-                  }}
-                >
-                  <T size={14} style={{ lineHeight: 20 }}>
-                    {opt.label}
-                  </T>
-                </TouchableOpacity>
-              ))}
-            </View>
-          </Card>
-        </View>
-      ) : (
-        /* Резултати */
+      {showSavedResult || completed ? (
         <View style={{ gap: 20, marginBottom: 40 }}>
           {syncStatus && (
             <View
@@ -362,7 +315,7 @@ export default function Ayurveda() {
 
             <View style={{ alignItems: 'center', gap: 4 }}>
               <T muted size={11} style={{ letterSpacing: 1.5 }}>
-                ДОМИНИРАЩА ПРАКРИТИ ЕНЕРГИЯ
+                DOMINANT PRAKRITI ENERGY ({user?.name || 'User'})
               </T>
               <T bold size={26} style={{ color: dominant.color }}>
                 {dominant.title}
@@ -375,14 +328,12 @@ export default function Ayurveda() {
             </T>
           </Card>
 
-          {/* Графичен баланс на 3-те Доши */}
-          <Section>Разпределение на енергиите</Section>
+          <Section>Energy Distribution</Section>
           <Card style={{ gap: 14 }}>
-            {/* Вата */}
             <View style={{ gap: 6 }}>
               <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
                 <T bold size={13} style={{ color: DOSHA_DETAILS.vata.color }}>
-                  Вата (Vata) — Воздух
+                  Vata — Air & Ether
                 </T>
                 <T bold size={13}>{vataPct}%</T>
               </View>
@@ -391,11 +342,10 @@ export default function Ayurveda() {
               </View>
             </View>
 
-            {/* Пита */}
             <View style={{ gap: 6 }}>
               <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
                 <T bold size={13} style={{ color: DOSHA_DETAILS.pitta.color }}>
-                  Пита (Pitta) — Огън
+                  Pitta — Fire & Water
                 </T>
                 <T bold size={13}>{pittaPct}%</T>
               </View>
@@ -404,11 +354,10 @@ export default function Ayurveda() {
               </View>
             </View>
 
-            {/* Кафа */}
             <View style={{ gap: 6 }}>
               <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
                 <T bold size={13} style={{ color: DOSHA_DETAILS.kapha.color }}>
-                  Кафа (Kapha) — Земя
+                  Kapha — Earth & Water
                 </T>
                 <T bold size={13}>{kaphaPct}%</T>
               </View>
@@ -418,11 +367,10 @@ export default function Ayurveda() {
             </View>
           </Card>
 
-          {/* Препоръки за баланс */}
-          <Section>Аюрведични Препоръки</Section>
+          <Section>Ayurvedic Recommendations</Section>
           <Card style={{ gap: 12 }}>
             <T bold size={15} style={{ color: colors.text }}>
-              Как да поддържате своя хармония:
+              How to maintain your balance:
             </T>
             {dominant.recommendations.map((rec, i) => (
               <View key={i} style={{ flexDirection: 'row', gap: 10, alignItems: 'flex-start' }}>
@@ -434,9 +382,66 @@ export default function Ayurveda() {
             ))}
           </Card>
 
-          <Pill selected onPress={handleReset} style={{ alignSelf: 'center', marginTop: 10 }}>
-            <RotateCcw size={14} color="#FFF" style={{ marginRight: 6 }} /> Повтори теста
+          <Pill selected onPress={handleRetake} style={{ alignSelf: 'center', marginTop: 10 }}>
+            <RotateCcw size={14} color="#FFF" style={{ marginRight: 6 }} /> Retake Test
           </Pill>
+        </View>
+      ) : (
+        <View style={{ gap: 16, marginBottom: 40 }}>
+          <Card style={{ paddingVertical: 14 }}>
+            <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 8 }}>
+              <T bold size={11} style={{ color: colors.purple, letterSpacing: 1 }}>
+                {currentQ.category}
+              </T>
+              <T muted size={11}>
+                Question {currentIndex + 1} of {total}
+              </T>
+            </View>
+            <View
+              style={{
+                height: 6,
+                backgroundColor: colors.surfaceAlt,
+                borderRadius: 3,
+                overflow: 'hidden',
+              }}
+            >
+              <View
+                style={{
+                  height: '100%',
+                  width: `${((currentIndex + 1) / total) * 100}%`,
+                  backgroundColor: colors.purple,
+                  borderRadius: 3,
+                }}
+              />
+            </View>
+          </Card>
+
+          <Card style={{ gap: 16, paddingVertical: 20 }}>
+            <T bold size={17} style={{ lineHeight: 24 }}>
+              {currentQ.question}
+            </T>
+
+            <View style={{ gap: 10 }}>
+              {currentQ.options.map((opt, i) => (
+                <TouchableOpacity
+                  key={i}
+                  activeOpacity={0.8}
+                  onPress={() => handleSelectOption(opt.dosha)}
+                  style={{
+                    backgroundColor: colors.surfaceAlt,
+                    padding: 16,
+                    borderRadius: 14,
+                    borderWidth: 1,
+                    borderColor: colors.border,
+                  }}
+                >
+                  <T size={14} style={{ lineHeight: 20 }}>
+                    {opt.label}
+                  </T>
+                </TouchableOpacity>
+              ))}
+            </View>
+          </Card>
         </View>
       )}
     </>
