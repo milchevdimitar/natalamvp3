@@ -27,6 +27,8 @@ interface AppContextType {
   addStory: (imageBase64: string) => Promise<void>;
   deleteStory: (id: string) => Promise<void>;
   fetchActiveStories: () => Promise<void>;
+  hideBottomNav: boolean;
+  setHideBottomNav: (hide: boolean) => void;
 }
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
@@ -36,6 +38,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const [theme, setTheme] = useState<'dark' | 'light'>('dark');
   const [user, setUserState] = useState<UserProfile | null>(null);
   const [stories, setStories] = useState<AppStory[]>([]);
+  const [hideBottomNav, setHideBottomNav] = useState(false);
 
   const colors = {
     bg: theme === 'dark' ? '#0F0D15' : '#F7F6FB',
@@ -167,6 +170,8 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         addStory,
         deleteStory,
         fetchActiveStories,
+        hideBottomNav,
+        setHideBottomNav,
       }}
     >
       {children}

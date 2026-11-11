@@ -48,7 +48,7 @@ export interface Conversation {
 }
 
 export default function Chat() {
-  const { colors, setPage, user } = useApp();
+  const { colors, setPage, user, setHideBottomNav } = useApp();
 
   const [conversations, setConversations] = useState<Conversation[]>([]);
   const [activeChatId, setActiveChatId] = useState<string | null>(null);
@@ -65,6 +65,16 @@ export default function Chat() {
 
   const scrollViewRef = useRef<ScrollView>(null);
   const currentUserEmail = user?.email || '';
+
+  // Скриване/Показване на BottomNav при влизане и излизане от разговор
+  useEffect(() => {
+    if (activeChatId) {
+      setHideBottomNav?.(true);
+    } else {
+      setHideBottomNav?.(false);
+    }
+    return () => setHideBottomNav?.(false);
+  }, [activeChatId]);
 
   // 1. Зареждане на разговорите на потребителя от MongoDB при отваряне
   const loadConversations = async () => {
@@ -91,7 +101,6 @@ export default function Chat() {
 
     const interval = setInterval(async () => {
       if (activeChatId) {
-        // Зареждане на новите съобщения в активния чат
         const updatedMessages = await fetchChatMessages(activeChatId);
         if (updatedMessages && Array.isArray(updatedMessages)) {
           setConversations((prev) =>
@@ -100,7 +109,6 @@ export default function Chat() {
                 const oldLength = c.messages.length;
                 const newLength = updatedMessages.length;
 
-                // Задействане на локална нотификация, ако е получено ново съобщение от друг потребител
                 if (newLength > oldLength) {
                   const lastMsg = updatedMessages[newLength - 1];
                   if (lastMsg.senderEmail !== currentUserEmail) {
@@ -120,7 +128,6 @@ export default function Chat() {
           );
         }
       } else {
-        // Зареждане на списъка с разговори
         const data = await fetchUserConversations(currentUserEmail);
         if (Array.isArray(data)) {
           setConversations(data);
@@ -205,7 +212,6 @@ export default function Chat() {
       timestamp: timeStr,
     };
 
-    // Оптимистичен ъпдейт в UI
     setConversations((prev) =>
       prev.map((c) =>
         c.id === activeChatId
@@ -243,22 +249,24 @@ export default function Chat() {
     return (
       <KeyboardAvoidingView
         style={{ flex: 1 }}
-        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        keyboardVerticalOffset={Platform.OS === 'ios' ? 20 : 0}
       >
+        {/* Хедър на активния чат */}
         <View
           style={{
             flexDirection: 'row',
             alignItems: 'center',
             justifyContent: 'space-between',
-            paddingBottom: 14,
+            paddingBottom: 12,
             borderBottomWidth: 1,
             borderBottomColor: colors.line,
-            marginBottom: 12,
+            marginBottom: 8,
           }}
         >
           <TouchableOpacity
             onPress={() => setActiveChatId(null)}
-            style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}
+            style={{ flexDirection: 'row', alignItems: 'center', gap: 6, paddingVertical: 4 }}
           >
             <ArrowLeft size={20} color={colors.purple} />
             <T bold size={14} style={{ color: colors.purple }}>
@@ -276,13 +284,15 @@ export default function Chat() {
           </View>
         </View>
 
+        {/* Списък със съобщения */}
         <ScrollView
           ref={scrollViewRef}
           showsVerticalScrollIndicator={false}
-          contentContainerStyle={{ gap: 10, paddingVertical: 10 }}
+          onContentSizeChange={() => scrollViewRef.current?.scrollToEnd({ animated: true })}
+          contentContainerStyle={{ gap: 10, paddingVertical: 10, flexGrow: 1, justifyContent: 'flex-end' }}
         >
           {activeConversation.messages.length === 0 ? (
-            <View style={{ alignItems: 'center', marginVertical: 40, gap: 8 }}>
+            <View style={{ alignItems: 'center', marginVertical: 'auto', gap: 8 }}>
               <Sparkles size={32} color={colors.gold} />
               <T muted size={13} style={{ textAlign: 'center' }}>
                 Start your cosmic conversation with{' '}
@@ -336,14 +346,16 @@ export default function Chat() {
           )}
         </ScrollView>
 
+        {/* Поле за въвеждане на съобщение над клавиатурата */}
         <View
           style={{
             flexDirection: 'row',
             alignItems: 'center',
             gap: 8,
-            paddingTop: 10,
+            paddingVertical: 10,
             borderTopWidth: 1,
             borderTopColor: colors.line,
+            backgroundColor: colors.bg,
           }}
         >
           <TextInput
@@ -386,7 +398,7 @@ export default function Chat() {
 
   // --- ЕКРАН СПИСЪК С ЧАТОВЕ ---
   return (
-    <>
+    <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 120 }}>
       <TouchableOpacity
         onPress={() => setPage('explore')}
         style={{
@@ -633,7 +645,7 @@ export default function Chat() {
           </TouchableOpacity>
         </TouchableOpacity>
       </Modal>
-    </>
+    </ScrollView>
   );
 }
 

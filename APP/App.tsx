@@ -31,7 +31,7 @@ import { checkHealth } from './src/services/api';
 import { registerForPushNotificationsAsync } from './src/services/notifications';
 
 function Shell() {
-  const { page, colors, theme, user } = useApp();
+  const { page, colors, theme, user, hideBottomNav } = useApp();
   const [showSplash, setShowSplash] = useState(true);
   const fade = useRef(new Animated.Value(1)).current;
 
@@ -75,7 +75,9 @@ function Shell() {
   };
 
   const activePageNode = !user ? <Login /> : pages[page] || <Home />;
-  const isHomePage = user && page === 'home';
+
+  // Страниците Home и Chat управляват сами своя скрол и пълна височина на екрана
+  const isFullHeightPage = user && (page === 'home' || page === 'chat');
 
   return (
     <View style={{ flex: 1, backgroundColor: colors.bg }}>
@@ -95,11 +97,9 @@ function Shell() {
           alignSelf: 'center',
         }}
       >
-        {isHomePage ? (
-          // Home управлява собствен ScrollView с Pull-to-Refresh
+        {isFullHeightPage ? (
           activePageNode
         ) : (
-          // Всички останали страници се обвиват в ScrollView, за да могат да се скролват
           <ScrollView
             showsVerticalScrollIndicator={false}
             keyboardShouldPersistTaps="handled"
@@ -112,8 +112,8 @@ function Shell() {
         )}
       </View>
 
-      {/* Навигацията отдолу е видима само след успешен вход */}
-      {user && <BottomNav />}
+      {/* Навигацията отдолу е видима само след успешен вход и когато hideBottomNav не е активен */}
+      {user && !hideBottomNav && <BottomNav />}
 
       {showSplash && (
         <Animated.View
