@@ -1,10 +1,12 @@
 import React, { useState } from 'react';
 import { View, TextInput, ActivityIndicator, TouchableOpacity } from 'react-native';
-import { LogIn, User as UserIcon, Mail, Sparkles, Calendar, MapPin } from 'lucide-react-native';
+import { LogIn, User as UserIcon, Mail, Sparkles } from 'lucide-react-native';
 import { useApp } from '../context/AppContext';
 import { Card, T, Hero, Pill } from '../components/UI';
-import { loginUser, saveUserProfile } from '../services/api';
+import { loginUser } from '../services/api';
 import { saveAndSyncProfile } from '../services/profileManager';
+import { CitySearchPicker } from '../components/CitySearchPicker';
+import { CityLocation } from '../services/locationService';
 
 export default function Login() {
   const { colors, setUser, setPage } = useApp();
@@ -16,7 +18,15 @@ export default function Login() {
   const [birthDay, setBirthDay] = useState('15');
   const [birthMonth, setBirthMonth] = useState('6');
   const [birthYear, setBirthYear] = useState('1995');
-  const [city, setCity] = useState('София');
+  
+  // Избран град като обект (с lat, lng, timezone и country)
+  const [selectedCity, setSelectedCity] = useState<CityLocation | null>({
+    name: 'София',
+    country: 'Bulgaria',
+    lat: 42.6977,
+    lng: 23.3219,
+    timezone: 'Europe/Sofia',
+  });
 
   const [loading, setLoading] = useState(false);
 
@@ -52,7 +62,13 @@ export default function Login() {
             month: parseInt(birthMonth, 10) || 1,
             year: parseInt(birthYear, 10) || 1995,
           },
-          birthCity: { name: city.trim() || 'София' },
+          birthCity: selectedCity || {
+            name: 'София',
+            country: 'Bulgaria',
+            lat: 42.6977,
+            lng: 23.3219,
+            timezone: 'Europe/Sofia',
+          },
         });
 
         setUser(calculatedProfile);
@@ -114,7 +130,7 @@ export default function Login() {
         </TouchableOpacity>
       </View>
 
-      <Card style={{ gap: 16, padding: 20 }}>
+      <Card style={{ gap: 16, padding: 20, zIndex: 100 }}>
         {mode === 'register' && (
           <View style={{ gap: 8 }}>
             <T bold size={13}>Вашето Име</T>
@@ -179,23 +195,18 @@ export default function Login() {
               </View>
             </View>
 
-            <View style={{ gap: 8 }}>
-              <T bold size={13}>Град на раждане</T>
-              <View style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: colors.surfaceAlt, borderRadius: 12, paddingHorizontal: 12, height: 48, gap: 10 }}>
-                <MapPin size={18} color={colors.muted} />
-                <TextInput
-                  placeholder="напр. София"
-                  placeholderTextColor={colors.muted}
-                  value={city}
-                  onChangeText={setCity}
-                  style={{ flex: 1, color: colors.text, fontSize: 14 }}
-                />
-              </View>
+            {/* Избор на град с автодопълване */}
+            <View style={{ zIndex: 1000 }}>
+              <CitySearchPicker
+                selectedCity={selectedCity}
+                onSelectCity={setSelectedCity}
+                colors={colors}
+              />
             </View>
           </>
         )}
 
-        <View style={{ marginTop: 10 }}>
+        <View style={{ marginTop: 10, zIndex: 1 }}>
           <Pill selected onPress={handleSubmit}>
             {loading ? (
               <ActivityIndicator color="#FFF" size="small" />

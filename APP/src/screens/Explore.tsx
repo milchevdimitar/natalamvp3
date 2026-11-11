@@ -1,13 +1,37 @@
 import React, { useState } from "react";
 import { View } from "react-native";
-import { Hero, SearchBar, Card, T, Section, Pill } from "../components/UI";
+import { Hero, SearchBar, Card, T, Section } from "../components/UI";
 import { systems } from "../data/demo";
 import { useApp } from "../context/AppContext";
 
+// Карта на активните системи и съответните им страници
+const ACTIVE_SYSTEM_ROUTES: Record<string, string> = {
+  mbti: "mbti",
+  cardology: "cardology",
+  astrology: "astrology",
+  ayurveda: "ayurveda",
+  tarot: "tarot",
+  numerology: "numerology",
+};
+
 export default function Explore() {
   const [search, setSearch] = useState("");
-  const [selected, setSelected] = useState<string | null>(null);
   const { colors, setPage } = useApp();
+
+  const searchFiltered = systems.filter((s) =>
+    (s.name + " " + s.description)
+      .toLowerCase()
+      .includes(search.toLowerCase())
+  );
+
+  // Разделяне на активни и предстоящи системи
+  const activeSystems = searchFiltered.filter(
+    (s) => ACTIVE_SYSTEM_ROUTES[s.name.toLowerCase()] !== undefined
+  );
+
+  const upcomingSystems = searchFiltered.filter(
+    (s) => ACTIVE_SYSTEM_ROUTES[s.name.toLowerCase()] === undefined
+  );
 
   return (
     <>
@@ -22,18 +46,17 @@ export default function Explore() {
         onChange={setSearch}
         placeholder="Search systems..."
       />
+
+      {/* Секция 1: Активни системи */}
       <Section>Explore your systems</Section>
       <View style={{ gap: 11 }}>
-        {systems
-          .filter((s) =>
-            (s.name + " " + s.description)
-              .toLowerCase()
-              .includes(search.toLowerCase())
-          )
-          .map((s) => (
+        {activeSystems.map((s) => {
+          const route = ACTIVE_SYSTEM_ROUTES[s.name.toLowerCase()];
+          return (
             <Card
               key={s.name}
-              onPress={() => setSelected(selected === s.name ? null : s.name)}
+              onPress={() => setPage(route as any)}
+              activeOpacity={0.7}
             >
               <View
                 style={{ flexDirection: "row", gap: 14, alignItems: "center" }}
@@ -60,55 +83,56 @@ export default function Explore() {
                     {s.description}
                   </T>
                 </View>
-                <T size={9} bold style={{ color: colors.gold }}>
-                  {s.status}
+                <T size={10} bold style={{ color: colors.purple }}>
+                  EXPLORE ↗
                 </T>
               </View>
-              {selected === s.name && (
-                <View style={{ marginTop: 15, gap: 9 }}>
-                  <T muted size={13}>
-                    {s.status === "SOON"
-                      ? "This lens is planned for a future release."
-                      : "Explore your personal insights through this lens."}
-                  </T>
-                  <View style={{ flexDirection: "row", gap: 8, flexWrap: "wrap" }}>
-                    {s.name.toLowerCase() === "astrology" && (
-                      <Pill onPress={() => setPage("astrology" as any)}>
-                        Open Astrology
-                      </Pill>
-                    )}
-                    {s.name.toLowerCase() === "mbti" && (
-                      <Pill onPress={() => setPage("mbti" as any)}>
-                        Open MBTI Test
-                      </Pill>
-                    )}
-                    {s.name.toLowerCase() === "tarot" && (
-                      <Pill onPress={() => setPage("tarot" as any)}>
-                        Open Tarot Deck
-                      </Pill>
-                    )}
-                    {s.name.toLowerCase() === "numerology" && (
-                      <Pill onPress={() => setPage("numerology" as any)}>
-                        Open Numerology
-                      </Pill>
-                    )}
-                    {s.name.toLowerCase() === "cardology" && (
-                      <Pill onPress={() => setPage("cardology" as any)}>
-                        Open Cardology
-                      </Pill>
-                    )}
-                    {s.name.toLowerCase() === "ayurveda" && (
-                      <Pill onPress={() => setPage("ayurveda" as any)}>
-                        Open Ayurveda Test
-                      </Pill>
-                    )}
-                    <Pill onPress={() => setSelected(null)}>Close details</Pill>
-                  </View>
-                </View>
-              )}
             </Card>
-          ))}
+          );
+        })}
       </View>
+
+      {/* Секция 2: Предстоящи системи */}
+      {upcomingSystems.length > 0 && (
+        <>
+          <Section style={{ marginTop: 24 }}>Expect soon in next release</Section>
+          <View style={{ gap: 11, opacity: 0.75 }}>
+            {upcomingSystems.map((s) => (
+              <Card key={s.name}>
+                <View
+                  style={{ flexDirection: "row", gap: 14, alignItems: "center" }}
+                >
+                  <View
+                    style={{
+                      width: 53,
+                      height: 53,
+                      borderRadius: 17,
+                      backgroundColor: colors.surfaceAlt,
+                      alignItems: "center",
+                      justifyContent: "center",
+                    }}
+                  >
+                    <T size={29} style={{ color: colors.muted }}>
+                      {s.icon}
+                    </T>
+                  </View>
+                  <View style={{ flex: 1 }}>
+                    <T bold size={17}>
+                      {s.name}
+                    </T>
+                    <T muted size={12}>
+                      {s.description}
+                    </T>
+                  </View>
+                  <T size={9} bold style={{ color: colors.gold }}>
+                    SOON
+                  </T>
+                </View>
+              </Card>
+            ))}
+          </View>
+        </>
+      )}
     </>
   );
 }

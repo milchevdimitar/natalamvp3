@@ -7,7 +7,8 @@ const fs = require('fs');
 
 const User = require('./models/User');
 const storiesRoutes = require('./routes/stories');
-const chatRoutes = require('./routes/chatRoutes'); // 👈 Добавен рут за чатовете
+const chatRoutes = require('./routes/chatRoutes');
+const horizonsRoutes = require('./routes/horizons'); // 👈 Добавен рут за NASA JPL Horizons Proxy
 
 const app = express();
 app.use(cors());
@@ -48,7 +49,10 @@ app.get('/api/health', (req, res) => {
 app.use('/api/stories', storiesRoutes);
 
 // Рутове за чатове (Chat API)
-app.use('/api/chats', chatRoutes); // 👈 Регистриране на маршрута за чата
+app.use('/api/chats', chatRoutes);
+
+// Рутове за NASA JPL Horizons API (Horizons Proxy)
+app.use('/api/horizons', horizonsRoutes); // 👈 Регистриране на маршрута за NASA
 
 // Запис и синхронизация на изчисления профил
 app.post('/api/users/profile', async (req, res) => {

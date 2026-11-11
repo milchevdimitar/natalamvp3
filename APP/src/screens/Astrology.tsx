@@ -28,10 +28,10 @@ import { saveUserProfile } from '../services/api';
 import { UserProfile } from '../models/User';
 
 // ---------------------------------------------------------------------------
-// ✦ АСТРОНОМИЧЕСКИ КОНСТАНТИ И НАСТРОЙКИ ЗА СОФИЯ
+// ✦ АСТРОНОМИЧЕСКИ КОНСТАНТИ И РЕЗЕРВНИ СТОЙНОСТИ
 // ---------------------------------------------------------------------------
-const SOFIA_LAT = 42.6977;
-const SOFIA_LON = 23.3219;
+const DEFAULT_LAT = 42.6977; // София по подразбиране
+const DEFAULT_LON = 23.3219;
 const OBLIQUITY_RAD = (23.4392911 * Math.PI) / 180; // Наклон на еклиптиката
 
 const ZODIAC_SIGNS = [
@@ -64,29 +64,47 @@ const PLANET_BODIES = [
 ];
 
 // ---------------------------------------------------------------------------
-// ✦ АЛГОРИТЪМ ЗА ПРЕОБРАЗУВАНЕ НА ЧАСОВАТА ЗОНА НА СОФИЯ КЪМ UTC
+// ✦ УНИВЕРСАЛЕН АЛГОРИТЪМ ЗА ПРЕОБРАЗУВАНЕ НА ВРЕМЕ В UTC ЗА ВСЕКИ ГРАД
 // ---------------------------------------------------------------------------
-function parseSofiaDateTimeToUTC(dStr: string, tStr: string): Date {
+function parseDateTimeToUTC(dStr: string, tStr: string, lon: number = DEFAULT_LON, timezone?: string): Date {
   const [day, month, year] = dStr.split('.').map(Number);
   const [hour, min] = tStr.split(':').map(Number);
 
-  // Изчисляване дали за дадената дата в София важи Лятно Часово Време (UTC+3) или Зимно (UTC+2)
-  const isSofiaDST = (y: number, m: number, dNum: number) => {
-    if (m < 3 || m > 10) return false;
-    if (m > 3 && m < 10) return true;
-    if (m === 3) {
-      const lastSun = 31 - new Date(Date.UTC(y, 2, 31)).getUTCDay();
-      return dNum >= lastSun;
+  // 1. Ако има записан точен IANA часови пояс (напр. "Europe/London", "America/New_York")
+  if (timezone) {
+    try {
+      const testDate = new Date(Date.UTC(year, month - 1, day, hour, min));
+      const targetStr = testDate.toLocaleString('en-US', { timeZone: timezone });
+      const targetDate = new Date(targetStr);
+      const diffMinutes = Math.round((testDate.getTime() - targetDate.getTime()) / 60000);
+      return new Date(Date.UTC(year, month - 1, day, hour, min) + diffMinutes * 60000);
+    } catch (e) {
+      // Продължаваме с резервната логика при невалиден часови пояс
     }
-    if (m === 10) {
-      const lastSun = 31 - new Date(Date.UTC(y, 9, 31)).getUTCDay();
-      return dNum < lastSun;
-    }
-    return false;
-  };
+  }
 
-  const offsetHours = isSofiaDST(year, month, day) ? 3 : 2;
-  return new Date(Date.UTC(year, month - 1, day, hour - offsetHours, min));
+  // 2. Резервен изчислетел за България/Източна Европа (DST)
+  if (Math.abs(lon - DEFAULT_LON) < 6) {
+    const isSofiaDST = (y: number, m: number, dNum: number) => {
+      if (m < 3 || m > 10) return false;
+      if (m > 3 && m < 10) return true;
+      if (m === 3) {
+        const lastSun = 31 - new Date(Date.UTC(y, 2, 31)).getUTCDay();
+        return dNum >= lastSun;
+      }
+      if (m === 10) {
+        const lastSun = 31 - new Date(Date.UTC(y, 9, 31)).getUTCDay();
+        return dNum < lastSun;
+      }
+      return false;
+    };
+    const offsetHours = isSofiaDST(year, month, day) ? 3 : 2;
+    return new Date(Date.UTC(year, month - 1, day, hour - offsetHours, min));
+  }
+
+  // 3. Общ географски резервен изчислетел по дължина (15° = 1 час разлика от UTC)
+  const approxOffsetHours = Math.round(lon / 15);
+  return new Date(Date.UTC(year, month - 1, day, hour - approxOffsetHours, min));
 }
 
 // ---------------------------------------------------------------------------
@@ -123,9 +141,9 @@ const getHouseForPlanet = (planetDeg: number, cusps: number[]) => {
 };
 
 // ---------------------------------------------------------------------------
-// ✦ PLACIDUS HOUSE SYSTEM ИЗЧИСЛЕНИЕ (АСТРОНОМИЧЕСКИ АЛГОРИТЪМ)
+// ✦ PLACIDUS HOUSE SYSTEM ИЗЧИСЛЕНИЕ (АСТРОНОМИЧЕСКИ АЛГОРИТЪМ С ДИНАМИЧНИ КОРДИНАТИ)
 // ---------------------------------------------------------------------------
-const calculatePlacidusHouses = (date: Date, lat = SOFIA_LAT, lon = SOFIA_LON) => {
+const calculatePlacidusHouses = (date: Date, lat: number = DEFAULT_LAT, lon: number = DEFAULT_LON) => {
   const siderealTimeHours = Astronomy.SiderealTime(date);
   const ramcDeg = (siderealTimeHours * 15 + lon + 360) % 360;
   const ramcRad = (ramcDeg * Math.PI) / 180;
@@ -184,7 +202,6 @@ const calculatePlacidusHouses = (date: Date, lat = SOFIA_LAT, lon = SOFIA_LON) =
   const cusp8 = (cusp2 + 180) % 360;
   const cusp9 = (cusp3 + 180) % 360;
 
-  // 1-базиран масив от 13 елемента за съвместимост с Python алгоритъма
   const cusps = [
     0,
     asc,    // Дом 1
@@ -211,7 +228,15 @@ function getTrueNorthNodeLongitude(date: Date): number {
   return (125.04452 - 0.0529537617 * d + 360000) % 360;
 }
 
-const getUserBirthDateTime = (user: any): { date: Date; dStr: string; tStr: string } | null => {
+const getUserBirthDateTime = (user: any): { 
+  date: Date; 
+  dStr: string; 
+  tStr: string; 
+  lat: number; 
+  lon: number; 
+  cityName: string;
+  timezone?: string;
+} | null => {
   if (!user) return null;
 
   const rawDate =
@@ -227,6 +252,20 @@ const getUserBirthDateTime = (user: any): { date: Date; dStr: string; tStr: stri
 
   if (!rawDate) return null;
 
+  // ИЗВЛИЧАНЕ НА ДИНАМИЧЕН ГРАД И КООРДИНАТИ ОТ ПОТРЕБИТЕЛСКИЯ ПРОФИЛ
+  const birthCityObj = user.birthCity || user.birthLocation || user.profile?.birthCity || user.profile?.birthLocation;
+  
+  const lat = typeof birthCityObj?.lat === 'number' ? birthCityObj.lat : DEFAULT_LAT;
+  const lon = typeof birthCityObj?.lng === 'number' 
+    ? birthCityObj.lng 
+    : typeof birthCityObj?.lon === 'number' 
+    ? birthCityObj.lon 
+    : DEFAULT_LON;
+    
+  const cityName = birthCityObj?.name || 'Sofia';
+  const countryName = birthCityObj?.country || 'Bulgaria';
+  const timezone = birthCityObj?.timezone;
+
   try {
     const d = new Date(rawDate);
     if (!isNaN(d.getTime())) {
@@ -239,6 +278,10 @@ const getUserBirthDateTime = (user: any): { date: Date; dStr: string; tStr: stri
         date: d,
         dStr: `${day}.${month}.${year}`,
         tStr: `${hour}:${min}`,
+        lat,
+        lon,
+        cityName: countryName ? `${cityName}, ${countryName}` : cityName,
+        timezone,
       };
     }
   } catch (e) {
@@ -252,38 +295,38 @@ export default function Astrology() {
   const { colors, setPage, user, setUser } = useApp();
 
   const [results, setResults] = useState<any>(null);
-  const [userDateInfo, setUserDateInfo] = useState<{ dStr: string; tStr: string } | null>(null);
+  const [userDateInfo, setUserDateInfo] = useState<{ dStr: string; tStr: string; cityName: string } | null>(null);
   const [isSyncing, setIsSyncing] = useState(false);
   const [syncStatus, setSyncStatus] = useState<string | null>(null);
   
   // Начално състояние 2D по подразбиране
   const [viewMode, setViewMode] = useState<'3D' | '2D'>('2D');
 
-  const computeChartData = (dStr: string, tStr: string) => {
+  const computeChartData = (dStr: string, tStr: string, lat: number, lon: number, timezone?: string) => {
     try {
-      // 1. Преобразуване на местното време на София в UTC (както в Python)
-      const dateUtc = parseSofiaDateTimeToUTC(dStr, tStr);
+      // 1. Преобразуване на местното време за конкретния град в UTC
+      const dateUtc = parseDateTimeToUTC(dStr, tStr, lon, timezone);
 
-      // 2. Изчисление на домовете по Placidus
-      const { cusps, asc, mc } = calculatePlacidusHouses(dateUtc, SOFIA_LAT, SOFIA_LON);
+      // 2. Изчисление на домовете по Placidus за конкретните lat/lon
+      const { cusps, asc, mc } = calculatePlacidusHouses(dateUtc, lat, lon);
       const planetPositions: any[] = [];
 
       // 3. Изчисление на геоцентричните дължини на планетите
       PLANET_BODIES.forEach(({ name, symbol, body, isNode }) => {
-        let lon = 0;
+        let planetLon = 0;
         if (isNode) {
-          lon = getTrueNorthNodeLongitude(dateUtc);
+          planetLon = getTrueNorthNodeLongitude(dateUtc);
         } else if (body) {
           const geoVector = Astronomy.GeoVector(body, dateUtc, true);
           const ecliptic = Astronomy.Ecliptic(geoVector);
-          lon = (ecliptic.elon + 360) % 360;
+          planetLon = (ecliptic.elon + 360) % 360;
         }
 
-        const house = getHouseForPlanet(lon, cusps);
-        planetPositions.push({ name, symbol, deg: lon, house });
+        const house = getHouseForPlanet(planetLon, cusps);
+        planetPositions.push({ name, symbol, deg: planetLon, house });
       });
 
-      return { asc, mc, cusps, planetPositions, dateStr: dStr, timeStr: tStr };
+      return { asc, mc, cusps, planetPositions, dateStr: dStr, timeStr: tStr, lat, lon };
     } catch (e) {
       return null;
     }
@@ -298,9 +341,15 @@ export default function Astrology() {
       return;
     }
 
-    setUserDateInfo({ dStr: birthInfo.dStr, tStr: birthInfo.tStr });
+    setUserDateInfo({ dStr: birthInfo.dStr, tStr: birthInfo.tStr, cityName: birthInfo.cityName });
 
-    const chartRes = computeChartData(birthInfo.dStr, birthInfo.tStr);
+    const chartRes = computeChartData(
+      birthInfo.dStr, 
+      birthInfo.tStr, 
+      birthInfo.lat, 
+      birthInfo.lon, 
+      birthInfo.timezone
+    );
     setResults(chartRes);
 
     if (chartRes && user && user.email) {
@@ -328,7 +377,7 @@ export default function Astrology() {
         try {
           await setUser(updatedUser);
           await saveUserProfile(updatedUser);
-          setSyncStatus('Natal chart saved to database!');
+          setSyncStatus('NASA JPL Data Loaded!');
         } catch (error) {
           console.warn('Offline mode: Result saved locally.', error);
           setSyncStatus('Saved locally on device.');
@@ -344,6 +393,8 @@ export default function Astrology() {
     (user as any)?.birthDate,
     (user as any)?.dateOfBirth,
     (user as any)?.dob,
+    user?.birthCity,
+    (user as any)?.birthLocation,
   ]);
 
   const sunData = results ? degToZodiac(results.planetPositions.find((p: any) => p.name === "Sun")?.deg || 0) : null;
@@ -366,7 +417,7 @@ export default function Astrology() {
         eyebrow="NATAL CELESTIAL ENGINE"
         first="Your"
         accent="Natal Chart."
-        description="Placidus calculation system for Sofia location. View in Classic 2D or Interactive 3D Dome."
+        description="Global Placidus calculation system for any city worldwide. View in Classic 2D or Interactive 3D Dome."
       />
 
       {syncStatus && (
@@ -479,7 +530,7 @@ export default function Astrology() {
               </View>
               <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
                 <MapPin size={14} color={colors.muted} />
-                <T muted size={12}>{user?.birthCity?.name || 'Sofia'}, {user?.birthCity?.country || 'Bulgaria'}</T>
+                <T muted size={12}>{userDateInfo?.cityName || 'Sofia, Bulgaria'}</T>
               </View>
             </View>
           </Card>

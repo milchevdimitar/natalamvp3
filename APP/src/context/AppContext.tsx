@@ -11,6 +11,20 @@ export interface AppStory {
   authorName: string;
   imageUrl: string;
   createdAt: string;
+  likes?: string[];
+  likesCount?: number;
+}
+
+export interface SharedStoryData {
+  id: string;
+  imageUrl: string;
+  authorName: string;
+}
+
+export interface SelectedChatData {
+  targetUser?: string;
+  targetUserId?: string;
+  sharedStory?: SharedStoryData;
 }
 
 interface AppContextType {
@@ -29,6 +43,12 @@ interface AppContextType {
   fetchActiveStories: () => Promise<void>;
   hideBottomNav: boolean;
   setHideBottomNav: (hide: boolean) => void;
+  
+  // Чат и взаимодействия със сторита
+  selectedChat: SelectedChatData | null;
+  setSelectedChat: (chat: SelectedChatData | null) => void;
+  sendStoryReply: (storyId: string, authorEmail: string, text: string, storyImageUrl: string) => Promise<void>;
+  toggleStoryLike: (storyId: string) => Promise<void>;
 }
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
@@ -39,6 +59,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const [user, setUserState] = useState<UserProfile | null>(null);
   const [stories, setStories] = useState<AppStory[]>([]);
   const [hideBottomNav, setHideBottomNav] = useState(false);
+  const [selectedChat, setSelectedChat] = useState<SelectedChatData | null>(null);
 
   const colors = {
     bg: theme === 'dark' ? '#0F0D15' : '#F7F6FB',
@@ -103,7 +124,6 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     await setUser(merged);
   };
 
-  // Качване чрез чист Base64 JSON (100% стабилно за Expo/Hermes)
   const addStory = async (imageBase64: string) => {
     try {
       if (!imageBase64) {
@@ -111,7 +131,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         return;
       }
 
-      const userIdVal = String(user?.email || user?.name || 'guest_id');
+      const userIdVal = String(user?.email || user?.name || 'guest_id').toLowerCase().trim();
       const authorNameVal = String(user?.name || user?.email || 'Stargazer');
 
       const response = await fetch(`${API_BASE_URL}/api/stories/upload-base64`, {
@@ -152,6 +172,102 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
+  // Изпращане на коментар / отговор на стори през чат рутовете
+  const sendStoryReply = async (
+    storyId: string,
+    authorEmail: string,
+    text: string,
+    storyImageUrl: string
+  ) => {
+    try {
+      const senderEmail = user?.email || '';
+      if (!senderEmail || !authorEmail) {
+        console.warn('Липсва имейл на изпращача или автора');
+        return;
+      }
+
+      // 1. Старт / Намиране на съществуващ чат с автора
+      const startRes = await fetch(`${API_BASE_URL}/api/chats/start`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          userEmail: senderEmail,
+          partnerEmail: authorEmail,
+        }),
+      });
+
+      if (!startRes.ok) {
+        console.warn('Не бе намерен/създаден чат с автора');
+        return;
+      }
+
+      const chatData = await startRes.json();
+
+      if (chatData?.id) {
+        // 2. Публикуване на съобщението с отговор на сторито
+        await fetch(`${API_BASE_URL}/api/chats/${chatData.id}/messages`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            senderEmail,
+            text: text || '💬 Отговор на стори',
+            type: 'story_reply',
+            storyData: {
+              storyId,
+              imageUrl: storyImageUrl,
+            },
+          }),
+        });
+      }
+    } catch (err) {
+      console.error('Грешка при изпращане на отговор на стори:', err);
+    }
+  };
+
+  // Запазване и превключване на Like в MongoDB с моментално оптимистично обновяване
+  const toggleStoryLike = async (storyId: string) => {
+    try {
+      const userIdVal = String(user?.email || user?.name || 'guest_id').toLowerCase().trim();
+
+      // 1. Оптимистичен ъпдейт на UI състоянието
+      setStories((prevStories) =>
+        prevStories.map((story) => {
+          if (story._id === storyId) {
+            const currentLikes = (story.likes || []).map((id) => String(id).toLowerCase().trim());
+            const hasLiked = currentLikes.includes(userIdVal);
+            const updatedLikes = hasLiked
+              ? currentLikes.filter((id) => id !== userIdVal)
+              : [...currentLikes, userIdVal];
+            return { ...story, likes: updatedLikes };
+          }
+          return story;
+        })
+      );
+
+      // 2. Изпращане на заявка към MongoDB бекенда
+      const response = await fetch(`${API_BASE_URL}/api/stories/${storyId}/like`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          userId: userIdVal,
+        }),
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        if (data.likes) {
+          setStories((prev) =>
+            prev.map((s) => (s._id === storyId ? { ...s, likes: data.likes } : s))
+          );
+        }
+      }
+    } catch (err) {
+      console.error('Грешка при изпращане на like към MongoDB:', err);
+    }
+  };
+
   const toggleTheme = () => setTheme((t) => (t === 'dark' ? 'light' : 'dark'));
 
   return (
@@ -172,6 +288,10 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         fetchActiveStories,
         hideBottomNav,
         setHideBottomNav,
+        selectedChat,
+        setSelectedChat,
+        sendStoryReply,
+        toggleStoryLike,
       }}
     >
       {children}

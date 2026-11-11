@@ -1,7 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const Chat = require('../models/Chat');
-const User = require('../models/User'); // Вашият съществуващ модел за потребители
+const User = require('../models/User');
 
 // 1. Извличане на всички чатове за даден потребител
 router.get('/', async (req, res) => {
@@ -12,7 +12,6 @@ router.get('/', async (req, res) => {
     const userEmail = email.toLowerCase().trim();
     const chats = await Chat.find({ participants: userEmail }).sort({ updatedAt: -1 });
 
-    // Форматиране за фронтенда
     const formattedChats = await Promise.all(
       chats.map(async (chat) => {
         const partnerEmail = chat.participants.find((p) => p !== userEmail) || userEmail;
@@ -29,6 +28,9 @@ router.get('/', async (req, res) => {
             id: m._id.toString(),
             senderEmail: m.senderEmail,
             text: m.text,
+            type: m.type || 'text',
+            storyData: m.storyData || null,
+            replyTo: m.replyTo || null,
             timestamp: m.timestamp,
           })),
         };
@@ -49,13 +51,11 @@ router.post('/start', async (req, res) => {
     const uEmail = userEmail.toLowerCase().trim();
     const pEmail = partnerEmail.toLowerCase().trim();
 
-    // Проверка дали партньорът съществува в базата данни
     const partnerUser = await User.findOne({ email: pEmail });
     if (!partnerUser) {
-      return res.status(444).json({ message: 'Потребителят с този имейл не съществува.' });
+      return res.status(404).json({ message: 'Потребителят с този имейл не съществува.' });
     }
 
-    // Търсене на съществуващ чат между двамата
     let chat = await Chat.findOne({
       participants: { $all: [uEmail, pEmail] },
     });
@@ -76,18 +76,26 @@ router.post('/start', async (req, res) => {
       partnerName: partnerUser.name || pEmail.split('@')[0],
       lastMessage: chat.lastMessage,
       lastMessageTime: chat.lastMessageTime,
-      messages: chat.messages,
+      messages: chat.messages.map((m) => ({
+        id: m._id.toString(),
+        senderEmail: m.senderEmail,
+        text: m.text,
+        type: m.type || 'text',
+        storyData: m.storyData || null,
+        replyTo: m.replyTo || null,
+        timestamp: m.timestamp,
+      })),
     });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
 });
 
-// 3. Изпращане на съобщение
+// 3. Изпращане на съобщение (с поддръжка за story_reply, story_share и replyTo)
 router.post('/:chatId/messages', async (req, res) => {
   try {
     const { chatId } = req.params;
-    const { senderEmail, text } = req.body;
+    const { senderEmail, text, type, storyData, replyTo } = req.body;
 
     const now = new Date();
     const timeStr = `${String(now.getHours()).padStart(2, '0')}:${String(
@@ -95,35 +103,57 @@ router.post('/:chatId/messages', async (req, res) => {
     ).padStart(2, '0')}`;
 
     const chat = await Chat.findById(chatId);
-    if (!chat) return res.status(444).json({ message: 'Чаталнята не е намерена' });
+    if (!chat) return res.status(404).json({ message: 'Чаталнята не е намерена' });
+
+    const msgType = type || 'text';
+    const msgText = text || (msgType === 'story_reply' ? '💬 Отговор на стори' : msgType === 'story_share' ? '📷 Споделено стори' : '');
 
     const newMsg = {
       senderEmail: senderEmail.toLowerCase().trim(),
-      text,
+      text: msgText,
+      type: msgType,
+      storyData: storyData || null,
+      replyTo: replyTo || null,
       timestamp: timeStr,
     };
 
     chat.messages.push(newMsg);
-    chat.lastMessage = text;
+    chat.lastMessage = msgText;
     chat.lastMessageTime = timeStr;
     await chat.save();
 
-    res.json({ success: true, message: newMsg });
+    const savedMsg = chat.messages[chat.messages.length - 1];
+
+    res.json({
+      success: true,
+      message: {
+        id: savedMsg._id.toString(),
+        senderEmail: savedMsg.senderEmail,
+        text: savedMsg.text,
+        type: savedMsg.type,
+        storyData: savedMsg.storyData,
+        replyTo: savedMsg.replyTo,
+        timestamp: savedMsg.timestamp,
+      },
+    });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
 });
 
-// 4. Вземане на съобщения за конкретен чат (за Polling)
+// 4. Вземане на съобщения за конкретен чат (за Polling / Real-time updates)
 router.get('/:chatId/messages', async (req, res) => {
   try {
     const chat = await Chat.findById(req.params.chatId);
-    if (!chat) return res.status(444).json({ message: 'Чаталнята не е намерена' });
+    if (!chat) return res.status(404).json({ message: 'Чаталнята не е намерена' });
 
     const formattedMessages = chat.messages.map((m) => ({
       id: m._id.toString(),
       senderEmail: m.senderEmail,
       text: m.text,
+      type: m.type || 'text',
+      storyData: m.storyData || null,
+      replyTo: m.replyTo || null,
       timestamp: m.timestamp,
     }));
 

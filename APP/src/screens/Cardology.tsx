@@ -230,7 +230,7 @@ export default function Cardology() {
         try {
           await setUser(updatedUser);
           await saveUserProfile(updatedUser);
-          setSyncStatus('Birth card saved to database!');
+          setSyncStatus('Card loaded!');
         } catch (error) {
           console.warn('Offline mode: Card saved locally on device.', error);
           setSyncStatus('Saved locally on device.');

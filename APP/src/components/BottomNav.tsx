@@ -48,7 +48,6 @@ export default function BottomNav() {
         <BlurView
           intensity={80}
           tint={isDark ? "dark" : "light"}
-          experimentalBlurMethod="dimezisBlurView"
           style={{ width: "100%" }}
         >
           <LinearGradient

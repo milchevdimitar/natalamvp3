@@ -14,35 +14,88 @@ import {
   Alert,
   ActivityIndicator,
 } from "react-native";
+import { captureRef } from "react-native-view-shot";
 import { LinearGradient } from "expo-linear-gradient";
 import ConfettiCannon from "react-native-confetti-cannon";
 import {
-  Sun,
-  Stars,
   X,
   Globe,
   Sparkles,
   PlusCircle,
   CheckCircle,
   RotateCcw,
-  Zap,
   Calendar,
-  Compass,
+  ChevronLeft,
+  ChevronRight,
 } from "lucide-react-native";
 import { Brand, Card, T, Section, Pill } from "../components/UI";
 import { stories as demoStories } from "../data/demo";
 import { useApp } from "../context/AppContext";
 import { StoryViewer } from "../components/StoryViewer";
+import { Planet3D } from "../components/planets";
 
 const { width, height } = Dimensions.get("window");
+const API_BASE_URL = "http://10.159.206.3:5000";
 
-// ---------------------------------------------------------------------------
-// ✦ АСТРОНОМИЧЕСКИ ИЗЧИСЛЕНИЯ И АПИ ЗА РЕТРОГРАДНИ ПЛАНЕТИ
-// ---------------------------------------------------------------------------
+const ZODIAC_SIGNS_DATA = [
+  { name: "Aries", symbol: "♈", element: "Fire" },
+  { name: "Taurus", symbol: "♉", element: "Earth" },
+  { name: "Gemini", symbol: "♊", element: "Air" },
+  { name: "Cancer", symbol: "♋", element: "Water" },
+  { name: "Leo", symbol: "♌", element: "Fire" },
+  { name: "Virgo", symbol: "♍", element: "Earth" },
+  { name: "Libra", symbol: "♎", element: "Air" },
+  { name: "Scorpio", symbol: "♏", element: "Water" },
+  { name: "Sagittarius", symbol: "♐", element: "Fire" },
+  { name: "Capricorn", symbol: "♑", element: "Earth" },
+  { name: "Aquarius", symbol: "♒", element: "Air" },
+  { name: "Pisces", symbol: "♓", element: "Water" },
+];
+
+export function getZodiacInfo(longitude: number) {
+  const normalized = ((longitude % 360) + 360) % 360;
+  const index = Math.floor(normalized / 30);
+  const degree = Math.floor(normalized % 30);
+  const signData = ZODIAC_SIGNS_DATA[index] || ZODIAC_SIGNS_DATA[0];
+  return {
+    sign: signData.name,
+    symbol: signData.symbol,
+    element: signData.element as "Fire" | "Earth" | "Air" | "Water",
+    degree,
+  };
+}
+
+/** Извлича еклиптична дължина за планета през собствения Express бекенд */
+export async function fetchJPLPlanetPosition(
+  planetName: string,
+  dateObj = new Date()
+): Promise<{ longitude: number; sign: string; degree: number; symbol: string } | null> {
+  try {
+    const dateStr = dateObj.toISOString().split("T")[0];
+    const response = await fetch(
+      `${API_BASE_URL}/api/horizons?planet=${planetName}&date=${dateStr}`
+    );
+    if (!response.ok) return null;
+
+    const data = await response.json();
+    if (data && typeof data.longitude === "number") {
+      return {
+        longitude: data.longitude,
+        sign: data.sign,
+        degree: data.degree,
+        symbol: data.symbol,
+      };
+    }
+    return null;
+  } catch (error) {
+    console.warn(`[JPL Horizons Proxy Error] ${planetName}:`, error);
+    return null;
+  }
+}
 
 /** Изчислява прецизно фазата, осветеността и възрастта на Луната */
 export function getMoonPhaseData(date = new Date()) {
-  const synodicMonth = 29.53058770576; // Дължина на синодичния месец в дни
+  const synodicMonth = 29.53058770576;
   const knownNewMoon = new Date("2024-01-11T11:57:00Z").getTime();
   const diffDays = (date.getTime() - knownNewMoon) / 86400000;
   const cyclePosition = ((diffDays % synodicMonth) + synodicMonth) % synodicMonth;
@@ -95,30 +148,23 @@ export function getMoonPhaseData(date = new Date()) {
   };
 }
 
-/** 
- * Астрономически алгоритъм за изчисляване на реалните геоцентрични дължини 
- * на всички планети с орбитален паралакс за откриване на Ретроградност
- */
-function getRawLongitudes(dObj: Date) {
+/** Алгоритмичен резервен изчислетел (Fallback при офлайн режим) */
+function getFallbackRawLongitudes(dObj: Date) {
   const julianDate = dObj.getTime() / 86400000 + 2440587.5;
-  const d = julianDate - 2451545.0; // Дни от епоха J2000.0
+  const d = julianDate - 2451545.0;
 
-  // Слънце
-  const g = ((357.529 + 0.98560028 * d) % 360 * Math.PI) / 180;
+  const g = (((357.529 + 0.98560028 * d) % 360) * Math.PI) / 180;
   const sunLong =
     (280.459 + 0.98564736 * d + 1.915 * Math.sin(g) + 0.02 * Math.sin(2 * g)) % 360;
 
-  // Луна
   const Lm = (218.316 + 13.176396 * d) % 360;
-  const Mm = ((134.963 + 13.064993 * d) % 360 * Math.PI) / 180;
-  const Fm = ((93.272 + 13.22935 * d) % 360 * Math.PI) / 180;
+  const Mm = (((134.963 + 13.064993 * d) % 360) * Math.PI) / 180;
+  const Fm = (((93.272 + 13.22935 * d) % 360) * Math.PI) / 180;
   const moonLong =
     (Lm + 6.289 * Math.sin(Mm) - 1.274 * Math.sin(Mm - 2 * Fm)) % 360;
 
-  // Земна орбитaлна геоцентрична координата
   const earthLong = (sunLong + 180) % 360;
 
-  // Вътрешни планети (Меркурий & Венера)
   const mercMean = (252.251 + 4.0923344 * d) % 360;
   const mercLong =
     (sunLong + 23 * Math.sin((((mercMean - sunLong) % 360) * Math.PI) / 180)) % 360;
@@ -127,11 +173,10 @@ function getRawLongitudes(dObj: Date) {
   const venusLong =
     (sunLong + 42 * Math.sin((((venusMean - sunLong) % 360) * Math.PI) / 180)) % 360;
 
-  // Функция за изчисляване на геоцентричния паралакс на външните планети
   const calcOuterGeocentric = (helioMeanLong: number, semiMajorAxis: number) => {
     const alpha = (((earthLong - helioMeanLong) % 360) * Math.PI) / 180;
     const theta = Math.atan2(Math.sin(alpha), semiMajorAxis - Math.cos(alpha));
-    return ((helioMeanLong + (theta * 180) / Math.PI) % 360 + 360) % 360;
+    return (((helioMeanLong + (theta * 180) / Math.PI) % 360) + 360) % 360;
   };
 
   const marsHelio = (355.433 + 0.524033 * d) % 360;
@@ -155,63 +200,12 @@ function getRawLongitudes(dObj: Date) {
   };
 }
 
-/** Проверява дали геоцентричната дължина намалява спрямо утрешния ден (Ретроградност) */
 function checkRetrograde(todayDeg: number, tomorrowDeg: number): boolean {
   let diff = tomorrowDeg - todayDeg;
   if (diff > 180) diff -= 360;
   if (diff < -180) diff += 360;
   return diff < 0;
 }
-
-/** Изтегля реални онлайн данни от външно астрономическо API за ретроградни планети */
-async function fetchOnlineRetrogrades(): Promise<Record<string, boolean> | null> {
-  try {
-    const res = await fetch("https://mercuryretrogradeapi.com");
-    const data = await res.json();
-    if (data && typeof data.is_retrograde === "boolean") {
-      return { Mercury: data.is_retrograde };
-    }
-  } catch (err) {
-    // При липса на мрежа се използва математическия алгоритъм
-  }
-  return null;
-}
-
-const fetchImageAsBase64 = async (url: string): Promise<string> => {
-  const response = await fetch(url);
-  const arrayBuffer = await response.arrayBuffer();
-  const bytes = new Uint8Array(arrayBuffer);
-  const len = bytes.byteLength;
-
-  const chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
-  let base64 = "";
-  let i = 0;
-
-  while (i < len) {
-    const b1 = bytes[i++];
-    const b2 = i < len ? bytes[i++] : NaN;
-    const b3 = i < len ? bytes[i++] : NaN;
-
-    const c1 = b1 >> 2;
-    const c2 = ((b1 & 3) << 4) | (b2 >> 4);
-    let c3 = ((b2 & 15) << 2) | (b3 >> 6);
-    let c4 = b3 & 63;
-
-    if (isNaN(b2)) {
-      c3 = c4 = 64;
-    } else if (isNaN(b3)) {
-      c4 = 64;
-    }
-
-    base64 +=
-      chars.charAt(c1) +
-      chars.charAt(c2) +
-      (c3 === 64 ? "=" : chars.charAt(c3)) +
-      (c4 === 64 ? "=" : chars.charAt(c4));
-  }
-
-  return `data:image/png;base64,${base64}`;
-};
 
 const PLANET_METADATA: Record<
   string,
@@ -221,9 +215,11 @@ const PLANET_METADATA: Record<
     element: "Fire" | "Earth" | "Air" | "Water";
     topic: string;
     description: string;
+    symbol: string;
   }
 > = {
   Sun: {
+    symbol: "☉",
     image:
       "https://images.unsplash.com/photo-1614728894747-a83421e2b9c9?q=80&w=600&auto=format&fit=crop",
     ruler: "Leo",
@@ -233,6 +229,7 @@ const PLANET_METADATA: Record<
       "Our cosmic heart and source of vitality. Defines our willpower, self-expression, and core identity.",
   },
   Moon: {
+    symbol: "☾",
     image:
       "https://images.unsplash.com/photo-1532693322450-2cb5c511067d?q=80&w=600&auto=format&fit=crop",
     ruler: "Cancer",
@@ -242,6 +239,7 @@ const PLANET_METADATA: Record<
       "Guardian of the subconscious, emotional realm, inner comfort, and intuitive reactions.",
   },
   Mercury: {
+    symbol: "☿",
     image:
       "https://images.unsplash.com/photo-1545156521-77bd85671d30?q=80&w=600&auto=format&fit=crop",
     ruler: "Gemini / Virgo",
@@ -251,6 +249,7 @@ const PLANET_METADATA: Record<
       "Planet of thought, speech, logic, and mental agility. Governs how we process information.",
   },
   Venus: {
+    symbol: "♀",
     image:
       "https://images.unsplash.com/photo-1614732414444-096e5f1122d5?q=80&w=600&auto=format&fit=crop",
     ruler: "Taurus / Libra",
@@ -260,6 +259,7 @@ const PLANET_METADATA: Record<
       "Goddess of beauty, love, harmony, art, and what we truly value in relationships.",
   },
   Mars: {
+    symbol: "♂",
     image:
       "https://images.unsplash.com/photo-1614728894747-a83421e2b9c9?q=80&w=600&auto=format&fit=crop",
     ruler: "Aries",
@@ -269,6 +269,7 @@ const PLANET_METADATA: Record<
       "The zodiac warrior – defines how we assert ourselves, direct our passion, and overcome obstacles.",
   },
   Jupiter: {
+    symbol: "♃",
     image:
       "https://images.unsplash.com/photo-1614730321146-b6fa6a46bcb4?q=80&w=600&auto=format&fit=crop",
     ruler: "Sagittarius",
@@ -278,6 +279,7 @@ const PLANET_METADATA: Record<
       "The great benefactor – brings growth, abundance, philosophical depth, and new horizons.",
   },
   Saturn: {
+    symbol: "♄",
     image:
       "https://images.unsplash.com/photo-1614732484003-ef9881555dc3?q=80&w=600&auto=format&fit=crop",
     ruler: "Capricorn",
@@ -287,6 +289,7 @@ const PLANET_METADATA: Record<
       "The great teacher – builds boundaries, structure, discipline, maturity, and karmic lessons.",
   },
   Uranus: {
+    symbol: "♅",
     image:
       "https://images.unsplash.com/photo-1614732414444-096e5f1122d5?q=80&w=600&auto=format&fit=crop",
     ruler: "Aquarius",
@@ -296,6 +299,7 @@ const PLANET_METADATA: Record<
       "Catalyst for change, genius, freedom, originality, and sudden revolutionary breakthroughs.",
   },
   Neptune: {
+    symbol: "♆",
     image:
       "https://images.unsplash.com/photo-1506703719100-a0f3a48c0f86?q=80&w=600&auto=format&fit=crop",
     ruler: "Pisces",
@@ -305,6 +309,7 @@ const PLANET_METADATA: Record<
       "Planet of illusions, higher spirituality, creative inspiration, dreams, and cosmic oneness.",
   },
   Pluto: {
+    symbol: "♇",
     image:
       "https://images.unsplash.com/photo-1451187580459-43490279c0fa?q=80&w=600&auto=format&fit=crop",
     ruler: "Scorpio",
@@ -315,33 +320,6 @@ const PLANET_METADATA: Record<
   },
 };
 
-interface ZodiacSign {
-  name: string;
-  symbol: string;
-  element: "Fire" | "Earth" | "Air" | "Water";
-}
-
-const ZODIAC_SIGNS: ZodiacSign[] = [
-  { name: "Aries", symbol: "♈", element: "Fire" },
-  { name: "Taurus", symbol: "♉", element: "Earth" },
-  { name: "Gemini", symbol: "♊", element: "Air" },
-  { name: "Cancer", symbol: "♋", element: "Water" },
-  { name: "Leo", symbol: "♌", element: "Fire" },
-  { name: "Virgo", symbol: "♍", element: "Earth" },
-  { name: "Libra", symbol: "♎", element: "Air" },
-  { name: "Scorpio", symbol: "♏", element: "Water" },
-  { name: "Sagittarius", symbol: "♐", element: "Fire" },
-  { name: "Capricorn", symbol: "♑", element: "Earth" },
-  { name: "Aquarius", symbol: "♒", element: "Air" },
-  { name: "Pisces", symbol: "♓", element: "Water" },
-];
-
-function getZodiacFromLongitude(deg: number): ZodiacSign {
-  const normalized = ((deg % 360) + 360) % 360;
-  const index = Math.floor(normalized / 30);
-  return ZODIAC_SIGNS[index];
-}
-
 export interface DetailedPlanetPosition {
   planet: string;
   name: string;
@@ -350,106 +328,13 @@ export interface DetailedPlanetPosition {
   zodiacSymbol: string;
   progressPercent: number;
   isRetrograde: boolean;
+  longitude: number;
+  isLiveNASA?: boolean;
   meta: (typeof PLANET_METADATA)[string];
 }
 
-function calculateCurrentPlanetaryPositions(
-  date = new Date(),
-  overrideRetrogrades?: Record<string, boolean>
-): DetailedPlanetPosition[] {
-  const todayLongs = getRawLongitudes(date);
-  const tomorrowObj = new Date(date.getTime() + 86400000);
-  const tomorrowLongs = getRawLongitudes(tomorrowObj);
-
-  const rawPlanets = [
-    { symbol: "☉", name: "Sun", longitude: todayLongs.Sun, isRetro: false },
-    { symbol: "☾", name: "Moon", longitude: todayLongs.Moon, isRetro: false },
-    {
-      symbol: "☿",
-      name: "Mercury",
-      longitude: todayLongs.Mercury,
-      isRetro:
-        overrideRetrogrades?.Mercury ??
-        checkRetrograde(todayLongs.Mercury, tomorrowLongs.Mercury),
-    },
-    {
-      symbol: "♀",
-      name: "Venus",
-      longitude: todayLongs.Venus,
-      isRetro:
-        overrideRetrogrades?.Venus ??
-        checkRetrograde(todayLongs.Venus, tomorrowLongs.Venus),
-    },
-    {
-      symbol: "♂",
-      name: "Mars",
-      longitude: todayLongs.Mars,
-      isRetro:
-        overrideRetrogrades?.Mars ??
-        checkRetrograde(todayLongs.Mars, tomorrowLongs.Mars),
-    },
-    {
-      symbol: "♃",
-      name: "Jupiter",
-      longitude: todayLongs.Jupiter,
-      isRetro:
-        overrideRetrogrades?.Jupiter ??
-        checkRetrograde(todayLongs.Jupiter, tomorrowLongs.Jupiter),
-    },
-    {
-      symbol: "♄",
-      name: "Saturn",
-      longitude: todayLongs.Saturn,
-      isRetro:
-        overrideRetrogrades?.Saturn ??
-        checkRetrograde(todayLongs.Saturn, tomorrowLongs.Saturn),
-    },
-    {
-      symbol: "♅",
-      name: "Uranus",
-      longitude: todayLongs.Uranus,
-      isRetro:
-        overrideRetrogrades?.Uranus ??
-        checkRetrograde(todayLongs.Uranus, tomorrowLongs.Uranus),
-    },
-    {
-      symbol: "♆",
-      name: "Neptune",
-      longitude: todayLongs.Neptune,
-      isRetro:
-        overrideRetrogrades?.Neptune ??
-        checkRetrograde(todayLongs.Neptune, tomorrowLongs.Neptune),
-    },
-    {
-      symbol: "♇",
-      name: "Pluto",
-      longitude: todayLongs.Pluto,
-      isRetro:
-        overrideRetrogrades?.Pluto ??
-        checkRetrograde(todayLongs.Pluto, tomorrowLongs.Pluto),
-    },
-  ];
-
-  return rawPlanets.map((p) => {
-    const signInfo = getZodiacFromLongitude(p.longitude);
-    const degInSign = Math.floor(((p.longitude % 30) + 30) % 30);
-    const progressPercent = Math.min(100, Math.max(5, (degInSign / 30) * 100));
-
-    return {
-      planet: p.symbol,
-      name: p.name,
-      signName: signInfo.name,
-      degInSign,
-      zodiacSymbol: signInfo.symbol,
-      progressPercent,
-      isRetrograde: p.isRetro,
-      meta: PLANET_METADATA[p.name] || PLANET_METADATA.Sun,
-    };
-  });
-}
-
 // ---------------------------------------------------------------------------
-// 🌕 АНИМИРАН 3D ВИЗУАЛИЗАТОР НА ЛУНАТА
+// 🌕 ANIMATED MOON VISUALIZER
 // ---------------------------------------------------------------------------
 function AnimatedMoonVisualizer({ moonPhase }: { moonPhase: ReturnType<typeof getMoonPhaseData> }) {
   const { colors } = useApp();
@@ -521,10 +406,13 @@ function AnimatedMoonVisualizer({ moonPhase }: { moonPhase: ReturnType<typeof ge
 }
 
 // ---------------------------------------------------------------------------
-// 📅 7-ДНЕВНА ЛУННА ПРОГНОЗА
+// 📅 MOON 7-DAY FORECAST & INTERACTIVE CALENDAR MODAL
 // ---------------------------------------------------------------------------
 function Moon7DayForecast() {
   const { colors } = useApp();
+  const [showCalendarModal, setShowCalendarModal] = useState(false);
+  const [selectedCalendarDate, setSelectedCalendarDate] = useState(new Date());
+  const [currentMonthDate, setCurrentMonthDate] = useState(new Date());
 
   const forecast = useMemo(() => {
     const list = [];
@@ -544,11 +432,56 @@ function Moon7DayForecast() {
     return list;
   }, []);
 
+  // Изчисляване на Луната и зодиака за избраната дата в календара
+  const selectedMoonPhase = useMemo(
+    () => getMoonPhaseData(selectedCalendarDate),
+    [selectedCalendarDate]
+  );
+
+  const selectedMoonZodiac = useMemo(() => {
+    const raw = getFallbackRawLongitudes(selectedCalendarDate);
+    return getZodiacInfo(raw.Moon);
+  }, [selectedCalendarDate]);
+
+  // Генератор на дните за текущо избрания месец
+  const calendarGrid = useMemo(() => {
+    const year = currentMonthDate.getFullYear();
+    const month = currentMonthDate.getMonth();
+
+    const firstDayIndex = (new Date(year, month, 1).getDay() + 6) % 7; // Смятане с Понеделник = 0
+    const totalDays = new Date(year, month + 1, 0).getDate();
+
+    const daysArray = [];
+    for (let i = 0; i < firstDayIndex; i++) {
+      daysArray.push(null);
+    }
+    for (let day = 1; day <= totalDays; day++) {
+      daysArray.push(new Date(year, month, day));
+    }
+    return { year, month, daysArray };
+  }, [currentMonthDate]);
+
+  const changeMonth = (offset: number) => {
+    const newDate = new Date(
+      currentMonthDate.getFullYear(),
+      currentMonthDate.getMonth() + offset,
+      1
+    );
+    setCurrentMonthDate(newDate);
+  };
+
   return (
     <View style={{ marginTop: 18, marginBottom: 10 }}>
       <View style={styles.sectionHeaderRow}>
         <Section>Moon 7-Day Forecast</Section>
-        <Calendar size={15} color={colors.gold} />
+        {/* Кликването върху жълтия календар отваря модала */}
+        <TouchableOpacity
+          activeOpacity={0.7}
+          onPress={() => setShowCalendarModal(true)}
+          style={{ padding: 4 }}
+        >
+          <Calendar size={18} color={colors.gold} />
+        </TouchableOpacity>
       </View>
 
       <ScrollView
@@ -590,12 +523,158 @@ function Moon7DayForecast() {
           </View>
         ))}
       </ScrollView>
+
+      {/* 🌕 COSMIC MOON CALENDAR MODAL */}
+      <Modal
+        visible={showCalendarModal}
+        transparent
+        animationType="slide"
+        onRequestClose={() => setShowCalendarModal(false)}
+      >
+        <Pressable
+          style={styles.modalBackdrop}
+          onPress={() => setShowCalendarModal(false)}
+        >
+          <Pressable
+            onPress={(e) => e.stopPropagation()}
+            style={[
+              styles.encyclopediaModalSheet,
+              { backgroundColor: colors.surface, borderColor: colors.gold },
+            ]}
+          >
+            <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center" }}>
+              <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
+                <Calendar size={20} color={colors.gold} />
+                <T bold size={18} style={{ color: colors.text }}>
+                  Cosmic Moon Calendar
+                </T>
+              </View>
+              <TouchableOpacity onPress={() => setShowCalendarModal(false)}>
+                <X color={colors.text} size={22} />
+              </TouchableOpacity>
+            </View>
+
+            {/* Избор на Месец */}
+            <View
+              style={{
+                flexDirection: "row",
+                justifyContent: "space-between",
+                alignItems: "center",
+                backgroundColor: colors.surfaceAlt,
+                paddingHorizontal: 16,
+                paddingVertical: 10,
+                borderRadius: 16,
+                borderWidth: 1,
+                borderColor: colors.line,
+              }}
+            >
+              <TouchableOpacity onPress={() => changeMonth(-1)}>
+                <ChevronLeft size={22} color={colors.gold} />
+              </TouchableOpacity>
+              <T bold size={16} style={{ color: colors.gold }}>
+                {currentMonthDate.toLocaleDateString("en-US", { month: "long", year: "numeric" })}
+              </T>
+              <TouchableOpacity onPress={() => changeMonth(1)}>
+                <ChevronRight size={22} color={colors.gold} />
+              </TouchableOpacity>
+            </View>
+
+            {/* Дни от седмицата */}
+            <View style={{ flexDirection: "row", justifyContent: "space-around", paddingVertical: 4 }}>
+              {["Mo", "Tu", "We", "Th", "Fr", "Sa", "Su"].map((day, i) => (
+                <T key={i} bold size={12} style={{ color: colors.purple, width: 38, textAlign: "center" }}>
+                  {day}
+                </T>
+              ))}
+            </View>
+
+            {/* Решетка на Календара */}
+            <View style={{ flexDirection: "row", flexWrap: "wrap", justifyContent: "flex-start" }}>
+              {calendarGrid.daysArray.map((dateObj, idx) => {
+                if (!dateObj) {
+                  return <View key={`empty-${idx}`} style={{ width: "14.28%", height: 42 }} />;
+                }
+
+                const isSelected =
+                  dateObj.toDateString() === selectedCalendarDate.toDateString();
+                const isToday = dateObj.toDateString() === new Date().toDateString();
+                const dayMoon = getMoonPhaseData(dateObj);
+
+                return (
+                  <TouchableOpacity
+                    key={dateObj.toISOString()}
+                    onPress={() => setSelectedCalendarDate(dateObj)}
+                    style={{
+                      width: "14.28%",
+                      height: 44,
+                      alignItems: "center",
+                      justifyContent: "center",
+                      borderRadius: 12,
+                      backgroundColor: isSelected
+                        ? colors.gold
+                        : isToday
+                        ? colors.purpleSoft
+                        : "transparent",
+                      borderWidth: isSelected ? 0 : isToday ? 1 : 0,
+                      borderColor: colors.purple,
+                      marginVertical: 2,
+                    }}
+                  >
+                    <T
+                      bold={isSelected || isToday}
+                      size={12}
+                      style={{ color: isSelected ? "#000" : colors.text }}
+                    >
+                      {dateObj.getDate()}
+                    </T>
+                    <T size={10}>{dayMoon.symbol}</T>
+                  </TouchableOpacity>
+                );
+              })}
+            </View>
+
+            {/* Карта с Астро Детайли за Избрания Ден */}
+            <Card style={{ backgroundColor: colors.surfaceAlt, borderColor: colors.gold, padding: 14 }}>
+              <T bold size={13} style={{ color: colors.gold, marginBottom: 6 }}>
+                ✦ {selectedCalendarDate.toLocaleDateString("en-US", { weekday: "long", month: "short", day: "numeric", year: "numeric" })}
+              </T>
+
+              <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}>
+                <View style={{ flexDirection: "row", alignItems: "center", gap: 10 }}>
+                  <T size={32}>{selectedMoonPhase.symbol}</T>
+                  <View>
+                    <T bold size={15} style={{ color: colors.text }}>
+                      {selectedMoonPhase.phaseName}
+                    </T>
+                    <T muted size={11}>
+                      {selectedMoonPhase.illuminated}% Illuminated · Age: {selectedMoonPhase.ageInDays}d
+                    </T>
+                  </View>
+                </View>
+
+                <View style={{ alignItems: "flex-end" }}>
+                  <T bold size={18} style={{ color: colors.gold }}>
+                    {selectedMoonZodiac.symbol} {selectedMoonZodiac.sign}
+                  </T>
+                  <T muted size={11}>
+                    {selectedMoonZodiac.degree}° in Sign
+                  </T>
+                </View>
+              </View>
+            </Card>
+
+            <Pill selected onPress={() => setShowCalendarModal(false)}>
+              ✦ Close Moon Calendar
+            </Pill>
+          </Pressable>
+        </Pressable>
+      </Modal>
     </View>
   );
 }
 
 // ---------------------------------------------------------------------------
-// ℞ СЕКЦИЯ ЗА РЕТРОГРАДНИ ПЛАНЕТИ (С АВТОМАТИЧНО ТЕГЛЕНЕ И СМЕТАНЕ)
+// ℞ RETROGRADE SECTION
 // ---------------------------------------------------------------------------
 function RetrogradeSection({
   planetaryPositions,
@@ -666,7 +745,7 @@ function RetrogradeSection({
 }
 
 // ---------------------------------------------------------------------------
-// 🥠 FORTUNE COOKIE
+// 🥠 FORTUNE COOKIE WITH CUSTOM 9:16 STORY CARD
 // ---------------------------------------------------------------------------
 function UltraRealisticFortuneCookie({
   onOpenConfetti,
@@ -679,6 +758,9 @@ function UltraRealisticFortuneCookie({
   const [isPostingStory, setIsPostingStory] = useState(false);
   const [hasPostedToStory, setHasPostedToStory] = useState(false);
   const [fortuneIndex, setFortuneIndex] = useState(0);
+
+  // Ref за скритата 9:16 Story карта
+  const fortuneStoryCardRef = useRef<View>(null);
 
   const fortunes = [
     "A quiet step today will open an unexpected door tomorrow.",
@@ -752,22 +834,23 @@ function UltraRealisticFortuneCookie({
     });
   };
 
+  // Споделяне на изработената 9:16 Story карта в Стори
   const handlePostToStory = async () => {
     if (isPostingStory || hasPostedToStory) return;
     setIsPostingStory(true);
 
     try {
-      const currentFortuneText = fortunes[fortuneIndex];
-      const formattedText = `✦ NATALA FORTUNE ✦\n\n\n"${currentFortuneText}"\n\n\n✦ COSMIC DISCOVERY ✦`;
-      const fortuneCardUrl = `https://placehold.co/600x1066/120E1F/EAB308.png?text=${encodeURIComponent(formattedText)}`;
-
-      const base64Image = await fetchImageAsBase64(fortuneCardUrl);
+      const base64Image = await captureRef(fortuneStoryCardRef, {
+        format: "png",
+        quality: 1.0,
+        result: "base64",
+      });
 
       await addStory(base64Image);
       setHasPostedToStory(true);
-      Alert.alert("Success! ✨", "Your fortune card has been posted to your Story!");
+      Alert.alert("Success! ✨", "Your custom fortune card has been posted to your Story!");
     } catch (error) {
-      console.error("Error posting to story:", error);
+      console.error("Error capturing or posting fortune story:", error);
       Alert.alert("Error", "Could not post to Story. Please try again.");
     } finally {
       setIsPostingStory(false);
@@ -832,226 +915,391 @@ function UltraRealisticFortuneCookie({
   const currentFortune = fortunes[fortuneIndex];
 
   return (
-    <Card
-      style={{
-        width: "100%",
-        minHeight: 320,
-        padding: 18,
-        alignItems: "center",
-        justifyContent: "space-between",
-        overflow: "hidden",
-      }}
-    >
-      <View style={{ alignItems: "center", gap: 3 }}>
-        <T bold size={17} style={{ textAlign: "center", color: colors.text }}>
-          {isOpened ? "Your Daily Fortune" : "Cosmic Fortune Cookie"}
-        </T>
-        <T muted size={11} style={{ textAlign: "center" }}>
-          {isOpened
-            ? "Inspired by the stars for your journey today"
-            : "Tap the cookie to reveal what awaits you today"}
-        </T>
-      </View>
-
-      <TouchableOpacity
-        activeOpacity={0.92}
-        onPress={handleCrackCookie}
-        disabled={isAnimating}
-        style={styles.cookieStage}
+    <>
+      <Card
+        style={{
+          width: "100%",
+          minHeight: 320,
+          padding: 18,
+          alignItems: "center",
+          justifyContent: "space-between",
+          overflow: "hidden",
+        }}
       >
-        <Animated.View
-          style={[
-            styles.cosmicAura,
-            {
-              backgroundColor: colors.gold,
-              opacity: auraOpacity,
-              transform: [{ scale: auraScale }],
-            },
-          ]}
-        />
+        <View style={{ alignItems: "center", gap: 3 }}>
+          <T bold size={17} style={{ textAlign: "center", color: colors.text }}>
+            {isOpened ? "Your Daily Fortune" : "Cosmic Fortune Cookie"}
+          </T>
+          <T muted size={11} style={{ textAlign: "center" }}>
+            {isOpened
+              ? "Inspired by the stars for your journey today"
+              : "Tap the cookie to reveal what awaits you today"}
+          </T>
+        </View>
 
-        <Animated.View
-          style={[
-            styles.cookie3DWrapper,
-            {
-              transform: [{ translateY: shakeTranslateY }, { rotate: shakeRotate }],
-            },
-          ]}
+        <TouchableOpacity
+          activeOpacity={0.92}
+          onPress={handleCrackCookie}
+          disabled={isAnimating}
+          style={styles.cookieStage}
         >
           <Animated.View
             style={[
-              styles.fortunePaper,
+              styles.cosmicAura,
               {
-                borderColor: colors.gold,
-                opacity: paperOpacity,
-                transform: [{ translateY: paperTranslateY }, { scale: paperScale }],
+                backgroundColor: colors.gold,
+                opacity: auraOpacity,
+                transform: [{ scale: auraScale }],
+              },
+            ]}
+          />
+
+          <Animated.View
+            style={[
+              styles.cookie3DWrapper,
+              {
+                transform: [{ translateY: shakeTranslateY }, { rotate: shakeRotate }],
               },
             ]}
           >
-            <LinearGradient
-              colors={["#FFFDF5", "#FFF7E6", "#FFF0D4"]}
-              style={styles.paperGradient}
+            <Animated.View
+              style={[
+                styles.fortunePaper,
+                {
+                  borderColor: colors.gold,
+                  opacity: paperOpacity,
+                  transform: [{ translateY: paperTranslateY }, { scale: paperScale }],
+                },
+              ]}
             >
-              <View style={styles.paperInnerBorder}>
-                <Sparkles size={16} color={colors.gold} style={{ marginBottom: 4 }} />
+              <LinearGradient
+                colors={["#FFFDF5", "#FFF7E6", "#FFF0D4"]}
+                style={styles.paperGradient}
+              >
+                <View style={styles.paperInnerBorder}>
+                  <Sparkles size={16} color={colors.gold} style={{ marginBottom: 4 }} />
+                  <T
+                    bold
+                    size={12}
+                    style={{
+                      color: "#2D2140",
+                      textAlign: "center",
+                      lineHeight: 17,
+                    }}
+                  >
+                    "{currentFortune}"
+                  </T>
+                  <T size={9} style={{ color: colors.purple, marginTop: 6, letterSpacing: 1.5 }}>
+                    ✦ NATALA DISCOVERY ✦
+                  </T>
+                </View>
+              </LinearGradient>
+            </Animated.View>
+
+            <Animated.View
+              style={[
+                styles.cookie3DHalf,
+                styles.cookieLeftHalf,
+                {
+                  transform: [
+                    { translateX: leftTranslateX },
+                    { rotateZ: leftRotateZ },
+                    { rotateY: leftRotateY },
+                  ],
+                },
+              ]}
+            >
+              <LinearGradient
+                colors={["#FBBF24", "#D97706", "#B45309", "#78350F"]}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 1 }}
+                style={styles.cookieGradient}
+              >
+                <View style={styles.cookieHighlight} />
+                <View style={styles.cookieCreaseLeft} />
+              </LinearGradient>
+            </Animated.View>
+
+            <Animated.View
+              style={[
+                styles.cookie3DHalf,
+                styles.cookieRightHalf,
+                {
+                  transform: [
+                    { translateX: rightTranslateX },
+                    { rotateZ: rightRotateZ },
+                    { rotateY: rightRotateY },
+                  ],
+                },
+              ]}
+            >
+              <LinearGradient
+                colors={["#F59E0B", "#D97706", "#92400E", "#451A03"]}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 1 }}
+                style={styles.cookieGradient}
+              >
+                <View style={styles.cookieHighlightRight} />
+                <View style={styles.cookieCreaseRight} />
+              </LinearGradient>
+            </Animated.View>
+          </Animated.View>
+        </TouchableOpacity>
+
+        <View style={{ alignItems: "center", gap: 10, width: "100%", marginTop: 10 }}>
+          <Pill selected={isOpened} onPress={handleCrackCookie} disabled={isAnimating}>
+            {isOpened ? "✦ Crack Another Fortune Cookie" : "✦ Crack Your Fortune Cookie"}
+          </Pill>
+
+          {isOpened && (
+            <TouchableOpacity
+              onPress={handlePostToStory}
+              disabled={isPostingStory || hasPostedToStory}
+              style={[
+                styles.actionButton,
+                styles.storyActionButton,
+                hasPostedToStory && { opacity: 0.75 },
+              ]}
+              activeOpacity={0.7}
+            >
+              {isPostingStory ? (
+                <ActivityIndicator size="small" color={colors.gold} />
+              ) : hasPostedToStory ? (
+                <>
+                  <CheckCircle size={15} color={colors.gold} />
+                  <T bold size={12} style={{ color: colors.gold }}>
+                    Posted to Story ✓
+                  </T>
+                </>
+              ) : (
+                <>
+                  <PlusCircle size={15} color={colors.gold} />
+                  <T bold size={12} style={{ color: colors.gold }}>
+                    ✦ Add to Story
+                  </T>
+                </>
+              )}
+            </TouchableOpacity>
+          )}
+        </View>
+      </Card>
+
+      {/* DESIGNED FORTUNE COOKIE STORY CARD (9:16 ASPECT RATIO) */}
+      <View
+        style={{
+          position: "absolute",
+          left: -9999,
+          top: 0,
+        }}
+        pointerEvents="none"
+      >
+        <View
+          ref={fortuneStoryCardRef}
+          collapsable={false}
+          style={{
+            width: 380,
+            height: 675,
+            borderRadius: 32,
+            overflow: "hidden",
+          }}
+        >
+          <LinearGradient
+            colors={["#0D0714", "#1A0B2E", "#2D124D", "#0D0714"]}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 1 }}
+            style={{
+              flex: 1,
+              padding: 28,
+              justifyContent: "space-between",
+              alignItems: "center",
+            }}
+          >
+            <View style={{ alignItems: "center", gap: 4, marginTop: 12 }}>
+              <View
+                style={{
+                  flexDirection: "row",
+                  alignItems: "center",
+                  gap: 6,
+                  backgroundColor: "rgba(234, 179, 8, 0.15)",
+                  paddingHorizontal: 14,
+                  paddingVertical: 6,
+                  borderRadius: 20,
+                  borderWidth: 1,
+                  borderColor: "rgba(234, 179, 8, 0.4)",
+                }}
+              >
+                <Sparkles size={14} color="#EAB308" />
+                <T bold size={11} style={{ color: "#EAB308", letterSpacing: 2 }}>
+                  DAILY COSMIC ORACLE
+                </T>
+              </View>
+              <T size={10} style={{ color: "rgba(255,255,255,0.5)", letterSpacing: 1.5, marginTop: 4 }}>
+                NATALA FORTUNE COOKIE
+              </T>
+            </View>
+
+            <View
+              style={{
+                width: "100%",
+                backgroundColor: "#FFFDF5",
+                borderRadius: 24,
+                padding: 24,
+                alignItems: "center",
+                justifyContent: "center",
+                borderWidth: 2,
+                borderColor: "#EAB308",
+                shadowColor: "#EAB308",
+                shadowOffset: { width: 0, height: 0 },
+                shadowOpacity: 0.55,
+                shadowRadius: 20,
+              }}
+            >
+              <View
+                style={{
+                  borderWidth: 1.5,
+                  borderColor: "rgba(217, 119, 6, 0.35)",
+                  borderStyle: "dashed",
+                  borderRadius: 16,
+                  paddingHorizontal: 18,
+                  paddingVertical: 22,
+                  width: "100%",
+                  alignItems: "center",
+                }}
+              >
+                <T size={34} style={{ marginBottom: 12 }}>
+                  🥠
+                </T>
                 <T
                   bold
-                  size={12}
+                  size={19}
                   style={{
                     color: "#2D2140",
                     textAlign: "center",
-                    lineHeight: 17,
+                    lineHeight: 27,
+                    fontStyle: "italic",
                   }}
                 >
                   "{currentFortune}"
                 </T>
-                <T size={9} style={{ color: colors.purple, marginTop: 6, letterSpacing: 1.5 }}>
-                  ✦ NATALA DISCOVERY ✦
+                <View
+                  style={{
+                    height: 1.5,
+                    width: 60,
+                    backgroundColor: "#D97706",
+                    marginVertical: 16,
+                    opacity: 0.5,
+                  }}
+                />
+                <T bold size={10} style={{ color: "#9333EA", letterSpacing: 2 }}>
+                  ✦ NATALA COSMIC WISDOM ✦
                 </T>
               </View>
-            </LinearGradient>
-          </Animated.View>
+            </View>
 
-          <Animated.View
-            style={[
-              styles.cookie3DHalf,
-              styles.cookieLeftHalf,
-              {
-                transform: [
-                  { translateX: leftTranslateX },
-                  { rotateZ: leftRotateZ },
-                  { rotateY: leftRotateY },
-                ],
-              },
-            ]}
-          >
-            <LinearGradient
-              colors={["#FBBF24", "#D97706", "#B45309", "#78350F"]}
-              start={{ x: 0, y: 0 }}
-              end={{ x: 1, y: 1 }}
-              style={styles.cookieGradient}
-            >
-              <View style={styles.cookieHighlight} />
-              <View style={styles.cookieCreaseLeft} />
-            </LinearGradient>
-          </Animated.View>
-
-          <Animated.View
-            style={[
-              styles.cookie3DHalf,
-              styles.cookieRightHalf,
-              {
-                transform: [
-                  { translateX: rightTranslateX },
-                  { rotateZ: rightRotateZ },
-                  { rotateY: rightRotateY },
-                ],
-              },
-            ]}
-          >
-            <LinearGradient
-              colors={["#F59E0B", "#D97706", "#92400E", "#451A03"]}
-              start={{ x: 0, y: 0 }}
-              end={{ x: 1, y: 1 }}
-              style={styles.cookieGradient}
-            >
-              <View style={styles.cookieHighlightRight} />
-              <View style={styles.cookieCreaseRight} />
-            </LinearGradient>
-          </Animated.View>
-        </Animated.View>
-      </TouchableOpacity>
-
-      <View style={{ alignItems: "center", gap: 10, width: "100%", marginTop: 10 }}>
-        <Pill selected={isOpened} onPress={handleCrackCookie} disabled={isAnimating}>
-          {isOpened ? "✦ Crack Another Fortune Cookie" : "✦ Crack Your Fortune Cookie"}
-        </Pill>
-
-        {isOpened && (
-          <TouchableOpacity
-            onPress={handlePostToStory}
-            disabled={isPostingStory || hasPostedToStory}
-            style={[
-              styles.actionButton,
-              styles.storyActionButton,
-              hasPostedToStory && { opacity: 0.75 },
-            ]}
-            activeOpacity={0.7}
-          >
-            {isPostingStory ? (
-              <ActivityIndicator size="small" color={colors.gold} />
-            ) : hasPostedToStory ? (
-              <>
-                <CheckCircle size={15} color={colors.gold} />
-                <T bold size={12} style={{ color: colors.gold }}>
-                  Posted to Story ✓
-                </T>
-              </>
-            ) : (
-              <>
-                <PlusCircle size={15} color={colors.gold} />
-                <T bold size={12} style={{ color: colors.gold }}>
-                  ✦ Add to Story
-                </T>
-              </>
-            )}
-          </TouchableOpacity>
-        )}
+            <View style={{ alignItems: "center", marginBottom: 10 }}>
+              <T bold size={12} style={{ color: "#EAB308", letterSpacing: 1 }}>
+                UNLOCK YOUR DAILY DESTINY
+              </T>
+              <T size={9} style={{ color: "rgba(255,255,255,0.4)", letterSpacing: 1, marginTop: 2 }}>
+                NATALA ASTROLOGY & COSMIC ATLAS
+              </T>
+            </View>
+          </LinearGradient>
+        </View>
       </View>
-    </Card>
+    </>
   );
 }
 
 // ---------------------------------------------------------------------------
-// 🏠 MAIN HOME SCREEN
+// 🏠 MAIN HOME SCREEN WITH LIVE NASA JPL HORIZONS PROXY
 // ---------------------------------------------------------------------------
 export default function Home() {
   const { colors, setPage, fetchActiveStories } = useApp();
   const [refreshing, setRefreshing] = useState(false);
+  const [loadingNASA, setLoadingNASA] = useState(true);
   const [selectedPlanet, setSelectedPlanet] = useState<DetailedPlanetPosition | null>(null);
-  const [onlineRetrogrades, setOnlineRetrogrades] = useState<Record<string, boolean> | undefined>(undefined);
 
+  const [planetaryPositions, setPlanetaryPositions] = useState<DetailedPlanetPosition[]>([]);
   const [showConfetti, setShowConfetti] = useState(false);
   const [confettiKey, setConfettiKey] = useState(0);
 
-  // Извличане на онлайн данни при зареждане
-  useEffect(() => {
-    (async () => {
-      const liveData = await fetchOnlineRetrogrades();
-      if (liveData) {
-        setOnlineRetrogrades(liveData);
-      }
-    })();
+  const currentMoonPhase = useMemo(() => getMoonPhaseData(), []);
+
+  // Извличане на всички планетни позиции през Express Proxy
+  const loadNASAPlanetaryData = useCallback(async () => {
+    setLoadingNASA(true);
+    const planetNames = Object.keys(PLANET_METADATA);
+    const todayObj = new Date();
+    const tomorrowObj = new Date(todayObj.getTime() + 86400000);
+
+    const fallbackLongsToday = getFallbackRawLongitudes(todayObj);
+    const fallbackLongsTomorrow = getFallbackRawLongitudes(tomorrowObj);
+
+    try {
+      const jplPromises = planetNames.map((name) => fetchJPLPlanetPosition(name, todayObj));
+      const jplTomorrowPromises = planetNames.map((name) => fetchJPLPlanetPosition(name, tomorrowObj));
+
+      const resultsToday = await Promise.all(jplPromises);
+      const resultsTomorrow = await Promise.all(jplTomorrowPromises);
+
+      const computedPositions: DetailedPlanetPosition[] = planetNames.map((name, idx) => {
+        const meta = PLANET_METADATA[name];
+        const jplToday = resultsToday[idx];
+        const jplTomorrow = resultsTomorrow[idx];
+
+        let longitude = jplToday ? jplToday.longitude : fallbackLongsToday[name as keyof typeof fallbackLongsToday];
+        let tomorrowLong = jplTomorrow ? jplTomorrow.longitude : fallbackLongsTomorrow[name as keyof typeof fallbackLongsTomorrow];
+
+        const isRetrograde = name === "Sun" || name === "Moon" ? false : checkRetrograde(longitude, tomorrowLong);
+        const zodiacInfo = getZodiacInfo(longitude);
+        const degInSign = zodiacInfo.degree;
+        const progressPercent = Math.min(100, Math.max(5, (degInSign / 30) * 100));
+
+        return {
+          planet: meta.symbol,
+          name,
+          signName: zodiacInfo.sign,
+          degInSign,
+          zodiacSymbol: zodiacInfo.symbol,
+          progressPercent,
+          isRetrograde,
+          longitude,
+          isLiveNASA: !!jplToday,
+          meta,
+        };
+      });
+
+      setPlanetaryPositions(computedPositions);
+    } catch (err) {
+      console.error("Грешка при зареждане от NASA JPL Horizons Proxy:", err);
+    } finally {
+      setLoadingNASA(false);
+    }
   }, []);
+
+  useEffect(() => {
+    loadNASAPlanetaryData();
+  }, [loadNASAPlanetaryData]);
 
   const triggerConfetti = useCallback(() => {
     setConfettiKey((prev) => prev + 1);
     setShowConfetti(true);
   }, []);
 
-  const planetaryPositions = useMemo(
-    () => calculateCurrentPlanetaryPositions(new Date(), onlineRetrogrades),
-    [onlineRetrogrades]
-  );
-  const currentMoonPhase = useMemo(() => getMoonPhaseData(), []);
-
   const onRefresh = useCallback(async () => {
     setRefreshing(true);
     try {
-      const liveData = await fetchOnlineRetrogrades();
-      if (liveData) {
-        setOnlineRetrogrades(liveData);
-      }
+      await loadNASAPlanetaryData();
       if (typeof fetchActiveStories === "function") {
         await fetchActiveStories();
       }
-      await new Promise((resolve) => setTimeout(resolve, 800));
     } catch (error) {
       console.error("Error refreshing data:", error);
     } finally {
       setRefreshing(false);
     }
-  }, [fetchActiveStories]);
+  }, [loadNASAPlanetaryData, fetchActiveStories]);
 
   const getElementColor = (element: string) => {
     switch (element) {
@@ -1067,6 +1315,9 @@ export default function Home() {
         return colors.gold;
     }
   };
+
+  const sunData = planetaryPositions.find((p) => p.name === "Sun");
+  const moonData = planetaryPositions.find((p) => p.name === "Moon");
 
   return (
     <View style={{ flex: 1 }}>
@@ -1097,9 +1348,12 @@ export default function Home() {
           }}
         >
           <Brand />
-          <T size={11} style={{ color: colors.gold }}>
-            ✦ YOUR DAILY SPACE
-          </T>
+          <View style={{ flexDirection: "row", alignItems: "center", gap: 5 }}>
+            <Globe size={13} color={colors.gold} />
+            <T size={11} bold style={{ color: colors.gold }}>
+              NASA JPL LIVE
+            </T>
+          </View>
         </View>
 
         {/* Stories */}
@@ -1140,7 +1394,7 @@ export default function Home() {
         </View>
 
         {/* 🌕 THE SKY TODAY & ANIMATED MOON VISUALIZER */}
-        <Section>The sky today</Section>
+        <Section>The sky today (NASA JPL Data)</Section>
         <View style={{ gap: 10 }}>
           <Card>
             <View style={{ flexDirection: "row", gap: 15, alignItems: "center" }}>
@@ -1154,8 +1408,7 @@ export default function Home() {
                   Age: {currentMoonPhase.ageInDays} days · {currentMoonPhase.illuminated}% Illuminated
                 </T>
                 <T size={12} style={{ color: colors.gold, marginTop: 5 }}>
-                  ☾ In{" "}
-                  {planetaryPositions.find((p) => p.name === "Moon")?.signName || "Gemini"}
+                  ☾ In {moonData ? `${moonData.zodiacSymbol} ${moonData.signName}` : "Calculating..."}
                 </T>
               </View>
             </View>
@@ -1164,24 +1417,24 @@ export default function Home() {
           <Card>
             <View style={{ flexDirection: "row", alignItems: "center", gap: 16 }}>
               <T size={40} style={{ color: colors.gold }}>
-                {planetaryPositions.find((p) => p.name === "Sun")?.zodiacSymbol || "♏"}
+                {sunData?.zodiacSymbol || "♏"}
               </T>
               <View style={{ flex: 1 }}>
                 <T bold size={18}>
-                  {planetaryPositions.find((p) => p.name === "Sun")?.signName || "Scorpio"} season
+                  {sunData ? `${sunData.signName} Season` : "Loading Season..."}
                 </T>
                 <T muted size={12}>
-                  A deeper month. A quieter kind of power.
+                  Sun at {sunData ? `${sunData.degInSign}° (${sunData.longitude.toFixed(2)}° JPL)` : "..."}
                 </T>
               </View>
             </View>
           </Card>
         </View>
 
-        {/* 📅 7-ДНЕВНА ЛУННА ПРОГНОЗА */}
+        {/* 📅 7-DAY MOON FORECAST & CALENDAR */}
         <Moon7DayForecast />
 
-        {/* ℞ СЕКЦИЯ ЗА РЕТРОГРАДНИ ПЛАНЕТИ */}
+        {/* ℞ RETROGRADE SECTION */}
         <RetrogradeSection planetaryPositions={planetaryPositions} />
 
         {/* Planetary Codex */}
@@ -1194,10 +1447,14 @@ export default function Home() {
             marginBottom: 10,
           }}
         >
-          <Section>Planetary Codex</Section>
-          <T size={11} style={{ color: colors.gold }}>
-            ✦ TAP FOR ENCYCLOPEDIA
-          </T>
+          <Section>Planetary Codex (NASA JPL)</Section>
+          {loadingNASA ? (
+            <ActivityIndicator size="small" color={colors.gold} />
+          ) : (
+            <T size={11} style={{ color: colors.gold }}>
+              ✦ LIVE EPHEMERIS
+            </T>
+          )}
         </View>
 
         <ScrollView
@@ -1219,11 +1476,7 @@ export default function Home() {
               ]}
             >
               <View style={styles.planetImageFrame}>
-                <Image
-                  source={{ uri: item.meta.image }}
-                  style={styles.planetSphereImage}
-                  resizeMode="cover"
-                />
+                <Planet3D name={item.name} size={76} />
                 <View
                   style={[
                     styles.planetSymbolBadge,
@@ -1280,7 +1533,7 @@ export default function Home() {
 
               <View style={styles.cardBottomMeta}>
                 <T muted size={10} style={{ textAlign: "center" }}>
-                  {item.meta.topic}
+                  {item.longitude.toFixed(1)}° JPL
                 </T>
               </View>
             </TouchableOpacity>
@@ -1314,12 +1567,7 @@ export default function Home() {
                 </TouchableOpacity>
 
                 <View style={{ alignItems: "center", gap: 12 }}>
-                  <View style={styles.modalPlanetImageContainer}>
-                    <Image
-                      source={{ uri: selectedPlanet.meta.image }}
-                      style={styles.modalPlanetImage}
-                    />
-                  </View>
+                  <Planet3D name={selectedPlanet.name} size={110} />
 
                   <View style={{ alignItems: "center", gap: 4 }}>
                     <View
@@ -1374,10 +1622,10 @@ export default function Home() {
 
                   <View style={{ alignItems: "center", flex: 1 }}>
                     <T muted size={10}>
-                      EXACT DEGREE
+                      NASA JPL LONGITUDE
                     </T>
                     <T bold size={16} style={{ color: colors.text, marginTop: 2 }}>
-                      {selectedPlanet.degInSign}° / 30°
+                      {selectedPlanet.longitude.toFixed(2)}°
                     </T>
                   </View>
                 </View>
@@ -1552,6 +1800,7 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     borderWidth: 1,
     borderColor: "#FFF",
+    zIndex: 10,
   },
 
   /* Cookie Styles */

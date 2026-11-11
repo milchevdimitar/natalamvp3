@@ -6,8 +6,10 @@ import {
   Image,
   Alert,
   ActivityIndicator,
+  StyleSheet,
 } from 'react-native';
 import { captureRef } from 'react-native-view-shot';
+import { LinearGradient } from 'expo-linear-gradient';
 import {
   ArrowLeft,
   RotateCcw,
@@ -19,6 +21,9 @@ import {
   PlusCircle,
   Share2,
   Check,
+  Sparkles,
+  Flame,
+  Moon,
 } from 'lucide-react-native';
 import { useApp } from '../context/AppContext';
 import { Card, T, Section, Pill, Hero } from '../components/UI';
@@ -207,12 +212,13 @@ function LocalPngTarotCard({
   isRevealed: boolean;
   cardIndex?: number;
   colors: any;
-  size?: 'small' | 'medium' | 'large';
+  size?: 'micro' | 'small' | 'medium' | 'large';
 }) {
   const dims = {
-    small: { width: 90, height: 154 },
+    micro: { width: 64, height: 108 },
+    small: { width: 84, height: 142 },
     medium: { width: 110, height: 188 },
-    large: { width: 150, height: 256 },
+    large: { width: 145, height: 246 },
   }[size];
 
   const imageSource = card ? TAROT_PNG_MAP[card.pngKey] : null;
@@ -222,16 +228,16 @@ function LocalPngTarotCard({
       style={{
         width: size === 'medium' ? '100%' : dims.width,
         height: dims.height,
-        borderRadius: 10,
+        borderRadius: 8,
         backgroundColor: '#161026',
         borderWidth: 1.5,
         borderColor: colors.purple,
         overflow: 'hidden',
         shadowColor: '#000',
-        shadowOffset: { width: 0, height: 6 },
+        shadowOffset: { width: 0, height: 4 },
         shadowOpacity: 0.35,
-        shadowRadius: 7,
-        elevation: 6,
+        shadowRadius: 5,
+        elevation: 5,
       }}
     >
       {!isRevealed ? (
@@ -245,17 +251,17 @@ function LocalPngTarotCard({
             <View
               style={{
                 position: 'absolute',
-                bottom: 8,
+                bottom: 4,
                 alignSelf: 'center',
                 backgroundColor: 'rgba(26, 20, 35, 0.9)',
-                paddingHorizontal: 8,
-                paddingVertical: 2,
-                borderRadius: 6,
+                paddingHorizontal: 6,
+                paddingVertical: 1,
+                borderRadius: 4,
                 borderWidth: 1,
                 borderColor: colors.purple,
               }}
             >
-              <T bold size={9} style={{ color: colors.purple }}>
+              <T bold size={8} style={{ color: colors.purple }}>
                 #{cardIndex + 1}
               </T>
             </View>
@@ -270,9 +276,9 @@ function LocalPngTarotCard({
               resizeMode="contain"
             />
           ) : (
-            <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', padding: 8 }}>
-              <T size={32}>{card?.symbol || '🃏'}</T>
-              <T bold size={11} style={{ textAlign: 'center', marginTop: 4, color: '#111' }}>
+            <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', padding: 4 }}>
+              <T size={24}>{card?.symbol || '🃏'}</T>
+              <T bold size={9} style={{ textAlign: 'center', marginTop: 2, color: '#111' }}>
                 {card?.name}
               </T>
             </View>
@@ -288,8 +294,8 @@ export default function Tarot() {
   const [mode, setMode] = useState<'daily' | 'spread'>('daily');
   const [useFullDeck, setUseFullDeck] = useState(true);
 
-  // Ref за заснемане на компонента в PNG
-  const storyCardRef = useRef<View>(null);
+  // Ref за заснемане на мистично оформената Story карта за олтар
+  const tarotAltarStoryRef = useRef<View>(null);
   const [isCapturing, setIsCapturing] = useState(false);
   const [shared, setShared] = useState(false);
 
@@ -309,21 +315,21 @@ export default function Tarot() {
   const [dailyDrawn, setDailyDrawn] = useState(false);
   const [dailyCard, setDailyCard] = useState<TarotCardData | null>(null);
 
-  // Генерира чист Base64 стринг (съвместим и с мобилни устройства, и с уеб)
+  // Заснемане на олтара с 1 или ВСИЧКИ карти в 9:16 PNG за Story
   const handleShareToStory = async () => {
     try {
       setIsCapturing(true);
 
-      const base64Image = await captureRef(storyCardRef, {
+      const base64Image = await captureRef(tarotAltarStoryRef, {
         format: 'png',
-        quality: 0.9,
+        quality: 1.0,
         result: 'base64',
       });
 
       await addStory(base64Image);
 
       setShared(true);
-      setTimeout(() => setShared(false), 2000);
+      setTimeout(() => setShared(false), 2500);
     } catch (error) {
       console.error("Грешка при заснемане или качване на снимката:", error);
       Alert.alert(
@@ -406,6 +412,9 @@ export default function Tarot() {
   const rCount = parseInt(rowsInput) || 1;
   const cCount = parseInt(colsInput) || 1;
 
+  // Избиране на единична карта за режим daily
+  const singleCardForStory = mode === 'daily' ? dailyCard : drawnCards[0] || dailyCard;
+
   return (
     <>
       <TouchableOpacity
@@ -467,10 +476,7 @@ export default function Tarot() {
           ) : (
             dailyCard && (
               <Card style={{ alignItems: 'center', paddingVertical: 26, gap: 14 }}>
-                {/* Рамка, която се заснема като Снимка за Story */}
                 <View
-                  ref={storyCardRef}
-                  collapsable={false}
                   style={{
                     alignItems: 'center',
                     padding: 16,
@@ -594,12 +600,7 @@ export default function Tarot() {
 
           {spreadDrawn && (
             <>
-              {/* Рамка за заснемане на пълната подредба */}
-              <View
-                ref={storyCardRef}
-                collapsable={false}
-                style={{ gap: 14, padding: 10, backgroundColor: '#120C1F', borderRadius: 16 }}
-              >
+              <View style={{ gap: 14, padding: 10, backgroundColor: '#120C1F', borderRadius: 16 }}>
                 {question.trim().length > 0 && (
                   <Card style={{ gap: 6, backgroundColor: colors.purpleSoft }}>
                     <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
@@ -682,7 +683,7 @@ export default function Tarot() {
                                       card={cCard}
                                       isRevealed={true}
                                       colors={colors}
-                                      size="small"
+                                      size="micro"
                                     />
                                   </View>
                                 ))}
@@ -757,6 +758,329 @@ export default function Tarot() {
           )}
         </View>
       )}
+
+      {/* 
+        -----------------------------------------------------------------------
+        🕯️ MYSTICAL TAROT ALTAR TABLE STORY CARD (9:16 ASPECT RATIO)
+        Разположена извън видимата част на екрана (left: -9999).
+        Визуализира ВСИЧКИ ТЕГЛЕНИ КАРТИ (или единичната daily карта) върху
+        мистична олтарна маса със свещи, златна покривка и атмосфера!
+        -----------------------------------------------------------------------
+      */}
+      <View
+        style={{
+          position: 'absolute',
+          left: -9999,
+          top: 0,
+        }}
+        pointerEvents="none"
+      >
+        <View
+          ref={tarotAltarStoryRef}
+          collapsable={false}
+          style={{
+            width: 380,
+            height: 675, // Perfect 9:16 ratio
+            borderRadius: 32,
+            overflow: 'hidden',
+          }}
+        >
+          {/* Маса / Олтарна кадифена покривка */}
+          <LinearGradient
+            colors={['#08040C', '#180B26', '#2A0E3B', '#10051B']}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 1 }}
+            style={{
+              flex: 1,
+              padding: 22,
+              justifyContent: 'space-between',
+              alignItems: 'center',
+              position: 'relative',
+            }}
+          >
+            {/* Декоративна златна орнаментна рамка на покривката */}
+            <View
+              style={{
+                position: 'absolute',
+                top: 10,
+                left: 10,
+                right: 10,
+                bottom: 10,
+                borderRadius: 24,
+                borderWidth: 1.5,
+                borderColor: 'rgba(234, 179, 8, 0.35)',
+                borderStyle: 'dashed',
+                pointerEvents: 'none',
+              }}
+            />
+
+            {/* Header: Заглавие & Свещи (Горе) */}
+            <View style={{ width: '100%', flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginTop: 6 }}>
+              {/* Запалена Свещ вляво */}
+              <View style={{ alignItems: 'center', justifyContent: 'center' }}>
+                <View
+                  style={{
+                    width: 36,
+                    height: 36,
+                    borderRadius: 18,
+                    backgroundColor: 'rgba(245, 158, 11, 0.2)',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    borderWidth: 1,
+                    borderColor: 'rgba(245, 158, 11, 0.5)',
+                    shadowColor: '#F59E0B',
+                    shadowOffset: { width: 0, height: 0 },
+                    shadowOpacity: 0.8,
+                    shadowRadius: 10,
+                  }}
+                >
+                  <Flame size={18} color="#F59E0B" />
+                </View>
+                <T size={8} style={{ color: '#F59E0B', marginTop: 2, letterSpacing: 1 }}>
+                  🕯️ ALTAR
+                </T>
+              </View>
+
+              {/* Заглавен надпис */}
+              <View style={{ alignItems: 'center' }}>
+                <View
+                  style={{
+                    flexDirection: 'row',
+                    alignItems: 'center',
+                    gap: 6,
+                    backgroundColor: 'rgba(168, 85, 247, 0.18)',
+                    paddingHorizontal: 12,
+                    paddingVertical: 4,
+                    borderRadius: 18,
+                    borderWidth: 1,
+                    borderColor: 'rgba(168, 85, 247, 0.35)',
+                  }}
+                >
+                  <Sparkles size={12} color="#EAB308" />
+                  <T bold size={10} style={{ color: '#EAB308', letterSpacing: 2 }}>
+                    SACRED TAROT SPREAD
+                  </T>
+                </View>
+                <T size={8} style={{ color: 'rgba(255,255,255,0.5)', letterSpacing: 1.5, marginTop: 4 }}>
+                  NATALA TAROT SANCTUARY
+                </T>
+              </View>
+
+              {/* Лунен символ вдясно */}
+              <View style={{ alignItems: 'center', justifyContent: 'center' }}>
+                <View
+                  style={{
+                    width: 36,
+                    height: 36,
+                    borderRadius: 18,
+                    backgroundColor: 'rgba(168, 85, 247, 0.2)',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    borderWidth: 1,
+                    borderColor: 'rgba(168, 85, 247, 0.4)',
+                  }}
+                >
+                  <Moon size={16} color="#EAB308" />
+                </View>
+                <T size={8} style={{ color: '#EAB308', marginTop: 2, letterSpacing: 1 }}>
+                  🔮 ORACLE
+                </T>
+              </View>
+            </View>
+
+            {/* Въпроса / Интенцията (ако има зададен такъв) */}
+            {mode === 'spread' && question.trim().length > 0 && (
+              <View
+                style={{
+                  backgroundColor: 'rgba(255, 255, 255, 0.06)',
+                  borderRadius: 12,
+                  paddingHorizontal: 14,
+                  paddingVertical: 6,
+                  borderWidth: 1,
+                  borderColor: 'rgba(234, 179, 8, 0.3)',
+                  maxWidth: 330,
+                  alignItems: 'center',
+                  marginVertical: 4,
+                }}
+              >
+                <T size={9} style={{ color: '#EAB308', letterSpacing: 1, marginBottom: 2 }}>
+                  ✦ SEEKER'S INTENTION ✦
+                </T>
+                <T bold size={12} style={{ color: '#FFF', textAlign: 'center', fontStyle: 'italic' }} numberOfLines={2}>
+                  "{question}"
+                </T>
+              </View>
+            )}
+
+            {/* Основно платно: Карта (Daily) или Грид от ВСИЧКИ ТЕГЛЕНИ КАРТИ (Spread) */}
+            <View style={{ alignItems: 'center', width: '100%', flex: 1, justifyContent: 'center', marginVertical: 6 }}>
+              {mode === 'daily' || drawnCards.length <= 1 ? (
+                /* Единична карта за Дневен режим */
+                singleCardForStory ? (
+                  <View style={{ alignItems: 'center' }}>
+                    <View
+                      style={{
+                        borderRadius: 16,
+                        padding: 10,
+                        backgroundColor: 'rgba(26, 12, 45, 0.85)',
+                        borderWidth: 1.5,
+                        borderColor: '#EAB308',
+                        shadowColor: '#EAB308',
+                        shadowOffset: { width: 0, height: 0 },
+                        shadowOpacity: 0.6,
+                        shadowRadius: 18,
+                      }}
+                    >
+                      <LocalPngTarotCard
+                        card={singleCardForStory}
+                        isRevealed={true}
+                        colors={colors}
+                        size="large"
+                      />
+                    </View>
+
+                    <T bold size={22} style={{ color: '#FFF', marginTop: 12, letterSpacing: 1, textShadowColor: '#A855F7', textShadowRadius: 8 }}>
+                      {singleCardForStory.name}
+                    </T>
+
+                    <View
+                      style={{
+                        backgroundColor: 'rgba(234, 179, 8, 0.18)',
+                        paddingHorizontal: 12,
+                        paddingVertical: 4,
+                        borderRadius: 12,
+                        borderWidth: 1,
+                        borderColor: 'rgba(234, 179, 8, 0.4)',
+                        marginTop: 6,
+                      }}
+                    >
+                      <T bold size={11} style={{ color: '#EAB308' }}>
+                        {singleCardForStory.arcana} Arcana {singleCardForStory.suit ? `· ${singleCardForStory.suit}` : ''}
+                      </T>
+                    </View>
+
+                    <View
+                      style={{
+                        marginTop: 10,
+                        backgroundColor: 'rgba(255, 253, 245, 0.95)',
+                        borderRadius: 14,
+                        paddingHorizontal: 14,
+                        paddingVertical: 10,
+                        borderWidth: 1.5,
+                        borderColor: '#D97706',
+                        maxWidth: 310,
+                      }}
+                    >
+                      <T
+                        bold
+                        size={11}
+                        style={{
+                          color: '#2D2140',
+                          textAlign: 'center',
+                          lineHeight: 16,
+                          fontStyle: 'italic',
+                        }}
+                      >
+                        "{singleCardForStory.message}"
+                      </T>
+                    </View>
+                  </View>
+                ) : null
+              ) : (
+                /* ПЪЛНО ТЕГЛЕНЕ (SPREAD GRID) - Визуализиране на всички карти върху олтара */
+                <View style={{ width: '100%', alignItems: 'center', gap: 8 }}>
+                  <View
+                    style={{
+                      width: '100%',
+                      backgroundColor: 'rgba(18, 9, 32, 0.85)',
+                      borderRadius: 20,
+                      padding: 10,
+                      borderWidth: 1.5,
+                      borderColor: 'rgba(234, 179, 8, 0.5)',
+                      gap: 8,
+                      shadowColor: '#EAB308',
+                      shadowOffset: { width: 0, height: 0 },
+                      shadowOpacity: 0.4,
+                      shadowRadius: 12,
+                    }}
+                  >
+                    {Array.from({ length: rCount }).map((_, rIdx) => (
+                      <View key={`story-row-${rIdx}`} style={{ flexDirection: 'row', gap: 6, justifyContent: 'center' }}>
+                        {Array.from({ length: cCount }).map((_, cIdx) => {
+                          const cardIdx = rIdx * cCount + cIdx;
+                          const card = drawnCards[cardIdx];
+                          if (!card) return null;
+
+                          // Динамично оразмеряване за 9:16 стори екран
+                          const isLargeSpread = rCount * cCount > 4;
+                          const cardSize = isLargeSpread ? 'micro' : 'small';
+
+                          return (
+                            <View key={`story-card-${cardIdx}`} style={{ alignItems: 'center', flex: 1, maxWidth: isLargeSpread ? 80 : 100 }}>
+                              <LocalPngTarotCard
+                                card={card}
+                                isRevealed={true}
+                                cardIndex={cardIdx}
+                                colors={colors}
+                                size={cardSize}
+                              />
+                              <T bold size={9} style={{ color: '#EAB308', textAlign: 'center', marginTop: 3 }} numberOfLines={1}>
+                                {card.name}
+                              </T>
+                            </View>
+                          );
+                        })}
+                      </View>
+                    ))}
+                  </View>
+
+                  {/* Подсъзнателна основа (Bottom of Deck), ако съществува */}
+                  {bottomCard && (
+                    <View
+                      style={{
+                        flexDirection: 'row',
+                        alignItems: 'center',
+                        gap: 8,
+                        backgroundColor: 'rgba(234, 179, 8, 0.14)',
+                        paddingHorizontal: 12,
+                        paddingVertical: 6,
+                        borderRadius: 12,
+                        borderWidth: 1,
+                        borderColor: 'rgba(234, 179, 8, 0.35)',
+                        width: '100%',
+                      }}
+                    >
+                      <T size={13}>🔮</T>
+                      <View style={{ flex: 1 }}>
+                        <T bold size={10} style={{ color: '#EAB308' }}>
+                          FOUNDATION: {bottomCard.name}
+                        </T>
+                        <T size={9} style={{ color: 'rgba(255,255,255,0.7)' }} numberOfLines={1}>
+                          {bottomCard.message}
+                        </T>
+                      </View>
+                    </View>
+                  )}
+                </View>
+              )}
+            </View>
+
+            {/* Долен Брандинг & Олтарна Естетика */}
+            <View style={{ alignItems: 'center', marginBottom: 4 }}>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 2 }}>
+                <T size={11}>🕯️</T>
+                <T bold size={10} style={{ color: '#EAB308', letterSpacing: 1 }}>
+                  UNVEIL YOUR COSMIC DESTINY
+                </T>
+                <T size={11}>✨</T>
+              </View>
+              <T size={8} style={{ color: 'rgba(255,255,255,0.4)', letterSpacing: 1 }}>
+                NATALA ASTROLOGY & TAROT SANCTUARY
+              </T>
+            </View>
+          </LinearGradient>
+        </View>
+      </View>
     </>
   );
 }

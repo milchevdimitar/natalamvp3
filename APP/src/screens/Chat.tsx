@@ -10,6 +10,7 @@ import {
   Alert,
   ActivityIndicator,
   StyleSheet,
+  Image,
 } from 'react-native';
 import {
   ArrowLeft,
@@ -20,6 +21,8 @@ import {
   X,
   Mail,
   Sparkles,
+  CornerUpLeft,
+  Clock,
 } from 'lucide-react-native';
 import { useApp } from '../context/AppContext';
 import { Card, T, Section, Pill, Hero } from '../components/UI';
@@ -36,6 +39,18 @@ export interface Message {
   senderEmail: string;
   text: string;
   timestamp: string;
+  type?: 'text' | 'story_reply' | 'story_share';
+  storyData?: {
+    storyId?: string;
+    imageUrl?: string;
+    authorName?: string;
+    createdAt?: string;
+  };
+  replyTo?: {
+    messageId?: string;
+    senderEmail?: string;
+    text?: string;
+  };
 }
 
 export interface Conversation {
@@ -48,7 +63,14 @@ export interface Conversation {
 }
 
 export default function Chat() {
-  const { colors, setPage, user, setHideBottomNav } = useApp();
+  const {
+    colors,
+    setPage,
+    user,
+    setHideBottomNav,
+    selectedChat,
+    setSelectedChat,
+  } = useApp();
 
   const [conversations, setConversations] = useState<Conversation[]>([]);
   const [activeChatId, setActiveChatId] = useState<string | null>(null);
@@ -58,6 +80,18 @@ export default function Chat() {
   const [isLoading, setIsLoading] = useState(true);
   const [isSending, setIsSending] = useState(false);
 
+  // Прикачено стори за споделяне
+  const [pendingStory, setPendingStory] = useState<{
+    id?: string;
+    imageUrl?: string;
+    authorName?: string;
+    createdAt?: string;
+    type?: 'story_reply' | 'story_share';
+  } | null>(null);
+
+  // Избрано съобщение за отговор (Reply to message)
+  const [replyingToMessage, setReplyingToMessage] = useState<Message | null>(null);
+
   // Модал за добавяне по имейл
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [newEmail, setNewEmail] = useState('');
@@ -66,7 +100,54 @@ export default function Chat() {
   const scrollViewRef = useRef<ScrollView>(null);
   const currentUserEmail = user?.email || '';
 
-  // Скриване/Показване на BottomNav при влизане и излизане от разговор
+  const formatStoryAge = (isoString?: string) => {
+    if (!isoString) return 'скоро';
+    try {
+      const date = new Date(isoString);
+      if (isNaN(date.getTime())) return isoString;
+      const hours = Math.floor((Date.now() - date.getTime()) / (1000 * 60 * 60));
+      if (hours < 1) return 'преди малко';
+      return `преди ${hours}ч`;
+    } catch {
+      return isoString;
+    }
+  };
+
+  useEffect(() => {
+    if (selectedChat?.sharedStory) {
+      setPendingStory({
+        id: selectedChat.sharedStory.id,
+        imageUrl: selectedChat.sharedStory.imageUrl,
+        authorName: selectedChat.sharedStory.authorName,
+        type: 'story_share',
+      });
+
+      if (selectedChat.targetUser) {
+        const targetEmail = selectedChat.targetUser.toLowerCase();
+        (async () => {
+          try {
+            const conversation = await createOrGetConversation(
+              currentUserEmail,
+              targetEmail
+            );
+            setConversations((prev) => {
+              const exists = prev.some((c) => c.id === conversation.id);
+              if (exists) {
+                return prev.map((c) => (c.id === conversation.id ? conversation : c));
+              }
+              return [conversation, ...prev];
+            });
+            setActiveChatId(conversation.id);
+          } catch (e) {
+            console.error('Грешка при отваряне на чат:', e);
+          }
+        })();
+      } else {
+        setActiveChatId(null);
+      }
+    }
+  }, [selectedChat, currentUserEmail]);
+
   useEffect(() => {
     if (activeChatId) {
       setHideBottomNav?.(true);
@@ -76,7 +157,6 @@ export default function Chat() {
     return () => setHideBottomNav?.(false);
   }, [activeChatId]);
 
-  // 1. Зареждане на разговорите на потребителя от MongoDB при отваряне
   const loadConversations = async () => {
     if (!currentUserEmail) return;
     try {
@@ -95,7 +175,6 @@ export default function Chat() {
     loadConversations();
   }, [currentUserEmail]);
 
-  // 2. Real-time Polling: Периодично обновяване и изпращане на нотификации при ново съобщение
   useEffect(() => {
     if (!currentUserEmail) return;
 
@@ -138,7 +217,6 @@ export default function Chat() {
     return () => clearInterval(interval);
   }, [currentUserEmail, activeChatId]);
 
-  // Автоматично скролване до най-новото съобщение
   useEffect(() => {
     if (activeChatId) {
       setTimeout(() => {
@@ -149,7 +227,6 @@ export default function Chat() {
 
   const activeConversation = conversations.find((c) => c.id === activeChatId);
 
-  // 3. Добавяне на нов чат по имейл през базата данни
   const handleStartNewChat = async () => {
     const trimmedEmail = newEmail.trim().toLowerCase();
 
@@ -192,10 +269,9 @@ export default function Chat() {
     }
   };
 
-  // 4. Изпращане на съобщение с онлайн запис в базата
   const handleSendMessage = async () => {
     const text = messageInput.trim();
-    if (!text || !activeChatId || isSending) return;
+    if ((!text && !pendingStory) || !activeChatId || isSending) return;
 
     setMessageInput('');
     setIsSending(true);
@@ -205,11 +281,32 @@ export default function Chat() {
       now.getMinutes()
     ).padStart(2, '0')}`;
 
+    const msgType = pendingStory?.type || (pendingStory ? 'story_share' : 'text');
+    const storyData = pendingStory
+      ? {
+          storyId: pendingStory.id,
+          imageUrl: pendingStory.imageUrl,
+          authorName: pendingStory.authorName,
+          createdAt: pendingStory.createdAt,
+        }
+      : undefined;
+
+    const replyToData = replyingToMessage
+      ? {
+          messageId: replyingToMessage.id,
+          senderEmail: replyingToMessage.senderEmail,
+          text: replyingToMessage.text,
+        }
+      : undefined;
+
     const tempMsg: Message = {
       id: Date.now().toString(),
       senderEmail: currentUserEmail,
-      text,
+      text: text || (msgType === 'story_reply' ? '💬 Story reply' : '📷 Shared story'),
       timestamp: timeStr,
+      type: msgType,
+      storyData,
+      replyTo: replyToData,
     };
 
     setConversations((prev) =>
@@ -217,7 +314,7 @@ export default function Chat() {
         c.id === activeChatId
           ? {
               ...c,
-              lastMessage: text,
+              lastMessage: tempMsg.text,
               lastMessageTime: timeStr,
               messages: [...c.messages, tempMsg],
             }
@@ -226,7 +323,18 @@ export default function Chat() {
     );
 
     try {
-      await sendMessageApi(activeChatId, currentUserEmail, text);
+      await sendMessageApi(
+        activeChatId,
+        currentUserEmail,
+        tempMsg.text,
+        msgType,
+        storyData,
+        replyToData
+      );
+
+      setPendingStory(null);
+      setReplyingToMessage(null);
+      if (setSelectedChat) setSelectedChat(null);
     } catch (error) {
       console.error('Грешка при изпращане:', error);
       Alert.alert(
@@ -252,7 +360,6 @@ export default function Chat() {
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
         keyboardVerticalOffset={Platform.OS === 'ios' ? 20 : 0}
       >
-        {/* Хедър на активния чат */}
         <View
           style={{
             flexDirection: 'row',
@@ -284,12 +391,11 @@ export default function Chat() {
           </View>
         </View>
 
-        {/* Списък със съобщения */}
         <ScrollView
           ref={scrollViewRef}
           showsVerticalScrollIndicator={false}
           onContentSizeChange={() => scrollViewRef.current?.scrollToEnd({ animated: true })}
-          contentContainerStyle={{ gap: 10, paddingVertical: 10, flexGrow: 1, justifyContent: 'flex-end' }}
+          contentContainerStyle={{ gap: 12, paddingVertical: 10, flexGrow: 1, justifyContent: 'flex-end' }}
         >
           {activeConversation.messages.length === 0 ? (
             <View style={{ alignItems: 'center', marginVertical: 'auto', gap: 8 }}>
@@ -307,46 +413,191 @@ export default function Chat() {
                   key={msg.id}
                   style={{
                     alignSelf: isMe ? 'flex-end' : 'flex-start',
-                    maxWidth: '80%',
+                    maxWidth: '84%',
                   }}
                 >
-                  <View
+                  <TouchableOpacity
+                    activeOpacity={0.9}
+                    onLongPress={() => setReplyingToMessage(msg)}
                     style={{
-                      backgroundColor: isMe
-                        ? colors.purple
-                        : colors.surfaceAlt,
-                      borderRadius: 16,
-                      borderBottomRightRadius: isMe ? 2 : 16,
-                      borderBottomLeftRadius: isMe ? 16 : 2,
-                      paddingHorizontal: 14,
-                      paddingVertical: 10,
+                      backgroundColor: isMe ? colors.purple : colors.surfaceAlt,
+                      borderRadius: 18,
+                      borderBottomRightRadius: isMe ? 3 : 18,
+                      borderBottomLeftRadius: isMe ? 18 : 3,
+                      padding: 10,
+                      shadowColor: '#000',
+                      shadowOffset: { width: 0, height: 2 },
+                      shadowOpacity: 0.15,
+                      shadowRadius: 4,
+                      elevation: 3,
                     }}
                   >
-                    <T
-                      size={14}
-                      style={{ color: isMe ? '#FFFFFF' : colors.text }}
-                    >
-                      {msg.text}
-                    </T>
-                  </View>
-                  <T
-                    muted
-                    size={9}
+                    {/* ЦИТИРАНО СЪОБЩЕНИЕ (REPLY TO) */}
+                    {msg.replyTo && (
+                      <View
+                        style={{
+                          backgroundColor: isMe ? 'rgba(0,0,0,0.2)' : 'rgba(255,255,255,0.08)',
+                          borderLeftWidth: 3,
+                          borderLeftColor: isMe ? colors.gold : colors.purple,
+                          paddingHorizontal: 8,
+                          paddingVertical: 5,
+                          borderRadius: 6,
+                          marginBottom: 8,
+                        }}
+                      >
+                        <T bold size={10} style={{ color: isMe ? colors.gold : colors.purple }}>
+                          {msg.replyTo.senderEmail === currentUserEmail ? 'You' : msg.replyTo.senderEmail}
+                        </T>
+                        <T muted size={11} numberOfLines={1} style={{ color: isMe ? '#EAE6FF' : colors.text }}>
+                          {msg.replyTo.text}
+                        </T>
+                      </View>
+                    )}
+
+                    {/* ПРЕМИУМ МАЗНО СТОРИ КАРТА */}
+                    {msg.storyData?.imageUrl && (
+                      <View
+                        style={{
+                          width: 210,
+                          height: 280,
+                          borderRadius: 14,
+                          overflow: 'hidden',
+                          marginBottom: 8,
+                          backgroundColor: '#000000',
+                          position: 'relative',
+                        }}
+                      >
+                        <Image
+                          source={{ uri: msg.storyData.imageUrl }}
+                          style={{ width: '100%', height: '100%' }}
+                          resizeMode="cover"
+                        />
+                        <View style={styles.storyCardGradientOverlay} />
+
+                        {/* Хедър с автор и време на сторито */}
+                        <View style={styles.storyCardHeaderBadge}>
+                          <View style={styles.storyAvatarBorder}>
+                            <T bold size={10} style={{ color: '#FFF' }}>
+                              {(msg.storyData.authorName || 'S').charAt(0).toUpperCase()}
+                            </T>
+                          </View>
+                          <View style={{ flex: 1 }}>
+                            <T bold size={11} numberOfLines={1} style={{ color: '#FFFFFF' }}>
+                              {msg.storyData.authorName || 'Stargazer'}
+                            </T>
+                            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 3 }}>
+                              <Clock size={9} color="rgba(255,255,255,0.7)" />
+                              <T size={9} style={{ color: 'rgba(255,255,255,0.75)' }}>
+                                {formatStoryAge(msg.storyData.createdAt)}
+                              </T>
+                            </View>
+                          </View>
+                        </View>
+
+                        {/* Долна значка за тип стори */}
+                        <View style={styles.storyTypeBadge}>
+                          <Sparkles size={11} color={colors.gold} />
+                          <T bold size={10} style={{ color: colors.gold }}>
+                            {msg.type === 'story_reply' ? 'Story Reply' : 'Shared Story'}
+                          </T>
+                        </View>
+                      </View>
+                    )}
+
+                    {/* ТЕКСТ НА СЪОБЩЕНИЕТО */}
+                    {!!msg.text && (
+                      <T size={14} style={{ color: isMe ? '#FFFFFF' : colors.text, lineHeight: 18 }}>
+                        {msg.text}
+                      </T>
+                    )}
+                  </TouchableOpacity>
+
+                  {/* Време & Бутон за Бърз Отговор */}
+                  <View
                     style={{
-                      alignSelf: isMe ? 'flex-end' : 'flex-start',
+                      flexDirection: 'row',
+                      alignItems: 'center',
+                      justifyContent: isMe ? 'flex-end' : 'flex-start',
+                      gap: 6,
                       marginTop: 3,
                       marginHorizontal: 4,
                     }}
                   >
-                    {msg.timestamp}
-                  </T>
+                    <T muted size={9}>
+                      {msg.timestamp}
+                    </T>
+                    <TouchableOpacity onPress={() => setReplyingToMessage(msg)} style={{ padding: 2 }}>
+                      <CornerUpLeft size={12} color={colors.muted} />
+                    </TouchableOpacity>
+                  </View>
                 </View>
               );
             })
           )}
         </ScrollView>
 
-        {/* Поле за въвеждане на съобщение над клавиатурата */}
+        {/* ПРЕГЛЕД НА СТОРИ ПРЕДИ ИЗПРАЩАНЕ */}
+        {pendingStory?.imageUrl && (
+          <View
+            style={{
+              flexDirection: 'row',
+              alignItems: 'center',
+              backgroundColor: colors.surfaceAlt,
+              padding: 8,
+              borderRadius: 14,
+              marginBottom: 6,
+              borderWidth: 1,
+              borderColor: colors.purple,
+            }}
+          >
+            <Image
+              source={{ uri: pendingStory.imageUrl }}
+              style={{ width: 44, height: 56, borderRadius: 8, marginRight: 10 }}
+            />
+            <View style={{ flex: 1 }}>
+              <T bold size={12} style={{ color: colors.gold }}>
+                {pendingStory.type === 'story_reply' ? 'Reply to story' : 'Sharing story'}
+              </T>
+              <T muted size={11} numberOfLines={1}>
+                {pendingStory.authorName ? `by @${pendingStory.authorName}` : 'Story preview'}
+              </T>
+            </View>
+            <TouchableOpacity onPress={() => setPendingStory(null)}>
+              <X size={18} color={colors.text} />
+            </TouchableOpacity>
+          </View>
+        )}
+
+        {/* ПРЕГЛЕД НА ЦИТИРАНО СЪОБЩЕНИЕ ПРЕДИ ИЗПРАЩАНЕ (REPLY BAR) */}
+        {replyingToMessage && (
+          <View
+            style={{
+              flexDirection: 'row',
+              alignItems: 'center',
+              backgroundColor: colors.surfaceAlt,
+              paddingHorizontal: 12,
+              paddingVertical: 8,
+              borderRadius: 12,
+              marginBottom: 6,
+              borderLeftWidth: 3,
+              borderLeftColor: colors.purple,
+            }}
+          >
+            <View style={{ flex: 1 }}>
+              <T bold size={11} style={{ color: colors.purple }}>
+                Replying to {replyingToMessage.senderEmail === currentUserEmail ? 'yourself' : replyingToMessage.senderEmail}
+              </T>
+              <T muted size={12} numberOfLines={1}>
+                {replyingToMessage.text}
+              </T>
+            </View>
+            <TouchableOpacity onPress={() => setReplyingToMessage(null)}>
+              <X size={18} color={colors.text} />
+            </TouchableOpacity>
+          </View>
+        )}
+
+        {/* ИНПУТ ЛЕНТА */}
         <View
           style={{
             flexDirection: 'row',
@@ -421,6 +672,42 @@ export default function Chat() {
         description="Connect with friends and astrological soulmates by email."
       />
 
+      {pendingStory && !activeChatId && (
+        <View
+          style={{
+            flexDirection: 'row',
+            alignItems: 'center',
+            backgroundColor: colors.purpleSoft,
+            padding: 12,
+            borderRadius: 14,
+            marginBottom: 16,
+            borderWidth: 1.5,
+            borderColor: colors.purple,
+          }}
+        >
+          <Image
+            source={{ uri: pendingStory.imageUrl }}
+            style={{ width: 44, height: 56, borderRadius: 8, marginRight: 10 }}
+          />
+          <View style={{ flex: 1 }}>
+            <T bold size={13} style={{ color: colors.purple }}>
+              Select a conversation to share story
+            </T>
+            <T muted size={11}>
+              Story by @{pendingStory.authorName || 'Stargazer'}
+            </T>
+          </View>
+          <TouchableOpacity
+            onPress={() => {
+              setPendingStory(null);
+              if (setSelectedChat) setSelectedChat(null);
+            }}
+          >
+            <X size={20} color={colors.text} />
+          </TouchableOpacity>
+        </View>
+      )}
+
       <Card style={{ marginBottom: 16 }}>
         <TouchableOpacity
           onPress={() => setIsAddModalOpen(true)}
@@ -430,9 +717,7 @@ export default function Chat() {
             justifyContent: 'space-between',
           }}
         >
-          <View
-            style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}
-          >
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
             <View
               style={{
                 width: 40,
@@ -557,7 +842,7 @@ export default function Chat() {
         )}
       </View>
 
-      {/* MODAL FOR ADDING USER BY EMAIL */}
+      {/* MODAL ADD EMAIL */}
       <Modal
         visible={isAddModalOpen}
         transparent
@@ -585,9 +870,7 @@ export default function Chat() {
                 marginBottom: 12,
               }}
             >
-              <View
-                style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}
-              >
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
                 <Mail size={18} color={colors.purple} />
                 <T bold size={16}>
                   Start Chat by Email
@@ -622,19 +905,9 @@ export default function Chat() {
               }}
             />
 
-            <View
-              style={{
-                flexDirection: 'row',
-                gap: 10,
-                justifyContent: 'flex-end',
-              }}
-            >
+            <View style={{ flexDirection: 'row', gap: 10, justifyContent: 'flex-end' }}>
               <Pill onPress={() => setIsAddModalOpen(false)}>Cancel</Pill>
-              <Pill
-                selected
-                onPress={handleStartNewChat}
-                disabled={isSearchingUser}
-              >
+              <Pill selected onPress={handleStartNewChat} disabled={isSearchingUser}>
                 {isSearchingUser ? (
                   <ActivityIndicator size="small" color="#FFF" />
                 ) : (
@@ -663,5 +936,42 @@ const styles = StyleSheet.create({
     borderRadius: 20,
     borderWidth: 1.5,
     padding: 20,
+  },
+  storyCardGradientOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: 'rgba(0, 0, 0, 0.25)',
+  },
+  storyCardHeaderBadge: {
+    position: 'absolute',
+    top: 8,
+    left: 8,
+    right: 8,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    backgroundColor: 'rgba(0, 0, 0, 0.55)',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 10,
+  },
+  storyAvatarBorder: {
+    width: 22,
+    height: 22,
+    borderRadius: 11,
+    backgroundColor: '#A855F7',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  storyTypeBadge: {
+    position: 'absolute',
+    bottom: 8,
+    left: 8,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    backgroundColor: 'rgba(0,0,0,0.65)',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 8,
   },
 });

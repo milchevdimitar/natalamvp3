@@ -215,12 +215,14 @@ export async function createOrGetConversation(
 }
 
 /**
- * Изпраща ново съобщение в конкретен чат
+ * Изпраща ново съобщение в конкретен чат (с поддръжка за тип съобщение и прикачено стори)
  */
 export async function sendMessageApi(
   chatId: string,
   senderEmail: string,
-  text: string
+  text: string,
+  type: string = 'text',
+  storyData?: { storyId?: string; imageUrl?: string; authorName?: string }
 ): Promise<any> {
   try {
     const response = await fetch(`${API_BASE_URL}/chats/${chatId}/messages`, {
@@ -231,6 +233,8 @@ export async function sendMessageApi(
       body: JSON.stringify({
         senderEmail: senderEmail.toLowerCase().trim(),
         text: text.trim(),
+        type,
+        storyData,
       }),
     });
 

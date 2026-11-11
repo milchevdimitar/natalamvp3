@@ -241,7 +241,7 @@ export default function Numerology() {
         try {
           await setUser(updatedUser);
           await saveUserProfile(updatedUser);
-          setSyncStatus('Life Path number saved to database!');
+          setSyncStatus('Life Path number calculated!');
         } catch (error) {
           console.warn('Offline mode: Result saved locally.', error);
           setSyncStatus('Saved locally on device.');

@@ -4,8 +4,10 @@ import {
   TouchableOpacity,
   ActivityIndicator,
   Alert,
+  Dimensions,
 } from 'react-native';
 import { captureRef } from 'react-native-view-shot';
+import { LinearGradient } from 'expo-linear-gradient';
 import {
   ArrowLeft,
   Brain,
@@ -108,8 +110,8 @@ export default function MBTI() {
   const [isSyncing, setIsSyncing] = useState(false);
   const [syncStatus, setSyncStatus] = useState<string | null>(null);
 
-  // Ref & State за заснемане на картата с резултати за Story
-  const resultCardRef = useRef<View>(null);
+  // Ref за скрития визуален компонент (9:16 Story Card)
+  const storyCardRef = useRef<View>(null);
   const [isCapturing, setIsCapturing] = useState(false);
   const [shared, setShared] = useState(false);
 
@@ -233,23 +235,23 @@ export default function MBTI() {
     setSyncStatus(null);
   };
 
-  // Качване на резултатите от MBTI като Стори в MongoDB
+  // Заснемане на специално изработената Story Card
   const handleShareToStory = async () => {
     try {
       setIsCapturing(true);
 
-      const base64Image = await captureRef(resultCardRef, {
+      const base64Image = await captureRef(storyCardRef, {
         format: 'png',
-        quality: 0.9,
+        quality: 1.0,
         result: 'base64',
       });
 
       await addStory(base64Image);
 
       setShared(true);
-      setTimeout(() => setShared(false), 2000);
+      setTimeout(() => setShared(false), 2500);
     } catch (error) {
-      console.error('Грешка при заснемане или качване на снимката:', error);
+      console.error('Грешка при генериране на Story изображението:', error);
       Alert.alert(
         'Грешка',
         'Не съумяхме да споделим сторито. Моля, проверете връзката си със сървъра.'
@@ -261,33 +263,26 @@ export default function MBTI() {
 
   const isPageComplete = currentQuestions.every((q) => answers[q.id] !== undefined);
 
-  const renderResultView = () => {
-    let type = '';
-    let details = TYPE_DESCRIPTIONS.INFP;
-    let ratios = {
-      EI: { first: 50, second: 50 },
-      SN: { first: 50, second: 50 },
-      TF: { first: 50, second: 50 },
-      JP: { first: 50, second: 50 },
-    };
-
+  // Извличане на текущите данни за показване
+  const getCurrentResultData = () => {
     if (showSavedResult && user?.mbti) {
-      type = user.mbti.type;
-      details = TYPE_DESCRIPTIONS[type] || TYPE_DESCRIPTIONS.INFP;
+      const type = user.mbti.type;
+      const details = TYPE_DESCRIPTIONS[type] || TYPE_DESCRIPTIONS.INFP;
       const p = user.mbti.percentages || {};
-      ratios = {
+      const ratios = {
         EI: { first: p.extraversion ?? 50, second: p.introversion ?? 50 },
         SN: { first: p.observant ?? 50, second: p.intuitive ?? 50 },
         TF: { first: p.thinking ?? 50, second: p.feeling ?? 50 },
         JP: { first: p.judging ?? 50, second: p.prospecting ?? 50 },
       };
-    } else {
-      const res = calculateResult();
-      type = res.type;
-      details = res.details;
-      ratios = res.ratios;
+      return { type, details, ratios };
     }
+    return calculateResult();
+  };
 
+  const { type, details, ratios } = getCurrentResultData();
+
+  const renderResultView = () => {
     return (
       <View style={{ gap: 18, marginBottom: 40 }}>
         {syncStatus && (
@@ -313,105 +308,94 @@ export default function MBTI() {
           </View>
         )}
 
-        {/* Заснемаща се рамка за споделяне към Story */}
-        <View
-          ref={resultCardRef}
-          collapsable={false}
-          style={{
-            backgroundColor: colors.bg,
-            borderRadius: 20,
-            padding: 12,
-            gap: 16,
-          }}
-        >
-          <Card style={{ alignItems: 'center', paddingVertical: 24, gap: 10 }}>
-            <View
-              style={{
-                width: 76,
-                height: 76,
-                borderRadius: 38,
-                backgroundColor: colors.purpleSoft,
-                alignItems: 'center',
-                justifyContent: 'center',
-              }}
-            >
-              <Brain size={38} color={colors.purple} />
-            </View>
-            <T muted size={11} style={{ letterSpacing: 2 }}>
-              YOUR PERSONALITY TYPE
-            </T>
-            <T bold size={36} style={{ color: colors.purple, letterSpacing: -1 }}>
-              {type}
-            </T>
-            <T bold size={20}>
-              {details.title}
-            </T>
-            <T muted size={13} style={{ textAlign: 'center', maxWidth: 320 }}>
-              {details.subtitle}
-            </T>
-          </Card>
-
-          <Card style={{ gap: 10 }}>
-            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-              <Sparkles size={16} color={colors.gold} />
-              <T bold size={15}>
-                Type Essence
-              </T>
-            </View>
-            <T muted size={13} style={{ lineHeight: 20 }}>
-              {details.desc}
-            </T>
-          </Card>
-
-          <Section>Cognitive Balance</Section>
-          <Card style={{ gap: 14 }}>
-            <View style={{ gap: 6 }}>
-              <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
-                <T bold size={12}>Extraversion (E) {ratios.EI.first}%</T>
-                <T bold size={12}>{ratios.EI.second}% Introversion (I)</T>
-              </View>
-              <Progress value={ratios.EI.first} color={colors.purple} />
-            </View>
-
-            <View style={{ gap: 6 }}>
-              <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
-                <T bold size={12}>Sensing (S) {ratios.SN.first}%</T>
-                <T bold size={12}>{ratios.SN.second}% Intuition (N)</T>
-              </View>
-              <Progress value={ratios.SN.first} color={colors.gold} />
-            </View>
-
-            <View style={{ gap: 6 }}>
-              <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
-                <T bold size={12}>Thinking (T) {ratios.TF.first}%</T>
-                <T bold size={12}>{ratios.TF.second}% Feeling (F)</T>
-              </View>
-              <Progress value={ratios.TF.first} color={colors.purple} />
-            </View>
-
-            <View style={{ gap: 6 }}>
-              <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
-                <T bold size={12}>Judging (J) {ratios.JP.first}%</T>
-                <T bold size={12}>{ratios.JP.second}% Prospecting (P)</T>
-              </View>
-              <Progress value={ratios.JP.first} color={colors.gold} />
-            </View>
-          </Card>
-
-          <Section>Core Traits</Section>
-          <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 10 }}>
-            {details.traits.map((trait, i) => (
-              <Card key={i} style={{ width: '48%', alignItems: 'center', paddingVertical: 14, gap: 6 }}>
-                <CheckCircle2 size={20} color={colors.purple} />
-                <T bold size={13}>
-                  {trait}
-                </T>
-              </Card>
-            ))}
+        {/* Главен UI екран с резултатите */}
+        <Card style={{ alignItems: 'center', paddingVertical: 24, gap: 10 }}>
+          <View
+            style={{
+              width: 76,
+              height: 76,
+              borderRadius: 38,
+              backgroundColor: colors.purpleSoft,
+              alignItems: 'center',
+              justifyContent: 'center',
+            }}
+          >
+            <Brain size={38} color={colors.purple} />
           </View>
+          <T muted size={11} style={{ letterSpacing: 2 }}>
+            YOUR PERSONALITY TYPE
+          </T>
+          <T bold size={36} style={{ color: colors.purple, letterSpacing: -1 }}>
+            {type}
+          </T>
+          <T bold size={20}>
+            {details.title}
+          </T>
+          <T muted size={13} style={{ textAlign: 'center', maxWidth: 320 }}>
+            {details.subtitle}
+          </T>
+        </Card>
+
+        <Card style={{ gap: 10 }}>
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+            <Sparkles size={16} color={colors.gold} />
+            <T bold size={15}>
+              Type Essence
+            </T>
+          </View>
+          <T muted size={13} style={{ lineHeight: 20 }}>
+            {details.desc}
+          </T>
+        </Card>
+
+        <Section>Cognitive Balance</Section>
+        <Card style={{ gap: 14 }}>
+          <View style={{ gap: 6 }}>
+            <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
+              <T bold size={12}>Extraversion (E) {ratios.EI.first}%</T>
+              <T bold size={12}>{ratios.EI.second}% Introversion (I)</T>
+            </View>
+            <Progress value={ratios.EI.first} color={colors.purple} />
+          </View>
+
+          <View style={{ gap: 6 }}>
+            <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
+              <T bold size={12}>Sensing (S) {ratios.SN.first}%</T>
+              <T bold size={12}>{ratios.SN.second}% Intuition (N)</T>
+            </View>
+            <Progress value={ratios.SN.first} color={colors.gold} />
+          </View>
+
+          <View style={{ gap: 6 }}>
+            <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
+              <T bold size={12}>Thinking (T) {ratios.TF.first}%</T>
+              <T bold size={12}>{ratios.TF.second}% Feeling (F)</T>
+            </View>
+            <Progress value={ratios.TF.first} color={colors.purple} />
+          </View>
+
+          <View style={{ gap: 6 }}>
+            <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
+              <T bold size={12}>Judging (J) {ratios.JP.first}%</T>
+              <T bold size={12}>{ratios.JP.second}% Prospecting (P)</T>
+            </View>
+            <Progress value={ratios.JP.first} color={colors.gold} />
+          </View>
+        </Card>
+
+        <Section>Core Traits</Section>
+        <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 10 }}>
+          {details.traits.map((trait, i) => (
+            <Card key={i} style={{ width: '48%', alignItems: 'center', paddingVertical: 14, gap: 6 }}>
+              <CheckCircle2 size={20} color={colors.purple} />
+              <T bold size={13}>
+                {trait}
+              </T>
+            </Card>
+          ))}
         </View>
 
-        {/* Бутони за управление и Споделяне в Стори */}
+        {/* Бутони за управление */}
         <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 10, marginTop: 10, justifyContent: 'center' }}>
           <Pill onPress={handleRetake}>
             <RotateCcw size={14} color={colors.purple} /> Retake Test
@@ -594,6 +578,210 @@ export default function MBTI() {
           </View>
         </>
       )}
+
+      {/* 
+        -----------------------------------------------------------------------
+        ✦ CUSTOM DESIGNED STORY CARD (9:16 ASPECT RATIO)
+        Поставена е извън видимата част на екрана (left: -9999), за да може 
+        captureRef да генерира визуално оформена карта за Story.
+        -----------------------------------------------------------------------
+      */}
+      <View
+        style={{
+          position: 'absolute',
+          left: -9999,
+          top: 0,
+        }}
+        pointerEvents="none"
+      >
+        <View
+          ref={storyCardRef}
+          collapsable={false}
+          style={{
+            width: 380,
+            height: 675, // 9:16 Пропорция
+            borderRadius: 32,
+            overflow: 'hidden',
+          }}
+        >
+          <LinearGradient
+            colors={['#0D0714', '#170E28', '#261240', '#0D0714']}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 1 }}
+            style={{
+              flex: 1,
+              padding: 24,
+              justifyContent: 'space-between',
+              alignItems: 'center',
+            }}
+          >
+            {/* Header Branding */}
+            <View style={{ alignItems: 'center', gap: 4, marginTop: 10 }}>
+              <View
+                style={{
+                  flexDirection: 'row',
+                  alignItems: 'center',
+                  gap: 6,
+                  backgroundColor: 'rgba(168, 85, 247, 0.15)',
+                  paddingHorizontal: 12,
+                  paddingVertical: 5,
+                  borderRadius: 20,
+                  borderWidth: 1,
+                  borderColor: 'rgba(168, 85, 247, 0.3)',
+                }}
+              >
+                <Sparkles size={12} color="#EAB308" />
+                <T bold size={11} style={{ color: '#EAB308', letterSpacing: 2 }}>
+                  NATALA COSMIC ATLAS
+                </T>
+              </View>
+              <T size={10} style={{ color: 'rgba(255,255,255,0.5)', letterSpacing: 1.5, marginTop: 2 }}>
+                MBTI PERSONALITY PROFILE
+              </T>
+            </View>
+
+            {/* Main Badge & Type Hero */}
+            <View style={{ alignItems: 'center', width: '100%' }}>
+              <View
+                style={{
+                  width: 100,
+                  height: 100,
+                  borderRadius: 50,
+                  backgroundColor: 'rgba(168, 85, 247, 0.2)',
+                  borderWidth: 2,
+                  borderColor: '#A855F7',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  shadowColor: '#A855F7',
+                  shadowOffset: { width: 0, height: 0 },
+                  shadowOpacity: 0.8,
+                  shadowRadius: 15,
+                  marginBottom: 12,
+                }}
+              >
+                <Brain size={48} color="#FFF" />
+              </View>
+
+              <T bold size={44} style={{ color: '#FFF', letterSpacing: 2, textShadowColor: '#A855F7', textShadowRadius: 10 }}>
+                {type}
+              </T>
+
+              <T bold size={22} style={{ color: '#EAB308', marginTop: 2 }}>
+                {details.title}
+              </T>
+
+              <T size={12} style={{ color: 'rgba(255,255,255,0.7)', textAlign: 'center', marginTop: 4, fontStyle: 'italic' }}>
+                "{details.subtitle}"
+              </T>
+            </View>
+
+            {/* Cognitive Balance Visual Bars */}
+            <View
+              style={{
+                width: '100%',
+                backgroundColor: 'rgba(255, 255, 255, 0.05)',
+                borderRadius: 20,
+                padding: 16,
+                borderWidth: 1,
+                borderColor: 'rgba(255, 255, 255, 0.1)',
+                gap: 10,
+              }}
+            >
+              <T bold size={11} style={{ color: '#EAB308', letterSpacing: 1, marginBottom: 2 }}>
+                COGNITIVE DYNAMICS
+              </T>
+
+              {/* Extraversion vs Introversion */}
+              <View style={{ gap: 4 }}>
+                <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
+                  <T bold size={10} style={{ color: '#FFF' }}>
+                    Extraversion {ratios.EI.first}%
+                  </T>
+                  <T bold size={10} style={{ color: '#FFF' }}>
+                    {ratios.EI.second}% Introversion
+                  </T>
+                </View>
+                <View style={{ height: 6, backgroundColor: 'rgba(255,255,255,0.1)', borderRadius: 3, overflow: 'hidden' }}>
+                  <View style={{ width: `${ratios.EI.first}%`, height: '100%', backgroundColor: '#A855F7' }} />
+                </View>
+              </View>
+
+              {/* Sensing vs Intuition */}
+              <View style={{ gap: 4 }}>
+                <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
+                  <T bold size={10} style={{ color: '#FFF' }}>
+                    Sensing {ratios.SN.first}%
+                  </T>
+                  <T bold size={10} style={{ color: '#FFF' }}>
+                    {ratios.SN.second}% Intuition
+                  </T>
+                </View>
+                <View style={{ height: 6, backgroundColor: 'rgba(255,255,255,0.1)', borderRadius: 3, overflow: 'hidden' }}>
+                  <View style={{ width: `${ratios.SN.first}%`, height: '100%', backgroundColor: '#EAB308' }} />
+                </View>
+              </View>
+
+              {/* Thinking vs Feeling */}
+              <View style={{ gap: 4 }}>
+                <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
+                  <T bold size={10} style={{ color: '#FFF' }}>
+                    Thinking {ratios.TF.first}%
+                  </T>
+                  <T bold size={10} style={{ color: '#FFF' }}>
+                    {ratios.TF.second}% Feeling
+                  </T>
+                </View>
+                <View style={{ height: 6, backgroundColor: 'rgba(255,255,255,0.1)', borderRadius: 3, overflow: 'hidden' }}>
+                  <View style={{ width: `${ratios.TF.first}%`, height: '100%', backgroundColor: '#3B82F6' }} />
+                </View>
+              </View>
+
+              {/* Judging vs Prospecting */}
+              <View style={{ gap: 4 }}>
+                <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
+                  <T bold size={10} style={{ color: '#FFF' }}>
+                    Judging {ratios.JP.first}%
+                  </T>
+                  <T bold size={10} style={{ color: '#FFF' }}>
+                    {ratios.JP.second}% Prospecting
+                  </T>
+                </View>
+                <View style={{ height: 6, backgroundColor: 'rgba(255,255,255,0.1)', borderRadius: 3, overflow: 'hidden' }}>
+                  <View style={{ width: `${ratios.JP.first}%`, height: '100%', backgroundColor: '#EC4899' }} />
+                </View>
+              </View>
+            </View>
+
+            {/* Core Traits Pills */}
+            <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6, justifyContent: 'center' }}>
+              {details.traits.map((trait, i) => (
+                <View
+                  key={i}
+                  style={{
+                    backgroundColor: 'rgba(168, 85, 247, 0.2)',
+                    paddingHorizontal: 10,
+                    paddingVertical: 5,
+                    borderRadius: 12,
+                    borderWidth: 1,
+                    borderColor: 'rgba(168, 85, 247, 0.4)',
+                  }}
+                >
+                  <T bold size={11} style={{ color: '#FFF' }}>
+                    ✦ {trait}
+                  </T>
+                </View>
+              ))}
+            </View>
+
+            {/* Footer Branding */}
+            <View style={{ alignItems: 'center', marginBottom: 6 }}>
+              <T size={10} style={{ color: 'rgba(255,255,255,0.4)', letterSpacing: 1 }}>
+                DISCOVER YOUR PERSONALITY · NATALA APP
+              </T>
+            </View>
+          </LinearGradient>
+        </View>
+      </View>
     </>
   );
 }

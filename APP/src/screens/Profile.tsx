@@ -1,6 +1,5 @@
-import React, { useEffect, useRef, useState } from 'react';
-import { View, Pressable, Animated, Alert, ActivityIndicator } from 'react-native';
-import { LinearGradient } from 'expo-linear-gradient';
+import React, { useEffect, useRef, useState, useMemo } from 'react';
+import { View, Pressable, Animated, ActivityIndicator } from 'react-native';
 import Svg, { Circle } from 'react-native-svg';
 import {
   Sun,
@@ -8,13 +7,95 @@ import {
   Brain,
   Layers3,
   Target,
-  ArrowUpRight,
   LogOut,
 } from 'lucide-react-native';
 import { Brand, Card, T, Section, Progress } from '../components/UI';
-import { elements } from '../data/demo';
 import { useApp } from '../context/AppContext';
 import { getUserProfile } from '../services/api';
+
+// ---------------------------------------------------------------------------
+// ✦ АЛГОРИТЪМ ЗА ИЗЧИСЛЯВАНЕ НА ЕЛЕМЕНТНИЯ БАЛАНС ОТ РОЖДЕНАТА ДАТА
+// ---------------------------------------------------------------------------
+function calculateElementsFromBirthDate(rawDate?: any) {
+  if (!rawDate) {
+    return [
+      { name: 'Fire', symbol: '🜂', value: 28, color: '#FF6B6B' },
+      { name: 'Earth', symbol: '🜃', value: 24, color: '#4ECDC4' },
+      { name: 'Air', symbol: '🜁', value: 26, color: '#FFE66D' },
+      { name: 'Water', symbol: '🜄', value: 22, color: '#4A90E2' },
+    ];
+  }
+
+  const d = new Date(rawDate);
+  if (isNaN(d.getTime())) {
+    return [
+      { name: 'Fire', symbol: '🜂', value: 25, color: '#FF6B6B' },
+      { name: 'Earth', symbol: '🜃', value: 25, color: '#4ECDC4' },
+      { name: 'Air', symbol: '🜁', value: 25, color: '#FFE66D' },
+      { name: 'Water', symbol: '🜄', value: 25, color: '#4A90E2' },
+    ];
+  }
+
+  const day = d.getUTCDate();
+  const month = d.getUTCMonth() + 1;
+  const year = d.getUTCFullYear();
+
+  // Оценяване на зодиакалната стихия по месец и ден
+  const zodiacCutoffs = [20, 19, 21, 20, 21, 22, 23, 23, 23, 23, 22, 22];
+  const zodiacElements = [1, 2, 3, 0, 1, 2, 3, 0, 1, 2, 3, 0]; // 0: Fire, 1: Earth, 2: Air, 3: Water
+
+  let signIdx = month - 1;
+  if (day < zodiacCutoffs[signIdx]) {
+    signIdx = (signIdx + 11) % 12;
+  }
+  const mainElementIdx = zodiacElements[signIdx];
+
+  let fireScore = 15;
+  let earthScore = 15;
+  let airScore = 15;
+  let waterScore = 15;
+
+  // Добавяне на тежест от слънчевия знак (+30 т.)
+  if (mainElementIdx === 0) fireScore += 30;
+  if (mainElementIdx === 1) earthScore += 30;
+  if (mainElementIdx === 2) airScore += 30;
+  if (mainElementIdx === 3) waterScore += 30;
+
+  // Добавяне на принос от деня
+  fireScore += day % 4 === 1 ? 15 : 5;
+  earthScore += day % 4 === 2 ? 15 : 5;
+  airScore += day % 4 === 3 ? 15 : 5;
+  waterScore += day % 4 === 0 ? 15 : 5;
+
+  // Добавяне на принос от месеца
+  fireScore += month % 4 === 1 ? 12 : 4;
+  earthScore += month % 4 === 2 ? 12 : 4;
+  airScore += month % 4 === 3 ? 12 : 4;
+  waterScore += month % 4 === 0 ? 12 : 4;
+
+  // Добавяне на принос от нумерологичната сума на годината
+  const yearSum = String(year)
+    .split('')
+    .reduce((acc, curr) => acc + (parseInt(curr, 10) || 0), 0);
+
+  fireScore += yearSum % 4 === 1 ? 13 : 4;
+  earthScore += yearSum % 4 === 2 ? 13 : 4;
+  airScore += yearSum % 4 === 3 ? 13 : 4;
+  waterScore += yearSum % 4 === 0 ? 13 : 4;
+
+  const total = fireScore + earthScore + airScore + waterScore;
+  const firePct = Math.round((fireScore / total) * 100);
+  const earthPct = Math.round((earthScore / total) * 100);
+  const airPct = Math.round((airScore / total) * 100);
+  const waterPct = 100 - (firePct + earthPct + airPct);
+
+  return [
+    { name: 'Fire', symbol: '🜂', value: firePct, color: '#FF6B6B' },
+    { name: 'Earth', symbol: '🜃', value: earthPct, color: '#4ECDC4' },
+    { name: 'Air', symbol: '🜁', value: airPct, color: '#FFE66D' },
+    { name: 'Water', symbol: '🜄', value: waterPct, color: '#4A90E2' },
+  ];
+}
 
 function Ring({ value, color, symbol, name }: { value: number; color: string; symbol: string; name: string }) {
   const { colors } = useApp();
@@ -105,7 +186,19 @@ export default function Profile() {
   const dosha = user?.ayurveda?.dominantDosha
     ? user.ayurveda.dominantDosha.toUpperCase()
     : 'Неизчислена';
-  const bloodGroup = user?.bloodGroup || 'Неизвестна';
+
+  // Динамично изчисление на стихиите спрямо рождената дата
+  const birthDateValue =
+    user?.birthdate ||
+    user?.birthDate ||
+    user?.dateOfBirth ||
+    user?.dob ||
+    user?.birth_date ||
+    user?.profile?.birthDate;
+
+  const dynamicElements = useMemo(() => {
+    return calculateElementsFromBirthDate(birthDateValue);
+  }, [birthDateValue]);
 
   const stats = [
     { name: 'Self Awareness', value: 84, icon: Brain, display: `${Math.round(number * 0.84)}%` },
@@ -192,61 +285,14 @@ export default function Profile() {
         ))}
       </View>
 
-      <Pressable
-        onPress={() =>
-          Alert.alert(
-            'Personal Synthesis',
-            'Синхронизирано с MongoDB Atlas. Всички профилни данни се извличат динамично.'
-          )
-        }
-      >
-        <LinearGradient
-          colors={['#EAB76D', '#C98A43', '#B6743D']}
-          start={{ x: 0, y: 0 }}
-          end={{ x: 1, y: 1 }}
-          style={{ borderRadius: 24, padding: 22, gap: 10, marginBottom: 18 }}
-        >
-          <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
-            <T bold size={10} style={{ color: '#4C2A14', letterSpacing: 1.5 }}>
-              ✧ YOUR PERSONAL SYNTHESIS
-            </T>
-            <View
-              style={{
-                backgroundColor: '#FFF2D7',
-                borderRadius: 99,
-                paddingHorizontal: 9,
-                paddingVertical: 4,
-              }}
-            >
-              <T bold size={10} style={{ color: '#7A4A18' }}>
-                ✦ MONGODB LIVE
-              </T>
-            </View>
-          </View>
-          <T bold size={25} style={{ color: '#3D2417' }}>
-            Анализ на картата
-          </T>
-          <T size={13} style={{ color: '#573720' }}>
-            Данните за раждане и диагностика са заредени директно от вашия профил в MongoDB Atlas.
-          </T>
-          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 5 }}>
-            <T bold size={13} style={{ color: '#3D2417' }}>
-              Преглед на детайли
-            </T>
-            <ArrowUpRight size={17} color="#3D2417" />
-          </View>
-        </LinearGradient>
-      </Pressable>
-
       <Section>Your profile</Section>
-      <Card style={{ gap: 15 }}>
+      <Card style={{ gap: 15, marginBottom: 20 }}>
         {[
           ['Personality (MBTI)', user?.mbti?.type || 'Неизчислен'],
           ['Zodiac', sunSign],
           ['Life path', lifePath],
           ['Cardology Birth Card', birthCard],
           ['Ayurveda Dosha', dosha],
-          ['Blood Group', bloodGroup],
         ].map(([k, v]) => (
           <View key={k} style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
             <T muted size={13}>
@@ -260,11 +306,11 @@ export default function Profile() {
       </Card>
 
       <Section>Personal lenses</Section>
-      <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 10 }}>
+      <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 10, marginBottom: 20 }}>
         {[
+          ['☉', `Sun: ${sunSign}`],
           ['♠', `Card: ${birthCard}`],
           ['☯', `Dosha: ${dosha}`],
-          ['◉', `Blood: ${bloodGroup}`],
           ['🜁', `Life Path: ${user?.numerology?.lifePathNumber || '-'}`],
         ].map(([icon, name]) => (
           <Card key={name} style={{ width: '48%', alignItems: 'center', gap: 8 }}>
@@ -279,16 +325,16 @@ export default function Profile() {
       </View>
 
       <Section>Elemental balance</Section>
-      <Card>
+      <Card style={{ marginBottom: 20 }}>
         <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
-          {elements.map((e) => (
+          {dynamicElements.map((e) => (
             <Ring key={e.name} {...e} />
           ))}
         </View>
       </Card>
 
       <Section>Self-awareness</Section>
-      <Card style={{ gap: 17 }}>
+      <Card style={{ gap: 17, marginBottom: 20 }}>
         {[
           ['Self reflection', 84],
           ['Communication', 72],
@@ -306,7 +352,7 @@ export default function Profile() {
       </Card>
 
       <Section>What your map says</Section>
-      <Card style={{ gap: 10 }}>
+      <Card style={{ gap: 10, marginBottom: 40 }}>
         <T bold size={17}>Deep inner processing</T>
         <T muted size={13}>
           Здравейте, {user?.name || 'пътешествениче'}! Вашите изчисления (MBTI: {user?.mbti?.type || 'N/A'}, Life Path: {user?.numerology?.lifePathNumber || 'N/A'}) са синхронизирани от базата данни.
