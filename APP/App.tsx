@@ -19,6 +19,7 @@ import Home from './src/screens/Home';
 import Explore from './src/screens/Explore';
 import Chat from './src/screens/Chat';
 import People from './src/screens/People';
+import Feed from './src/screens/Feed';
 import Profile from './src/screens/Profile';
 import Astrology from './src/screens/Astrology';
 import MBTI from './src/screens/MBTI';
@@ -70,14 +71,15 @@ function Shell() {
     ayurveda: <Ayurveda />,
     chat: <Chat />,
     people: <People />,
+    feed: <Feed />,
     profile: <Profile />,
     login: <Login />,
   };
 
   const activePageNode = !user ? <Login /> : pages[page] || <Home />;
 
-  // Страниците Home и Chat управляват сами своя скрол и пълна височина на екрана
-  const isFullHeightPage = user && (page === 'home' || page === 'chat');
+  // Страниците Home, Chat и Feed управляват сами своя скрол и пълна височина на екрана
+  const isFullHeightPage = user && (page === 'home' || page === 'chat' || page === 'feed');
 
   return (
     <View style={{ flex: 1, backgroundColor: colors.bg }}>
@@ -91,9 +93,9 @@ function Shell() {
             Platform.OS === 'web'
               ? 30
               : Math.max((StatusBar.currentHeight || 0) + 16, 28),
-          paddingHorizontal: 18,
+          paddingHorizontal: page === 'feed' ? 0 : 18,
           width: '100%',
-          maxWidth: 720,
+          maxWidth: page === 'feed' ? '100%' : 720,
           alignSelf: 'center',
         }}
       >

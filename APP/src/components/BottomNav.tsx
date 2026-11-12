@@ -7,6 +7,7 @@ import {
   Compass,
   MessageCircle,
   UsersRound,
+  Film,
   UserRound,
 } from "lucide-react-native";
 import { useApp, Page } from "../context/AppContext";
@@ -16,6 +17,7 @@ const items: [Page, string, any][] = [
   ["explore", "Explore", Compass],
   ["chat", "Chat", MessageCircle],
   ["people", "People", UsersRound],
+  ["feed", "Feed", Film],
   ["profile", "Profile", UserRound],
 ];
 
