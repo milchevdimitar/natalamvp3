@@ -21,7 +21,8 @@ const getBaseUrl = (): string => {
   );
 };
 
-const API_BASE_URL = getBaseUrl();
+export const API_BASE_URL = getBaseUrl();
+export const API_URL = API_BASE_URL;
 
 /**
  * Проверка на връзката между мобилното приложение, Express бекенда и MongoDB Atlas

@@ -377,7 +377,7 @@ export default function Astrology() {
         try {
           await setUser(updatedUser);
           await saveUserProfile(updatedUser);
-          setSyncStatus('NASA JPL Data Loaded!');
+          setSyncStatus('NASA JPL Data Loadeds!');
         } catch (error) {
           console.warn('Offline mode: Result saved locally.', error);
           setSyncStatus('Saved locally on device.');

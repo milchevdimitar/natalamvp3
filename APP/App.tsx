@@ -27,6 +27,7 @@ import Tarot from './src/screens/Tarot';
 import Numerology from './src/screens/Numerology';
 import Cardology from './src/screens/Cardology';
 import Ayurveda from './src/screens/Ayurveda';
+import BaZi from './src/screens/BaZi';
 import Login from './src/screens/Login';
 import { checkHealth } from './src/services/api';
 import { registerForPushNotificationsAsync } from './src/services/notifications';
@@ -69,6 +70,7 @@ function Shell() {
     numerology: <Numerology />,
     cardology: <Cardology />,
     ayurveda: <Ayurveda />,
+    bazi: <BaZi />,
     chat: <Chat />,
     people: <People />,
     feed: <Feed />,
@@ -78,8 +80,9 @@ function Shell() {
 
   const activePageNode = !user ? <Login /> : pages[page] || <Home />;
 
-  // Страниците Home, Chat и Feed управляват сами своя скрол и пълна височина на екрана
-  const isFullHeightPage = user && (page === 'home' || page === 'chat' || page === 'feed');
+  // Страниците Login, Home, Chat и Feed управляват сами своя скрол и клавиатура
+  const isFullHeightPage =
+    !user || page === 'login' || page === 'home' || page === 'chat' || page === 'feed';
 
   return (
     <View style={{ flex: 1, backgroundColor: colors.bg }}>

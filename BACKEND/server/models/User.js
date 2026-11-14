@@ -5,6 +5,7 @@ const UserSchema = new mongoose.Schema(
     name: { type: String, required: true },
     email: { type: String, required: true, unique: true },
     birthdate: { type: Date, required: true },
+    birthTime: { type: String },
     birthCity: {
       name: { type: String, required: true },
       country: { type: String },
@@ -52,6 +53,39 @@ const UserSchema = new mongoose.Schema(
       lifePathNumber: { type: Number },
       isMasterNumber: { type: Boolean, default: false },
     },
+    bazi: {
+      dayMaster: { type: String },
+      dayMasterHanzi: { type: String },
+      zodiacAnimal: { type: String },
+      dominantElement: { type: String },
+      favorableElement: { type: String },
+      hourBranchIndex: { type: Number, default: null },
+      pillars: {
+        year: { type: String },
+        month: { type: String },
+        day: { type: String },
+        hour: { type: String },
+      },
+      elementPercentages: {
+        Wood: { type: Number },
+        Fire: { type: Number },
+        Earth: { type: Number },
+        Metal: { type: Number },
+        Water: { type: Number },
+      },
+    },
+
+    // Социален граф и профилни детайли за People модула
+    bio: { type: String, default: '' },
+    interests: {
+      type: [String],
+      default: ['Astrology', 'Tarot', 'Numerology'],
+    },
+    friends: [{ type: mongoose.Schema.Types.ObjectId, ref: 'User' }],
+    sentRequests: [{ type: mongoose.Schema.Types.ObjectId, ref: 'User' }],
+    receivedRequests: [{ type: mongoose.Schema.Types.ObjectId, ref: 'User' }],
+    skippedUsers: [{ type: mongoose.Schema.Types.ObjectId, ref: 'User' }],
+    lastActiveAt: { type: Date, default: Date.now },
   },
   { timestamps: true }
 );

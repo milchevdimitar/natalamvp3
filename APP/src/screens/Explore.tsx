@@ -12,13 +12,32 @@ const ACTIVE_SYSTEM_ROUTES: Record<string, string> = {
   ayurveda: "ayurveda",
   tarot: "tarot",
   numerology: "numerology",
+  bazi: "bazi",
+  "ba zi": "bazi",
 };
 
 export default function Explore() {
   const [search, setSearch] = useState("");
   const { colors, setPage } = useApp();
 
-  const searchFiltered = systems.filter((s) =>
+  // Гарантира, че BaZi присъства в списъка дори ако липсва в demo.ts
+  const hasBaziInDemo = systems.some((s) =>
+    ["bazi", "ba zi"].includes(s.name.toLowerCase())
+  );
+
+  const allSystems = hasBaziInDemo
+    ? systems
+    : [
+        ...systems,
+        {
+          name: "BaZi",
+          icon: "☯",
+          description:
+            "Four Pillars of Destiny · Chinese solar-term & Five Elements chart.",
+        },
+      ];
+
+  const searchFiltered = allSystems.filter((s) =>
     (s.name + " " + s.description)
       .toLowerCase()
       .includes(search.toLowerCase())

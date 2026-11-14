@@ -1,60 +1,72 @@
-// src/services/locationService.ts
-
 export interface CityLocation {
   name: string;
   country: string;
   lat: number;
   lng: number;
   timezone: string;
+  region?: string;
 }
 
-/** Търсене на градове по целия свят (OpenStreetMap Nominatim) */
 export async function searchCities(query: string): Promise<CityLocation[]> {
-  if (!query || query.trim().length < 2) return [];
+  const trimmed = query.trim();
+  if (trimmed.length < 2) return [];
 
+  const isCyrillic = /[а-яА-ЯёЁ]/.test(trimmed);
+  const lang = isCyrillic ? 'bg' : 'en';
+
+  // 1. Основен източник: Open-Meteo Geocoding API (връща и timezone)
   try {
-    const url = `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(
-      query.trim()
-    )}&addressdetails=1&limit=5`;
+    const url = `https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(
+      trimmed
+    )}&count=15&language=${lang}&format=json`;
 
-    const response = await fetch(url, {
+    const response = await fetch(url);
+    if (response.ok) {
+      const data = await response.json();
+      if (Array.isArray(data.results) && data.results.length > 0) {
+        return data.results.map((item: any) => ({
+          name: item.name,
+          country: item.country || item.country_code || '',
+          lat: Number(item.latitude),
+          lng: Number(item.longitude),
+          timezone: item.timezone || 'UTC',
+          region: item.admin1 || undefined,
+        }));
+      }
+    }
+  } catch (error) {
+    console.warn('Open-Meteo geocoding error, switching to fallback:', error);
+  }
+
+  // 2. Резервен източник: OpenStreetMap Nominatim API
+  try {
+    const fallbackUrl = `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(
+      trimmed
+    )}&format=json&addressdetails=1&limit=10`;
+
+    const fallbackRes = await fetch(fallbackUrl, {
       headers: {
-        'User-Agent': 'NatalaAstrologyApp/1.0',
+        'Accept-Language': isCyrillic ? 'bg,en' : 'en',
+        'User-Agent': 'NatalaApp/1.0',
       },
     });
 
-    if (!response.ok) return [];
-    const data = await response.json();
-
-    return data.map((item: any) => {
-      const city =
-        item.address?.city ||
-        item.address?.town ||
-        item.address?.village ||
-        item.address?.municipality ||
-        item.display_name.split(',')[0];
-
-      const country = item.address?.country || '';
-      const lat = parseFloat(item.lat);
-      const lng = parseFloat(item.lon);
-
-      return {
-        name: city,
-        country,
-        lat,
-        lng,
-        timezone: getTimezoneFromCoords(lat, lng),
-      };
-    });
-  } catch (error) {
-    console.error('City search error:', error);
-    return [];
+    if (fallbackRes.ok) {
+      const items = await fallbackRes.json();
+      if (Array.isArray(items)) {
+        return items.map((item: any) => ({
+          name: item.name || item.display_name?.split(',')[0] || trimmed,
+          country: item.address?.country || '',
+          lat: parseFloat(item.lat),
+          lng: parseFloat(item.lon),
+          timezone: 'UTC',
+          region: item.address?.state || item.address?.city || undefined,
+        }));
+      }
+    }
+  } catch (fallbackError) {
+    console.error('Fallback geocoding error:', fallbackError);
   }
-}
 
-function getTimezoneFromCoords(lat: number, lng: number): string {
-  if (lat > 35 && lat < 70 && lng > 10 && lng < 40) return 'Europe/Sofia';
-  if (lng < -50) return 'America/New_York';
-  if (lng > 100) return 'Asia/Tokyo';
-  return Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC';
+  return [];
 }

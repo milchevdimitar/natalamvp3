@@ -1,5 +1,4 @@
-// CitySearchPicker.tsx
-import React, { useState } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import {
   View,
   TextInput,
@@ -7,8 +6,11 @@ import {
   FlatList,
   ActivityIndicator,
   StyleSheet,
+  Modal,
+  Platform,
+  StatusBar,
 } from 'react-native';
-import { MapPin, Search } from 'lucide-react-native';
+import { MapPin, Search, X, ChevronDown } from 'lucide-react-native';
 import { T } from './UI';
 import { searchCities, CityLocation } from '../services/locationService';
 
@@ -19,30 +21,73 @@ interface Props {
 }
 
 export function CitySearchPicker({ selectedCity, onSelectCity, colors }: Props) {
-  const [query, setQuery] = useState(selectedCity ? `${selectedCity.name}, ${selectedCity.country}` : '');
+  const [modalVisible, setModalVisible] = useState(false);
+  const [query, setQuery] = useState('');
   const [results, setResults] = useState<CityLocation[]>([]);
   const [loading, setLoading] = useState(false);
-  const [isOpen, setIsOpen] = useState(false);
+  const requestCounter = useRef(0);
+  const debounceTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  const handleSearch = async (text: string) => {
+  useEffect(() => {
+    return () => {
+      if (debounceTimer.current) clearTimeout(debounceTimer.current);
+    };
+  }, []);
+
+  const executeSearch = async (text: string) => {
+    const trimmed = text.trim();
+    if (trimmed.length < 2) {
+      requestCounter.current += 1;
+      setResults([]);
+      setLoading(false);
+      return;
+    }
+
+    const reqId = ++requestCounter.current;
+    setLoading(true);
+
+    try {
+      const cities = await searchCities(trimmed);
+      if (reqId === requestCounter.current) {
+        setResults(cities);
+      }
+    } catch {
+      if (reqId === requestCounter.current) {
+        setResults([]);
+      }
+    } finally {
+      if (reqId === requestCounter.current) {
+        setLoading(false);
+      }
+    }
+  };
+
+  const handleQueryChange = (text: string) => {
     setQuery(text);
+    if (debounceTimer.current) clearTimeout(debounceTimer.current);
+
     if (text.trim().length < 2) {
       setResults([]);
-      setIsOpen(false);
+      setLoading(false);
       return;
     }
 
     setLoading(true);
-    setIsOpen(true);
-    const cities = await searchCities(text);
-    setResults(cities);
-    setLoading(false);
+    debounceTimer.current = setTimeout(() => {
+      executeSearch(text);
+    }, 300);
+  };
+
+  const handleOpen = () => {
+    const initialQuery = selectedCity?.name || '';
+    setQuery(initialQuery);
+    setModalVisible(true);
+    executeSearch(initialQuery);
   };
 
   const handleSelect = (city: CityLocation) => {
-    setQuery(`${city.name}, ${city.country}`);
     onSelectCity(city);
-    setIsOpen(false);
+    setModalVisible(false);
   };
 
   return (
@@ -51,47 +96,139 @@ export function CitySearchPicker({ selectedCity, onSelectCity, colors }: Props) 
         BIRTH PLACE / CITY
       </T>
 
-      <View style={[styles.inputWrapper, { backgroundColor: colors.surfaceAlt, borderColor: colors.line }]}>
+      <TouchableOpacity
+        activeOpacity={0.8}
+        onPress={handleOpen}
+        style={[
+          styles.inputWrapper,
+          { backgroundColor: colors.surfaceAlt, borderColor: colors.line },
+        ]}
+      >
         <MapPin size={18} color={colors.gold} />
-        <TextInput
-          value={query}
-          onChangeText={handleSearch}
-          placeholder="Search any city (e.g. London, Plovdiv, Tokyo)..."
-          placeholderTextColor={colors.muted}
-          style={[styles.input, { color: colors.text }]}
-        />
-        {loading && <ActivityIndicator size="small" color={colors.gold} />}
-      </View>
+        <View style={{ flex: 1 }}>
+          {selectedCity ? (
+            <T bold size={14} style={{ color: colors.text }} numberOfLines={1}>
+              {selectedCity.name}, {selectedCity.country}
+            </T>
+          ) : (
+            <T size={14} style={{ color: colors.muted }}>
+              Изберете град на раждане...
+            </T>
+          )}
+        </View>
+        <ChevronDown size={18} color={colors.muted} />
+      </TouchableOpacity>
 
-      {isOpen && results.length > 0 && (
-        <View style={[styles.dropdown, { backgroundColor: colors.surface, borderColor: colors.purple }]}>
+      <Modal
+        visible={modalVisible}
+        animationType="slide"
+        onRequestClose={() => setModalVisible(false)}
+      >
+        <View
+          style={[
+            styles.modalContainer,
+            {
+              backgroundColor: colors.bg,
+              paddingTop:
+                Platform.OS === 'web'
+                  ? 24
+                  : Math.max((StatusBar.currentHeight || 0) + 12, 44),
+            },
+          ]}
+        >
+          <View style={styles.modalHeader}>
+            <T bold size={17} style={{ color: colors.text }}>
+              Място на раждане
+            </T>
+            <TouchableOpacity
+              onPress={() => setModalVisible(false)}
+              style={[styles.closeBtn, { backgroundColor: colors.surfaceAlt }]}
+            >
+              <X size={18} color={colors.text} />
+            </TouchableOpacity>
+          </View>
+
+          <View
+            style={[
+              styles.searchBox,
+              {
+                backgroundColor: colors.surfaceAlt,
+                borderColor: colors.purple,
+              },
+            ]}
+          >
+            <Search size={18} color={colors.gold} />
+            <TextInput
+              autoFocus
+              value={query}
+              onChangeText={handleQueryChange}
+              placeholder="Въведете град (напр. София, Пловдив, London)..."
+              placeholderTextColor={colors.muted}
+              style={[styles.input, { color: colors.text }]}
+            />
+            {loading ? (
+              <ActivityIndicator size="small" color={colors.gold} />
+            ) : (
+              query.length > 0 && (
+                <TouchableOpacity onPress={() => handleQueryChange('')}>
+                  <X size={16} color={colors.muted} />
+                </TouchableOpacity>
+              )
+            )}
+          </View>
+
           <FlatList
             data={results}
-            keyExtractor={(item, index) => `${item.name}-${index}`}
+            keyExtractor={(item, index) => `${item.name}-${item.lat}-${item.lng}-${index}`}
+            keyboardShouldPersistTaps="handled"
+            contentContainerStyle={styles.listContent}
+            ListEmptyComponent={
+              !loading ? (
+                <View style={styles.emptyBox}>
+                  <T muted size={13} style={{ textAlign: 'center' }}>
+                    {query.trim().length < 2
+                      ? 'Въведете поне 2 букви, за да потърсите град.'
+                      : 'Няма намерени градове за това търсене.'}
+                  </T>
+                </View>
+              ) : null
+            }
             renderItem={({ item }) => (
               <TouchableOpacity
+                activeOpacity={0.75}
                 onPress={() => handleSelect(item)}
-                style={[styles.dropdownItem, { borderBottomColor: colors.line }]}
+                style={[
+                  styles.cityItem,
+                  {
+                    backgroundColor: colors.surface,
+                    borderColor: colors.line,
+                  },
+                ]}
               >
-                <T bold size={13} style={{ color: colors.text }}>
-                  {item.name}
-                </T>
-                <T muted size={11}>
-                  {item.country} ({item.lat.toFixed(2)}°, {item.lng.toFixed(2)}°)
-                </T>
+                <MapPin size={18} color={colors.purple} />
+                <View style={{ flex: 1 }}>
+                  <T bold size={14} style={{ color: colors.text }}>
+                    {item.name}
+                  </T>
+                  <T muted size={12}>
+                    {item.region ? `${item.region}, ` : ''}
+                    {item.country} ({item.lat.toFixed(2)}°, {item.lng.toFixed(2)}°)
+                  </T>
+                </View>
               </TouchableOpacity>
             )}
           />
         </View>
-      )}
+      </Modal>
     </View>
   );
 }
 
+export default CitySearchPicker;
+
 const styles = StyleSheet.create({
   container: {
     width: '100%',
-    zIndex: 1000,
   },
   inputWrapper: {
     flexDirection: 'row',
@@ -102,30 +239,54 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     paddingHorizontal: 14,
   },
-  input: {
+  modalContainer: {
     flex: 1,
-    fontSize: 14,
-    fontWeight: '500',
+    paddingHorizontal: 18,
   },
-  dropdown: {
-    position: 'absolute',
-    top: 75,
-    left: 0,
-    right: 0,
-    maxHeight: 200,
+  modalHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 14,
+  },
+  closeBtn: {
+    width: 34,
+    height: 34,
+    borderRadius: 17,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  searchBox: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    height: 50,
     borderRadius: 14,
     borderWidth: 1.5,
-    elevation: 8,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 6 },
-    shadowOpacity: 0.4,
-    shadowRadius: 8,
-    zIndex: 2000,
-    overflow: 'hidden',
-  },
-  dropdownItem: {
-    paddingVertical: 10,
     paddingHorizontal: 14,
-    borderBottomWidth: 1,
+    marginBottom: 12,
+  },
+  input: {
+    flex: 1,
+    fontSize: 15,
+    fontWeight: '500',
+  },
+  listContent: {
+    gap: 8,
+    paddingBottom: 260,
+  },
+  cityItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    paddingVertical: 12,
+    paddingHorizontal: 14,
+    borderRadius: 14,
+    borderWidth: 1,
+  },
+  emptyBox: {
+    paddingVertical: 28,
+    paddingHorizontal: 16,
+    alignItems: 'center',
   },
 });

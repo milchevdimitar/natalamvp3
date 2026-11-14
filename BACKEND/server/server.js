@@ -8,7 +8,8 @@ const fs = require('fs');
 const User = require('./models/User');
 const storiesRoutes = require('./routes/stories');
 const chatRoutes = require('./routes/chatRoutes');
-const horizonsRoutes = require('./routes/horizons'); // 👈 Добавен рут за NASA JPL Horizons Proxy
+const horizonsRoutes = require('./routes/horizons');
+const peopleRoutes = require('./routes/people');
 
 const app = express();
 app.use(cors());
@@ -30,7 +31,9 @@ const MONGO_URI = process.env.MONGODB_URI;
 
 mongoose
   .connect(MONGO_URI)
-  .then(() => console.log(`✅ Успешна връзка с MongoDB Atlas! [DB: ${mongoose.connection.name}]`))
+  .then(() =>
+    console.log(`✅ Успешна връзка с MongoDB Atlas! [DB: ${mongoose.connection.name}]`)
+  )
   .catch((err) => console.error('❌ Грешка при свързване с MongoDB:', err.message));
 
 // Healthcheck Ендпойнт
@@ -52,7 +55,10 @@ app.use('/api/stories', storiesRoutes);
 app.use('/api/chats', chatRoutes);
 
 // Рутове за NASA JPL Horizons API (Horizons Proxy)
-app.use('/api/horizons', horizonsRoutes); // 👈 Регистриране на маршрута за NASA
+app.use('/api/horizons', horizonsRoutes);
+
+// Рутове за приятели, покани и съвместимост (People API)
+app.use('/api/people', peopleRoutes);
 
 // Запис и синхронизация на изчисления профил
 app.post('/api/users/profile', async (req, res) => {
@@ -62,9 +68,10 @@ app.post('/api/users/profile', async (req, res) => {
       return res.status(400).json({ success: false, error: 'Липсва имейл.' });
     }
 
+    const normalizedEmail = userData.email.toLowerCase().trim();
     const updatedUser = await User.findOneAndUpdate(
-      { email: userData.email },
-      { $set: userData },
+      { email: normalizedEmail },
+      { $set: { ...userData, email: normalizedEmail, lastActiveAt: new Date() } },
       { new: true, upsert: true, runValidators: true }
     );
 
@@ -78,8 +85,14 @@ app.post('/api/users/profile', async (req, res) => {
 
 app.get('/api/users/profile/:email', async (req, res) => {
   try {
-    const user = await User.findOne({ email: req.params.email });
-    if (!user) return res.status(404).json({ success: false, message: 'Потребителят не е намерен.' });
+    const user = await User.findOne({
+      email: req.params.email.toLowerCase().trim(),
+    });
+    if (!user) {
+      return res
+        .status(404)
+        .json({ success: false, message: 'Потребителят не е намерен.' });
+    }
     res.status(200).json({ success: true, user });
   } catch (error) {
     res.status(500).json({ success: false, error: error.message });
@@ -92,23 +105,30 @@ app.post('/api/users/login', async (req, res) => {
     const { email, name } = req.body;
 
     if (!email) {
-      return res.status(400).json({ success: false, error: 'Имейлът е задължителен.' });
+      return res
+        .status(400)
+        .json({ success: false, error: 'Имейлът е задължителен.' });
     }
 
+    const normalizedEmail = email.toLowerCase().trim();
+
     // Търсим съществуващ потребител
-    let user = await User.findOne({ email });
+    let user = await User.findOne({ email: normalizedEmail });
 
     // Ако не съществува, създаваме стартов профил
     if (!user) {
       user = new User({
-        name: name || email.split('@')[0],
-        email: email.toLowerCase().trim(),
+        name: name || normalizedEmail.split('@')[0],
+        email: normalizedEmail,
         birthdate: new Date(),
         birthCity: { name: 'София', country: 'България' },
+        lastActiveAt: new Date(),
       });
       await user.save();
       console.log(`✨ Създаден нов потребител в MongoDB: ${user.email}`);
     } else {
+      user.lastActiveAt = new Date();
+      await user.save();
       console.log(`🔑 Успешен логин за: ${user.email}`);
     }
 
