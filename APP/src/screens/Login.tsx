@@ -5,8 +5,16 @@ import {
   ActivityIndicator,
   TouchableOpacity,
   ScrollView,
+  Alert,
+  Platform,
 } from 'react-native';
-import { LogIn, User as UserIcon, Mail, Sparkles, Clock } from 'lucide-react-native';
+import {
+  LogIn,
+  User as UserIcon,
+  Mail,
+  Sparkles,
+  Clock,
+} from 'lucide-react-native';
 import { useApp } from '../context/AppContext';
 import { Card, T, Hero, Pill } from '../components/UI';
 import { loginUser, saveUserProfile } from '../services/api';
@@ -14,11 +22,19 @@ import { saveAndSyncProfile } from '../services/profileManager';
 import { CitySearchPicker } from '../components/CitySearchPicker';
 import { CityLocation } from '../services/locationService';
 
+const showAlert = (title: string, message: string) => {
+  if (Platform.OS === 'web') {
+    window.alert(`${title}: ${message}`);
+  } else {
+    Alert.alert(title, message);
+  }
+};
+
 export default function Login() {
   const { colors, setUser, setPage } = useApp();
   const [mode, setMode] = useState<'login' | 'register'>('login');
 
-  // Формени данни
+  // Form state
   const [email, setEmail] = useState('');
   const [name, setName] = useState('');
   const [birthDay, setBirthDay] = useState('15');
@@ -27,20 +43,21 @@ export default function Login() {
   const [birthHour, setBirthHour] = useState('');
   const [birthMinute, setBirthMinute] = useState('');
 
-  // Избран град като обект
+  // Selected city state compatible with CitySearchPicker (CityLocation | null)
   const [selectedCity, setSelectedCity] = useState<CityLocation | null>({
-    name: 'София',
+    name: 'Sofia',
     country: 'Bulgaria',
     lat: 42.6977,
     lng: 23.3219,
     timezone: 'Europe/Sofia',
+    region: 'Sofia-City',
   });
 
   const [loading, setLoading] = useState(false);
 
   const handleSubmit = async () => {
     if (!email.trim() || !email.includes('@')) {
-      alert('Моля, въведете валиден имейл адрес.');
+      showAlert('Invalid Email', 'Please enter a valid email address.');
       return;
     }
 
@@ -53,7 +70,10 @@ export default function Login() {
           setPage('home');
         }
       } catch {
-        alert('Възникна грешка при връзка със сървъра. Опитайте отново.');
+        showAlert(
+          'Connection Error',
+          'Could not connect to the server. Please try again.'
+        );
       } finally {
         setLoading(false);
       }
@@ -61,7 +81,12 @@ export default function Login() {
     }
 
     if (!name.trim()) {
-      alert('Моля, въведете вашето име.');
+      showAlert('Missing Name', 'Please enter your full name.');
+      return;
+    }
+
+    if (!selectedCity) {
+      showAlert('Missing City', 'Please select your city of birth.');
       return;
     }
 
@@ -80,55 +105,63 @@ export default function Login() {
       yearNum < 1900 ||
       yearNum > 2100
     ) {
-      alert('Моля, въведете валидна дата на раждане (ДД / ММ / ГГГГ).');
+      showAlert(
+        'Invalid Date',
+        'Please enter a valid date of birth (DD / MM / YYYY).'
+      );
       return;
     }
 
-    // Точен час на раждане във вида, въведен от потребителя ("HH:MM")
-    let exactBirthTime: string | undefined;
+    // Parse optional birth time ("HH:MM")
     const rawHour = birthHour.trim();
     const rawMinute = birthMinute.trim();
+    const hasCustomTime = rawHour !== '' || rawMinute !== '';
 
-    if (rawHour !== '' || rawMinute !== '') {
-      const hourNum = rawHour === '' ? 0 : parseInt(rawHour, 10);
-      const minuteNum = rawMinute === '' ? 0 : parseInt(rawMinute, 10);
+    const hourNum = rawHour === '' ? 0 : parseInt(rawHour, 10);
+    const minuteNum = rawMinute === '' ? 0 : parseInt(rawMinute, 10);
 
-      if (
-        Number.isNaN(hourNum) ||
+    if (
+      hasCustomTime &&
+      (Number.isNaN(hourNum) ||
         hourNum < 0 ||
         hourNum > 23 ||
         Number.isNaN(minuteNum) ||
         minuteNum < 0 ||
-        minuteNum > 59
-      ) {
-        alert('Моля, въведете валиден час на раждане (00–23 ч. и 00–59 мин.).');
-        return;
-      }
-
-      exactBirthTime = `${String(hourNum).padStart(2, '0')}:${String(minuteNum).padStart(2, '0')}`;
+        minuteNum > 59)
+    ) {
+      showAlert(
+        'Invalid Time',
+        'Please enter a valid time of birth (00–23h and 00–59m).'
+      );
+      return;
     }
+
+    const exactBirthTime = hasCustomTime
+      ? `${String(hourNum).padStart(2, '0')}:${String(minuteNum).padStart(2, '0')}`
+      : undefined;
 
     setLoading(true);
 
     try {
-      const cityPayload = selectedCity || {
-        name: 'София',
-        country: 'Bulgaria',
-        lat: 42.6977,
-        lng: 23.3219,
-        timezone: 'Europe/Sofia',
-      };
-
-      // Форматиране спрямо точната схема на models/User.js
+      // Embed exact hours & minutes into the UTC ISO date string
       const isoBirthDate = new Date(
-        Date.UTC(yearNum, monthNum - 1, dayNum)
+        Date.UTC(
+          yearNum,
+          monthNum - 1,
+          dayNum,
+          hasCustomTime ? hourNum : 12,
+          hasCustomTime ? minuteNum : 0
+        )
       ).toISOString();
 
+      // Map CityLocation (lat/lng) to MongoDB User schema (latitude/longitude)
       const schemaBirthCity = {
-        name: cityPayload.name,
-        country: cityPayload.country,
-        latitude: cityPayload.lat,
-        longitude: cityPayload.lng,
+        name: selectedCity.name,
+        country: selectedCity.country,
+        latitude: selectedCity.lat,
+        longitude: selectedCity.lng,
+        ...(selectedCity.timezone ? { timezone: selectedCity.timezone } : {}),
+        ...(selectedCity.region ? { region: selectedCity.region } : {}),
       };
 
       const calculatedProfile = await saveAndSyncProfile({
@@ -143,32 +176,40 @@ export default function Login() {
         },
         ...(exactBirthTime ? { birthTime: exactBirthTime } : {}),
         birthCity: {
-          ...cityPayload,
+          ...selectedCity,
           ...schemaBirthCity,
         },
       } as any);
 
-      // Записваме директно полетата birthdate, birthTime и birthCity в MongoDB по UserSchema
-      const synced = await saveUserProfile({
-        ...(calculatedProfile as any),
+      // Remove helper birthDate object before persisting to MongoDB
+      const { birthDate: _ignoredBirthDate, ...cleanCalculated } =
+        (calculatedProfile as any) || {};
+
+      const payloadToSave = {
+        ...cleanCalculated,
         name: name.trim(),
         email: email.trim().toLowerCase(),
         birthdate: isoBirthDate,
-        ...(exactBirthTime ? { birthTime: exactBirthTime } : {}),
-        birthCity: schemaBirthCity,
-      });
-
-      const finalUser = synced?.user || {
-        ...calculatedProfile,
-        birthdate: isoBirthDate,
-        ...(exactBirthTime ? { birthTime: exactBirthTime } : {}),
+        birthTime: exactBirthTime || cleanCalculated?.birthTime || null,
         birthCity: schemaBirthCity,
       };
+
+      const synced = await saveUserProfile(payloadToSave);
+
+      const finalUser = synced?.user
+        ? {
+            ...synced.user,
+            birthTime: synced.user.birthTime || payloadToSave.birthTime,
+          }
+        : payloadToSave;
 
       setUser(finalUser);
       setPage('home');
     } catch {
-      alert('Възникна грешка при връзка със сървъра. Опитайте отново.');
+      showAlert(
+        'Connection Error',
+        'Could not connect to the server. Please try again.'
+      );
     } finally {
       setLoading(false);
     }
@@ -182,12 +223,12 @@ export default function Login() {
     >
       <Hero
         eyebrow="WELCOME TO NATALA"
-        first="Отключете своя"
-        accent="вътрешен свят."
-        description="Влезте или се регистрирайте, за да достъпите своите Натални карти, Аюрведа и MBTI профил."
+        first="Unlock your"
+        accent="inner world."
+        description="Sign in or register to access your Natal Charts, Ayurveda, and MBTI profile."
       />
 
-      {/* Селектор за режим (Вход / Регистрация) */}
+      {/* Mode Switcher (Sign In / Register) */}
       <View
         style={{
           flexDirection: 'row',
@@ -206,8 +247,12 @@ export default function Login() {
             backgroundColor: mode === 'login' ? colors.purple : 'transparent',
           }}
         >
-          <T bold size={13} style={{ color: mode === 'login' ? '#FFF' : colors.muted }}>
-            Вход
+          <T
+            bold
+            size={13}
+            style={{ color: mode === 'login' ? '#FFF' : colors.muted }}
+          >
+            Sign In
           </T>
         </TouchableOpacity>
 
@@ -221,8 +266,12 @@ export default function Login() {
             backgroundColor: mode === 'register' ? colors.purple : 'transparent',
           }}
         >
-          <T bold size={13} style={{ color: mode === 'register' ? '#FFF' : colors.muted }}>
-            Регистрация
+          <T
+            bold
+            size={13}
+            style={{ color: mode === 'register' ? '#FFF' : colors.muted }}
+          >
+            Register
           </T>
         </TouchableOpacity>
       </View>
@@ -230,7 +279,9 @@ export default function Login() {
       <Card style={{ gap: 16, padding: 20 }}>
         {mode === 'register' && (
           <View style={{ gap: 8 }}>
-            <T bold size={13}>Вашето Име</T>
+            <T bold size={13}>
+              Full Name
+            </T>
             <View
               style={{
                 flexDirection: 'row',
@@ -244,7 +295,7 @@ export default function Login() {
             >
               <UserIcon size={18} color={colors.muted} />
               <TextInput
-                placeholder="напр. Димитър Милчев"
+                placeholder="e.g. Alex Mercer"
                 placeholderTextColor={colors.muted}
                 value={name}
                 onChangeText={setName}
@@ -255,7 +306,9 @@ export default function Login() {
         )}
 
         <View style={{ gap: 8 }}>
-          <T bold size={13}>Имейл адрес</T>
+          <T bold size={13}>
+            Email Address
+          </T>
           <View
             style={{
               flexDirection: 'row',
@@ -283,10 +336,12 @@ export default function Login() {
         {mode === 'register' && (
           <>
             <View style={{ gap: 8 }}>
-              <T bold size={13}>Дата на раждане (ДД / ММ / ГГГГ)</T>
+              <T bold size={13}>
+                Date of Birth (DD / MM / YYYY)
+              </T>
               <View style={{ flexDirection: 'row', gap: 10 }}>
                 <TextInput
-                  placeholder="ДД"
+                  placeholder="DD"
                   placeholderTextColor={colors.muted}
                   keyboardType="numeric"
                   maxLength={2}
@@ -302,7 +357,7 @@ export default function Login() {
                   }}
                 />
                 <TextInput
-                  placeholder="ММ"
+                  placeholder="MM"
                   placeholderTextColor={colors.muted}
                   keyboardType="numeric"
                   maxLength={2}
@@ -318,7 +373,7 @@ export default function Login() {
                   }}
                 />
                 <TextInput
-                  placeholder="ГГГГ"
+                  placeholder="YYYY"
                   placeholderTextColor={colors.muted}
                   keyboardType="numeric"
                   maxLength={4}
@@ -337,11 +392,23 @@ export default function Login() {
             </View>
 
             <View style={{ gap: 8 }}>
-              <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
-                <T bold size={13}>Час на раждане (ЧЧ : ММ)</T>
-                <T muted size={11}>24ч формат · по избор</T>
+              <View
+                style={{
+                  flexDirection: 'row',
+                  justifyContent: 'space-between',
+                  alignItems: 'center',
+                }}
+              >
+                <T bold size={13}>
+                  Time of Birth (HH : MM)
+                </T>
+                <T muted size={11}>
+                  24h format · optional
+                </T>
               </View>
-              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
+              <View
+                style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}
+              >
                 <View
                   style={{
                     flex: 1,
@@ -356,7 +423,7 @@ export default function Login() {
                 >
                   <Clock size={16} color={colors.gold} />
                   <TextInput
-                    placeholder="ЧЧ (напр. 14)"
+                    placeholder="HH (e.g. 14)"
                     placeholderTextColor={colors.muted}
                     keyboardType="numeric"
                     maxLength={2}
@@ -376,7 +443,7 @@ export default function Login() {
                 </T>
 
                 <TextInput
-                  placeholder="ММ (напр. 30)"
+                  placeholder="MM (e.g. 30)"
                   placeholderTextColor={colors.muted}
                   keyboardType="numeric"
                   maxLength={2}
@@ -397,7 +464,7 @@ export default function Login() {
 
             <CitySearchPicker
               selectedCity={selectedCity}
-              onSelectCity={setSelectedCity}
+              onSelectCity={(city) => setSelectedCity(city)}
               colors={colors}
             />
           </>
@@ -415,7 +482,7 @@ export default function Login() {
                   <Sparkles size={16} color="#FFF" />
                 )}
                 <T bold style={{ color: '#FFF' }}>
-                  {mode === 'login' ? 'Влез в профила' : 'Създай профил и продължи'}
+                  {mode === 'login' ? 'Sign In' : 'Create Profile & Continue'}
                 </T>
               </>
             )}

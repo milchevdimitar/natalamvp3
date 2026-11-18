@@ -139,6 +139,9 @@ app.post('/api/users/login', async (req, res) => {
   }
 });
 
+const reportRoutes = require('./routes/report');
+app.use(reportRoutes);
+
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => {
   console.log(`🚀 Natala API сървърът работи на порт ${PORT}`);

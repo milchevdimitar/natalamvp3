@@ -25,8 +25,12 @@ export function CitySearchPicker({ selectedCity, onSelectCity, colors }: Props) 
   const [query, setQuery] = useState('');
   const [results, setResults] = useState<CityLocation[]>([]);
   const [loading, setLoading] = useState(false);
+  const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const requestCounter = useRef(0);
   const debounceTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const bgColor = colors?.bg || colors?.background || '#0D0B1A';
+  const lineColor = colors?.line || colors?.border || 'rgba(255, 255, 255, 0.12)';
 
   useEffect(() => {
     return () => {
@@ -39,21 +43,24 @@ export function CitySearchPicker({ selectedCity, onSelectCity, colors }: Props) 
     if (trimmed.length < 2) {
       requestCounter.current += 1;
       setResults([]);
+      setErrorMsg(null);
       setLoading(false);
       return;
     }
 
     const reqId = ++requestCounter.current;
     setLoading(true);
+    setErrorMsg(null);
 
     try {
       const cities = await searchCities(trimmed);
       if (reqId === requestCounter.current) {
         setResults(cities);
       }
-    } catch {
+    } catch (err: any) {
       if (reqId === requestCounter.current) {
         setResults([]);
+        setErrorMsg(err?.message || 'Error searching cities');
       }
     } finally {
       if (reqId === requestCounter.current) {
@@ -68,6 +75,7 @@ export function CitySearchPicker({ selectedCity, onSelectCity, colors }: Props) 
 
     if (text.trim().length < 2) {
       setResults([]);
+      setErrorMsg(null);
       setLoading(false);
       return;
     }
@@ -75,11 +83,11 @@ export function CitySearchPicker({ selectedCity, onSelectCity, colors }: Props) 
     setLoading(true);
     debounceTimer.current = setTimeout(() => {
       executeSearch(text);
-    }, 300);
+    }, 200);
   };
 
   const handleOpen = () => {
-    const initialQuery = selectedCity?.name || '';
+    const initialQuery = selectedCity?.name || 'Sofia';
     setQuery(initialQuery);
     setModalVisible(true);
     executeSearch(initialQuery);
@@ -101,7 +109,7 @@ export function CitySearchPicker({ selectedCity, onSelectCity, colors }: Props) 
         onPress={handleOpen}
         style={[
           styles.inputWrapper,
-          { backgroundColor: colors.surfaceAlt, borderColor: colors.line },
+          { backgroundColor: colors.surfaceAlt, borderColor: lineColor },
         ]}
       >
         <MapPin size={18} color={colors.gold} />
@@ -112,7 +120,7 @@ export function CitySearchPicker({ selectedCity, onSelectCity, colors }: Props) 
             </T>
           ) : (
             <T size={14} style={{ color: colors.muted }}>
-              Изберете град на раждане...
+              Select city of birth...
             </T>
           )}
         </View>
@@ -128,7 +136,7 @@ export function CitySearchPicker({ selectedCity, onSelectCity, colors }: Props) 
           style={[
             styles.modalContainer,
             {
-              backgroundColor: colors.bg,
+              backgroundColor: bgColor,
               paddingTop:
                 Platform.OS === 'web'
                   ? 24
@@ -138,7 +146,7 @@ export function CitySearchPicker({ selectedCity, onSelectCity, colors }: Props) 
         >
           <View style={styles.modalHeader}>
             <T bold size={17} style={{ color: colors.text }}>
-              Място на раждане
+              Place of Birth
             </T>
             <TouchableOpacity
               onPress={() => setModalVisible(false)}
@@ -162,7 +170,7 @@ export function CitySearchPicker({ selectedCity, onSelectCity, colors }: Props) 
               autoFocus
               value={query}
               onChangeText={handleQueryChange}
-              placeholder="Въведете град (напр. София, Пловдив, London)..."
+              placeholder="Enter city (e.g. Sofia, London, New York)..."
               placeholderTextColor={colors.muted}
               style={[styles.input, { color: colors.text }]}
             />
@@ -179,16 +187,27 @@ export function CitySearchPicker({ selectedCity, onSelectCity, colors }: Props) 
 
           <FlatList
             data={results}
-            keyExtractor={(item, index) => `${item.name}-${item.lat}-${item.lng}-${index}`}
+            keyExtractor={(item, index) =>
+              `${item.name}-${item.country}-${item.lat}-${item.lng}-${index}`
+            }
             keyboardShouldPersistTaps="handled"
             contentContainerStyle={styles.listContent}
             ListEmptyComponent={
               !loading ? (
                 <View style={styles.emptyBox}>
-                  <T muted size={13} style={{ textAlign: 'center' }}>
-                    {query.trim().length < 2
-                      ? 'Въведете поне 2 букви, за да потърсите град.'
-                      : 'Няма намерени градове за това търсене.'}
+                  <T
+                    muted
+                    size={13}
+                    style={{
+                      textAlign: 'center',
+                      color: errorMsg ? '#f87171' : colors.muted,
+                    }}
+                  >
+                    {errorMsg
+                      ? `Search error: ${errorMsg}`
+                      : query.trim().length < 2
+                      ? 'Type at least 2 characters to search for a city.'
+                      : 'No cities found matching your search.'}
                   </T>
                 </View>
               ) : null
@@ -201,7 +220,7 @@ export function CitySearchPicker({ selectedCity, onSelectCity, colors }: Props) 
                   styles.cityItem,
                   {
                     backgroundColor: colors.surface,
-                    borderColor: colors.line,
+                    borderColor: lineColor,
                   },
                 ]}
               >

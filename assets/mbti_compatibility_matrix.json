@@ -1,0 +1,75 @@
+{
+  "version": "1.0.0",
+  "source": "User-supplied simplified Myers Briggs type compatibility image",
+  "source_is_empirically_validated": false,
+  "type_order": [
+    "INFP",
+    "ENFP",
+    "INFJ",
+    "ENFJ",
+    "INTJ",
+    "ENTJ",
+    "INTP",
+    "ENTP",
+    "ISFP",
+    "ESFP",
+    "ISTP",
+    "ESTP",
+    "ISFJ",
+    "ESFJ",
+    "ISTJ",
+    "ESTJ"
+  ],
+  "score_scale": "0..1; subjective editable configuration (not relationship probability)",
+  "legend": {
+    "R": {
+      "label_en": "Uh-oh, think this one through",
+      "label_bg": "Повишено внимание",
+      "score": 0.25
+    },
+    "Y": {
+      "label_en": "It could work, but not ideal",
+      "label_bg": "Предизвикателно допълване",
+      "score": 0.45
+    },
+    "L": {
+      "label_en": "One-sided match",
+      "label_bg": "Нееднозначна динамика",
+      "score": 0.6
+    },
+    "G": {
+      "label_en": "It's got a good chance",
+      "label_bg": "Добър потенциал",
+      "score": 0.8
+    },
+    "B": {
+      "label_en": "Often listed as an ideal match",
+      "label_bg": "Висок потенциал според таблицата",
+      "score": 1.0
+    }
+  },
+  "rows": {
+    "INFP": "GGGBGBGGRRRRRRRR",
+    "ENFP": "GGBGBGGGRRRRRRRR",
+    "INFJ": "GBGGGGGBRRRRRRRR",
+    "ENFJ": "BGGGGGGGBRRRRRRR",
+    "INTJ": "GBGGGGGBLLLLYYYY",
+    "ENTJ": "BGGGGGBGLLLLLLLL",
+    "INTP": "GGGGGBGGLLLLYYYB",
+    "ENTP": "GGBGBGGGLLLLYYYY",
+    "ISFP": "RRRBLLLLYYYYLBLB",
+    "ESFP": "RRRRLLLLYYYYBLBL",
+    "ISTP": "RRRRLLLLYYYYLBLB",
+    "ESTP": "RRRRLLLLYYYYBLBL",
+    "ISFJ": "RRRRYLYYLBLBGGGG",
+    "ESFJ": "RRRRYLYYBLBLGGGG",
+    "ISTJ": "RRRRYLYYLBLBGGGG",
+    "ESTJ": "RRRRYLBYBLBLGGGG"
+  },
+  "notes": [
+    "Rows/columns transcribed by sampling each colored cell from uploaded image.",
+    "Matrix is symmetric.",
+    "L means one-sided match in image legend, but the image itself is symmetric; do not introduce directional asymmetry.",
+    "No type pairing is a hard eligibility filter."
+  ]
+}
