@@ -1,15 +1,13 @@
 import React, { useState } from 'react';
-import { View, TouchableOpacity } from 'react-native';
+import { View, TouchableOpacity, ActivityIndicator } from 'react-native';
 import {
-  Sparkles,
   MapPin,
   Clock,
   Calendar,
   User,
-  Bookmark,
-  Share2,
-  Check,
   Compass,
+  Wand2,
+  ChevronRight,
   Layers,
 } from 'lucide-react-native';
 import { Card, T, Section, Pill } from '../../components/UI';
@@ -19,6 +17,7 @@ import {
   ZodiacPosition,
 } from './astrology.types';
 import { degToZodiac } from './astrology.calculations';
+import { DetailSheetModal, TieredSummaryCard } from './AstrologyDetailModal';
 import { styles } from './astrology.styles';
 
 export function PrimaryPlacementsRow({
@@ -39,32 +38,28 @@ export function PrimaryPlacementsRow({
   ];
 
   return (
-    <>
-      <Section>Primary Placements</Section>
-      <View style={styles.placementsRow}>
-        {items.map((item) => (
-          <Card key={item.label} style={styles.placementCard}>
-            <T size={20} style={{ color: item.color }}>
-              {item.symbol}
-            </T>
-            <T muted size={9} style={styles.placementLabel}>
-              {item.label}
-            </T>
-            <T bold size={13}>
-              {item.data.sign}
-            </T>
-            <T muted size={10}>
-              {item.data.degFormatted}
-            </T>
-          </Card>
-        ))}
-      </View>
-    </>
+    <View style={styles.placementsRow}>
+      {items.map((item) => (
+        <Card key={item.label} style={[styles.placementCard, { paddingVertical: 14 }]}>
+          <T size={22} style={{ color: item.color }}>
+            {item.symbol}
+          </T>
+          <T muted size={9} style={styles.placementLabel}>
+            {item.label}
+          </T>
+          <T bold size={14}>
+            {item.data.sign}
+          </T>
+          <T muted size={10}>
+            {item.data.degFormatted}
+          </T>
+        </Card>
+      ))}
+    </View>
   );
 }
 
-export function BirthDetailsCard({
-  userName,
+export function CompactBirthSummaryBar({
   dateStr,
   timeStr,
   cityName,
@@ -72,260 +67,268 @@ export function BirthDetailsCard({
   colors,
   onEditBirthData,
 }: {
-  userName?: string;
   dateStr: string;
   timeStr: string;
   cityName: string;
-  chartRuler?: { modernRuler: string; rulerSign: string; rulerHouse: number };
+  chartRuler: { modernRuler: string; rulerSign: string; rulerHouse: number };
   colors: any;
-  onEditBirthData?: () => void;
+  onEditBirthData: () => void;
 }) {
   return (
-    <Card style={styles.birthDetailsCard}>
+    <Card style={{ padding: 14, borderRadius: 16, gap: 8 }}>
+      <View
+        style={{
+          flexDirection: 'row',
+          justifyContent: 'space-between',
+          alignItems: 'center',
+        }}
+      >
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
+          <View style={styles.metaItem}>
+            <Calendar size={13} color={colors.muted} />
+            <T muted size={11}>
+              {dateStr}
+            </T>
+          </View>
+          <View style={styles.metaItem}>
+            <Clock size={13} color={colors.muted} />
+            <T muted size={11}>
+              {timeStr}
+            </T>
+          </View>
+          <View style={styles.metaItem}>
+            <MapPin size={13} color={colors.muted} />
+            <T muted size={11}>
+              {cityName}
+            </T>
+          </View>
+        </View>
+
+        <TouchableOpacity
+          onPress={onEditBirthData}
+          style={{
+            paddingHorizontal: 10,
+            paddingVertical: 4,
+            borderRadius: 8,
+            backgroundColor: colors.purpleSoft,
+          }}
+        >
+          <T bold size={11} style={{ color: colors.purple }}>
+            Edit
+          </T>
+        </TouchableOpacity>
+      </View>
+
       <View
         style={{
           flexDirection: 'row',
           alignItems: 'center',
-          justifyContent: 'space-between',
-        }}
-      >
-        <View style={styles.birthDetailsTitleRow}>
-          <Sparkles size={16} color={colors.purple} />
-          <T bold size={14}>
-            Birth Details ({userName || 'User'})
-          </T>
-        </View>
-        {onEditBirthData && (
-          <TouchableOpacity
-            onPress={onEditBirthData}
-            style={{
-              paddingHorizontal: 10,
-              paddingVertical: 4,
-              borderRadius: 8,
-              backgroundColor: colors.purpleSoft,
-            }}
-          >
-            <T bold size={11} style={{ color: colors.purple }}>
-              Edit
-            </T>
-          </TouchableOpacity>
-        )}
-      </View>
-      <View style={styles.birthDetailsMetaRow}>
-        <View style={styles.metaItem}>
-          <Calendar size={14} color={colors.muted} />
-          <T muted size={12}>
-            {dateStr}
-          </T>
-        </View>
-        <View style={styles.metaItem}>
-          <Clock size={14} color={colors.muted} />
-          <T muted size={12}>
-            {timeStr}
-          </T>
-        </View>
-        <View style={styles.metaItem}>
-          <MapPin size={14} color={colors.muted} />
-          <T muted size={12}>
-            {cityName}
-          </T>
-        </View>
-      </View>
-      {chartRuler && (
-        <View
-          style={{
-            marginTop: 8,
-            paddingTop: 8,
-            borderTopWidth: 1,
-            borderTopColor: colors.line,
-            flexDirection: 'row',
-            alignItems: 'center',
-            gap: 6,
-          }}
-        >
-          <Compass size={13} color={colors.gold} />
-          <T muted size={11}>
-            Chart Ruler: <T bold size={11}>{chartRuler.modernRuler}</T> in{' '}
-            <T bold size={11}>{chartRuler.rulerSign}</T> (House {chartRuler.rulerHouse})
-          </T>
-        </View>
-      )}
-    </Card>
-  );
-}
-
-export function ChartBalanceMatrixCard({
-  results,
-  colors,
-}: {
-  results: NatalChartResults;
-  colors: any;
-}) {
-  const elBars = [
-    { label: 'Fire 🔥', value: results.elements.shares.fire, color: '#EF4444' },
-    { label: 'Earth 🌿', value: results.elements.shares.earth, color: '#10B981' },
-    { label: 'Air 💨', value: results.elements.shares.air, color: '#38BDF8' },
-    { label: 'Water 💧', value: results.elements.shares.water, color: '#8B5CF6' },
-  ];
-
-  return (
-    <Card style={{ padding: 14, gap: 10 }}>
-      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-        <Layers size={15} color={colors.purple} />
-        <T bold size={14}>
-          Elemental, Modality & Polarity Balance
-        </T>
-      </View>
-
-      <View style={{ gap: 8 }}>
-        {elBars.map((item) => {
-          const pct = Math.round(item.value * 100);
-          return (
-            <View key={item.label} style={{ gap: 3 }}>
-              <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
-                <T size={12}>{item.label}</T>
-                <T bold size={12}>
-                  {pct}%
-                </T>
-              </View>
-              <View
-                style={{
-                  height: 6,
-                  borderRadius: 3,
-                  backgroundColor: colors.surfaceAlt,
-                  overflow: 'hidden',
-                }}
-              >
-                <View
-                  style={{
-                    width: `${pct}%`,
-                    height: '100%',
-                    backgroundColor: item.color,
-                    borderRadius: 3,
-                  }}
-                />
-              </View>
-            </View>
-          );
-        })}
-      </View>
-
-      <View
-        style={{
-          flexDirection: 'row',
-          justifyContent: 'space-between',
-          paddingTop: 8,
+          gap: 6,
+          paddingTop: 6,
           borderTopWidth: 1,
           borderTopColor: colors.line,
         }}
       >
+        <Compass size={13} color={colors.gold} />
         <T muted size={11}>
-          Modality: <T bold size={11}>{results.modalities.dominantModality}</T>
-        </T>
-        <T muted size={11}>
-          Polarity: <T bold size={11}>{results.polarity.dominantPolarity}</T>
-        </T>
-        <T muted size={11}>
-          Focus:{' '}
-          <T bold size={11}>
-            {results.hemispheres.eastern >= results.hemispheres.western ? 'Self-Driven' : 'Relational'}
-          </T>
+          Chart Ruler: <T bold size={11}>{chartRuler.modernRuler}</T> in{' '}
+          <T bold size={11}>{chartRuler.rulerSign}</T> · House {chartRuler.rulerHouse}
         </T>
       </View>
     </Card>
   );
 }
 
-export function PsychologicalInsightsSection({
+export function TieredChartInsightsSection({
   insights,
+  aiText,
+  isAiLoading,
+  onGenerateAi,
   savedIds,
   onSaveInsight,
   onShareText,
   colors,
 }: {
   insights: PsychologicalInsightBlock[];
+  aiText: string | null;
+  isAiLoading: boolean;
+  onGenerateAi: () => void;
   savedIds: Set<string>;
   onSaveInsight: (item: PsychologicalInsightBlock) => void;
   onShareText: (title: string, body: string) => void;
   colors: any;
 }) {
+  const [selectedInsight, setSelectedInsight] = useState<PsychologicalInsightBlock | null>(null);
+  const [showAllInsights, setShowAllInsights] = useState(false);
+  const [showAiModal, setShowAiModal] = useState(false);
+
+  const visibleList = showAllInsights ? insights : insights.slice(0, 3);
+
+  const handleOpenAi = () => {
+    setShowAiModal(true);
+    if (!aiText && !isAiLoading) {
+      onGenerateAi();
+    }
+  };
+
   return (
     <>
-      <Section>Psychological Interpretations & Insights</Section>
-      <View style={{ gap: 10 }}>
-        {insights.map((item) => {
-          const isSaved = savedIds.has(item.id);
-          return (
-            <Card key={item.id} style={{ padding: 14, gap: 8 }}>
-              <View
-                style={{
-                  flexDirection: 'row',
-                  justifyContent: 'space-between',
-                  alignItems: 'flex-start',
-                  gap: 8,
-                }}
-              >
-                <View style={{ flex: 1 }}>
-                  <T bold size={10} style={{ color: colors.gold }}>
-                    {item.placementTag}
-                  </T>
-                  <T bold size={15} style={{ marginTop: 2 }}>
-                    {item.title}
-                  </T>
-                </View>
-
-                <View style={{ flexDirection: 'row', gap: 6 }}>
-                  <TouchableOpacity
-                    onPress={() => onSaveInsight(item)}
-                    style={{
-                      padding: 7,
-                      borderRadius: 8,
-                      backgroundColor: isSaved ? colors.purple : colors.surfaceAlt,
-                    }}
-                  >
-                    {isSaved ? (
-                      <Check size={14} color="#FFFFFF" />
-                    ) : (
-                      <Bookmark size={14} color={colors.purple} />
-                    )}
-                  </TouchableOpacity>
-                  <TouchableOpacity
-                    onPress={() => onShareText(item.title, `${item.placementTag}\n\n${item.body}`)}
-                    style={{
-                      padding: 7,
-                      borderRadius: 8,
-                      backgroundColor: colors.surfaceAlt,
-                    }}
-                  >
-                    <Share2 size={14} color={colors.muted} />
-                  </TouchableOpacity>
-                </View>
-              </View>
-
-              <T size={13} style={{ lineHeight: 19 }}>
-                {item.body}
+      {/* Ниво 1: Компактен AI бутон за дълбок синтез */}
+      <TouchableOpacity activeOpacity={0.85} onPress={handleOpenAi}>
+        <Card
+          style={{
+            padding: 15,
+            borderRadius: 16,
+            flexDirection: 'row',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            backgroundColor: colors.purpleSoft,
+            borderWidth: 1,
+            borderColor: colors.purple,
+          }}
+        >
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, flex: 1 }}>
+            <View
+              style={{
+                width: 36,
+                height: 36,
+                borderRadius: 12,
+                backgroundColor: colors.purple,
+                alignItems: 'center',
+                justifyContent: 'center',
+              }}
+            >
+              <Wand2 size={17} color="#FFFFFF" />
+            </View>
+            <View style={{ flex: 1 }}>
+              <T bold size={14} style={{ color: colors.purple }}>
+                AI Natal Synthesis
               </T>
+              <T muted size={11}>
+                Tap for a personalized deep reading of your chart
+              </T>
+            </View>
+          </View>
+          <ChevronRight size={18} color={colors.purple} />
+        </Card>
+      </TouchableOpacity>
 
-              <View
-                style={{
-                  padding: 9,
-                  borderRadius: 8,
-                  backgroundColor: colors.purpleSoft,
-                }}
-              >
-                <T size={11} style={{ color: colors.purple }}>
-                  💡 {item.actionTip}
-                </T>
-              </View>
-            </Card>
-          );
-        })}
+      {/* Ниво 1: Изчистени карти с 2-редово резюме */}
+      <View
+        style={{
+          flexDirection: 'row',
+          justifyContent: 'space-between',
+          alignItems: 'center',
+          marginTop: 4,
+        }}
+      >
+        <Section>Core Insights</Section>
+        <TouchableOpacity onPress={() => setShowAllInsights((v) => !v)}>
+          <T bold size={11} style={{ color: colors.purple }}>
+            {showAllInsights ? 'Show Less' : `See All (${insights.length})`}
+          </T>
+        </TouchableOpacity>
       </View>
+
+      <View style={{ gap: 10 }}>
+        {visibleList.map((item) => (
+          <TieredSummaryCard
+            key={item.id}
+            tag={item.placementTag}
+            title={item.title}
+            summary={item.body}
+            onPressMore={() => setSelectedInsight(item)}
+            colors={colors}
+          />
+        ))}
+      </View>
+
+      {/* Ниво 2: Детайлен модал за избрания Insight */}
+      <DetailSheetModal
+        visible={Boolean(selectedInsight)}
+        onClose={() => setSelectedInsight(null)}
+        eyebrow={selectedInsight?.placementTag}
+        title={selectedInsight?.title || ''}
+        colors={colors}
+        isSaved={selectedInsight ? savedIds.has(selectedInsight.id) : false}
+        onSave={selectedInsight ? () => onSaveInsight(selectedInsight) : undefined}
+        onShare={
+          selectedInsight
+            ? () =>
+                onShareText(
+                  selectedInsight.title,
+                  `${selectedInsight.placementTag}\n\n${selectedInsight.body}\n\nGuidance: ${selectedInsight.actionTip}`
+                )
+            : undefined
+        }
+      >
+        {selectedInsight && (
+          <>
+            <T size={14} style={{ lineHeight: 22 }}>
+              {selectedInsight.body}
+            </T>
+            <View
+              style={{
+                padding: 14,
+                borderRadius: 12,
+                backgroundColor: colors.purpleSoft,
+                gap: 4,
+              }}
+            >
+              <T bold size={11} style={{ color: colors.purple }}>
+                PRACTICAL GUIDANCE
+              </T>
+              <T size={13} style={{ lineHeight: 19 }}>
+                {selectedInsight.actionTip}
+              </T>
+            </View>
+          </>
+        )}
+      </DetailSheetModal>
+
+      {/* Ниво 3: AI Synthesis Modal */}
+      <DetailSheetModal
+        visible={showAiModal}
+        onClose={() => setShowAiModal(false)}
+        eyebrow="AI ASTROLOGICAL SYNTHESIS"
+        title="Your Chart Blueprint"
+        colors={colors}
+        onShare={aiText ? () => onShareText('AI Natal Synthesis', aiText) : undefined}
+      >
+        {isAiLoading ? (
+          <View style={{ paddingVertical: 24, alignItems: 'center', gap: 10 }}>
+            <ActivityIndicator size="large" color={colors.purple} />
+            <T muted size={12}>
+              Synthesizing your placements and aspects...
+            </T>
+          </View>
+        ) : (
+          <>
+            <T size={14} style={{ lineHeight: 22 }}>
+              {aiText}
+            </T>
+            <TouchableOpacity
+              onPress={onGenerateAi}
+              style={{
+                alignSelf: 'flex-start',
+                paddingHorizontal: 14,
+                paddingVertical: 8,
+                borderRadius: 10,
+                backgroundColor: colors.purpleSoft,
+              }}
+            >
+              <T bold size={12} style={{ color: colors.purple }}>
+                Regenerate Reading
+              </T>
+            </TouchableOpacity>
+          </>
+        )}
+      </DetailSheetModal>
     </>
   );
 }
 
-export function PlanetaryPositionsList({
+export function ChartTechnicalDrawerTrigger({
   results,
   ascData,
   colors,
@@ -334,220 +337,235 @@ export function PlanetaryPositionsList({
   ascData: ZodiacPosition;
   colors: any;
 }) {
-  const [subView, setSubView] = useState<'planets' | 'houses' | 'aspects'>('planets');
+  const [open, setOpen] = useState(false);
+  const [tab, setTab] = useState<'planets' | 'houses' | 'aspects' | 'balance'>('planets');
   const mcData = degToZodiac(results.mc);
+
+  const elBars = [
+    { label: 'Fire', value: results.elements.shares.fire, color: '#EF4444' },
+    { label: 'Earth', value: results.elements.shares.earth, color: '#10B981' },
+    { label: 'Air', value: results.elements.shares.air, color: '#38BDF8' },
+    { label: 'Water', value: results.elements.shares.water, color: '#8B5CF6' },
+  ];
 
   return (
     <>
-      <View
-        style={{
-          flexDirection: 'row',
-          alignItems: 'center',
-          justifyContent: 'space-between',
-          marginTop: 8,
-        }}
+      <TouchableOpacity activeOpacity={0.85} onPress={() => setOpen(true)}>
+        <Card
+          style={{
+            padding: 15,
+            borderRadius: 16,
+            flexDirection: 'row',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+          }}
+        >
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
+            <Layers size={18} color={colors.purple} />
+            <View>
+              <T bold size={14}>
+                Planets, Houses & Aspects
+              </T>
+              <T muted size={11}>
+                {results.planetPositions.length} bodies · 12 Placidus houses ·{' '}
+                {results.aspects.length} aspects
+              </T>
+            </View>
+          </View>
+          <ChevronRight size={18} color={colors.muted} />
+        </Card>
+      </TouchableOpacity>
+
+      <DetailSheetModal
+        visible={open}
+        onClose={() => setOpen(false)}
+        eyebrow="TECHNICAL CHART DATA"
+        title="Planets, Houses & Balance"
+        colors={colors}
       >
-        <Section>Chart Architecture</Section>
         <View style={{ flexDirection: 'row', gap: 6 }}>
           {(
             [
               { id: 'planets', label: 'Planets' },
               { id: 'houses', label: 'Houses' },
-              { id: 'aspects', label: `Aspects (${results.aspects.length})` },
+              { id: 'aspects', label: 'Aspects' },
+              { id: 'balance', label: 'Balance' },
             ] as const
-          ).map((tab) => (
+          ).map((t) => (
             <TouchableOpacity
-              key={tab.id}
-              onPress={() => setSubView(tab.id)}
+              key={t.id}
+              onPress={() => setTab(t.id)}
               style={{
-                paddingHorizontal: 10,
-                paddingVertical: 5,
-                borderRadius: 8,
-                backgroundColor: subView === tab.id ? colors.purple : colors.surfaceAlt,
+                flex: 1,
+                paddingVertical: 7,
+                borderRadius: 9,
+                alignItems: 'center',
+                backgroundColor: tab === t.id ? colors.purple : colors.surfaceAlt,
               }}
             >
               <T
                 bold
                 size={11}
-                style={{ color: subView === tab.id ? '#FFFFFF' : colors.muted }}
+                style={{ color: tab === t.id ? '#FFFFFF' : colors.muted }}
               >
-                {tab.label}
+                {t.label}
               </T>
             </TouchableOpacity>
           ))}
         </View>
-      </View>
 
-      {subView === 'planets' && (
-        <View style={styles.positionsList}>
-          <Card style={styles.positionCard}>
-            <View style={styles.positionRow}>
-              <View style={[styles.positionIconBox, { backgroundColor: colors.purpleSoft }]}>
-                <T bold size={14} style={{ color: colors.purple }}>
-                  ASC
-                </T>
-              </View>
-              <View style={{ flex: 1 }}>
-                <T bold size={15}>
-                  Ascendant (ASC)
-                </T>
-                <T muted size={12}>
-                  {ascData.sign} {ascData.symbol} · {ascData.degFormatted}
-                </T>
-              </View>
-              <View style={[styles.houseBadge, { backgroundColor: colors.goldSoft }]}>
-                <T bold size={10} style={{ color: colors.gold }}>
-                  House 1
-                </T>
-              </View>
-            </View>
-          </Card>
-
-          <Card style={styles.positionCard}>
-            <View style={styles.positionRow}>
-              <View style={[styles.positionIconBox, { backgroundColor: colors.purpleSoft }]}>
-                <T bold size={14} style={{ color: colors.purple }}>
-                  MC
-                </T>
-              </View>
-              <View style={{ flex: 1 }}>
-                <T bold size={15}>
-                  Midheaven (MC)
-                </T>
-                <T muted size={12}>
-                  {mcData.sign} {mcData.symbol} · {mcData.degFormatted}
-                </T>
-              </View>
-              <View style={[styles.houseBadge, { backgroundColor: colors.purpleSoft }]}>
-                <T bold size={10} style={{ color: colors.purple }}>
-                  House 10
-                </T>
-              </View>
-            </View>
-          </Card>
-
-          {results.planetPositions.map((p, idx) => {
-            const pInfo = degToZodiac(p.deg);
-            return (
-              <Card key={idx} style={styles.positionCard}>
-                <View style={styles.positionRow}>
-                  <View style={[styles.positionIconBox, { backgroundColor: colors.purpleSoft }]}>
-                    <T size={20} style={{ color: colors.purple }}>
-                      {p.symbol}
+        {tab === 'planets' && (
+          <View style={{ gap: 8 }}>
+            {[
+              {
+                symbol: 'ASC',
+                name: 'Ascendant',
+                sign: ascData.sign,
+                deg: ascData.degFormatted,
+                house: 1,
+                extra: '',
+              },
+              {
+                symbol: 'MC',
+                name: 'Midheaven',
+                sign: mcData.sign,
+                deg: mcData.degFormatted,
+                house: 10,
+                extra: '',
+              },
+              ...results.planetPositions.map((p) => {
+                const z = degToZodiac(p.deg);
+                return {
+                  symbol: p.symbol,
+                  name: `${p.name}${p.isRetrograde ? ' ℞' : ''}`,
+                  sign: z.sign,
+                  deg: z.degFormatted,
+                  house: p.house,
+                  extra: p.dignity !== 'Peregrine' ? p.dignity : '',
+                };
+              }),
+            ].map((row, idx) => (
+              <View
+                key={idx}
+                style={{
+                  flexDirection: 'row',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                  padding: 10,
+                  borderRadius: 10,
+                  backgroundColor: colors.surfaceAlt,
+                }}
+              >
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
+                  <T bold size={15} style={{ color: colors.purple, width: 32 }}>
+                    {row.symbol}
+                  </T>
+                  <View>
+                    <T bold size={13}>
+                      {row.name}
                     </T>
-                  </View>
-                  <View style={{ flex: 1 }}>
-                    <T bold size={15}>
-                      {p.name} {p.isRetrograde ? '℞' : ''}
-                    </T>
-                    <T muted size={12}>
-                      {pInfo.sign} {pInfo.symbol} · {pInfo.degFormatted}
-                      {p.dignity !== 'Peregrine' ? ` · ${p.dignity}` : ''}
-                    </T>
-                  </View>
-                  <View style={[styles.houseBadge, { backgroundColor: colors.surfaceAlt }]}>
-                    <T bold size={10} style={{ color: colors.muted }}>
-                      House {p.house}
+                    <T muted size={11}>
+                      {row.sign} · {row.deg} {row.extra ? `· ${row.extra}` : ''}
                     </T>
                   </View>
                 </View>
-              </Card>
-            );
-          })}
-        </View>
-      )}
-
-      {subView === 'houses' && (
-        <View style={styles.positionsList}>
-          {results.houses.map((h) => (
-            <Card key={h.house} style={styles.positionCard}>
-              <View style={styles.positionRow}>
-                <View style={[styles.positionIconBox, { backgroundColor: colors.goldSoft }]}>
-                  <T bold size={14} style={{ color: colors.gold }}>
-                    {h.house}
-                  </T>
-                </View>
-                <View style={{ flex: 1 }}>
-                  <T bold size={14}>
-                    House {h.house} · {h.sign} {h.symbol} ({h.degFormatted})
-                  </T>
-                  <T muted size={11}>
-                    Ruler: {h.modernRuler}
-                    {h.planetsInHouse.length > 0
-                      ? ` · Planets: ${h.planetsInHouse.join(', ')}`
-                      : ''}
-                  </T>
-                </View>
-              </View>
-            </Card>
-          ))}
-        </View>
-      )}
-
-      {subView === 'aspects' && (
-        <View style={styles.positionsList}>
-          {results.patterns.length > 0 && (
-            <Card style={{ padding: 12, backgroundColor: colors.purpleSoft, gap: 4 }}>
-              <T bold size={12} style={{ color: colors.purple }}>
-                Active Chart Configurations:
-              </T>
-              {results.patterns.map((pat) => (
-                <T key={pat.id} size={12}>
-                  • <T bold size={12}>{pat.type}</T>: {pat.bodies.join(', ')}
-                  {pat.sign ? ` (${pat.sign})` : ''}
+                <T bold size={11} style={{ color: colors.muted }}>
+                  House {row.house}
                 </T>
-              ))}
-            </Card>
-          )}
-          {results.aspects.slice(0, 18).map((asp) => (
-            <Card key={asp.id} style={styles.positionCard}>
-              <View style={styles.positionRow}>
-                <View style={[styles.positionIconBox, { backgroundColor: colors.purpleSoft }]}>
-                  <T bold size={18} style={{ color: colors.purple }}>
-                    {asp.symbol}
-                  </T>
-                </View>
-                <View style={{ flex: 1 }}>
-                  <T bold size={14}>
-                    {asp.body1} {asp.aspectType} {asp.body2}
-                  </T>
-                  <T muted size={11}>
-                    Orb: {asp.orb}° · {asp.isApplying ? 'Applying' : 'Separating'}
-                  </T>
-                </View>
-                <View
-                  style={[
-                    styles.houseBadge,
-                    {
-                      backgroundColor:
-                        asp.harmony === 'harmonious'
-                          ? 'rgba(16,185,129,0.18)'
-                          : asp.harmony === 'challenging'
-                          ? 'rgba(245,158,11,0.18)'
-                          : colors.surfaceAlt,
-                    },
-                  ]}
-                >
-                  <T
-                    bold
-                    size={10}
+              </View>
+            ))}
+          </View>
+        )}
+
+        {tab === 'houses' && (
+          <View style={{ gap: 8 }}>
+            {results.houses.map((h) => (
+              <View
+                key={h.house}
+                style={{
+                  padding: 10,
+                  borderRadius: 10,
+                  backgroundColor: colors.surfaceAlt,
+                  flexDirection: 'row',
+                  justifyContent: 'space-between',
+                }}
+              >
+                <T bold size={13}>
+                  House {h.house} · {h.sign} {h.symbol}
+                </T>
+                <T muted size={11}>
+                  {h.degFormatted} · Ruler: {h.modernRuler}
+                </T>
+              </View>
+            ))}
+          </View>
+        )}
+
+        {tab === 'aspects' && (
+          <View style={{ gap: 8 }}>
+            {results.aspects.slice(0, 20).map((asp) => (
+              <View
+                key={asp.id}
+                style={{
+                  padding: 10,
+                  borderRadius: 10,
+                  backgroundColor: colors.surfaceAlt,
+                  flexDirection: 'row',
+                  justifyContent: 'space-between',
+                  alignItems: 'center',
+                }}
+              >
+                <T bold size={13}>
+                  {asp.body1} {asp.symbol} {asp.body2}
+                </T>
+                <T muted size={11}>
+                  {asp.aspectType} ({asp.orb}°)
+                </T>
+              </View>
+            ))}
+          </View>
+        )}
+
+        {tab === 'balance' && (
+          <View style={{ gap: 10 }}>
+            {elBars.map((item) => {
+              const pct = Math.round(item.value * 100);
+              return (
+                <View key={item.label} style={{ gap: 4 }}>
+                  <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
+                    <T bold size={12}>
+                      {item.label}
+                    </T>
+                    <T bold size={12}>
+                      {pct}%
+                    </T>
+                  </View>
+                  <View
                     style={{
-                      color:
-                        asp.harmony === 'harmonious'
-                          ? '#10B981'
-                          : asp.harmony === 'challenging'
-                          ? '#F59E0B'
-                          : colors.muted,
+                      height: 7,
+                      borderRadius: 4,
+                      backgroundColor: colors.surfaceAlt,
+                      overflow: 'hidden',
                     }}
                   >
-                    {asp.harmony}
-                  </T>
+                    <View
+                      style={{
+                        width: `${pct}%`,
+                        height: '100%',
+                        backgroundColor: item.color,
+                      }}
+                    />
+                  </View>
                 </View>
-              </View>
-            </Card>
-          ))}
-        </View>
-      )}
+              );
+            })}
+            <T muted size={12} style={{ marginTop: 4 }}>
+              Dominant Modality: <T bold size={12}>{results.modalities.dominantModality}</T> ·
+              Polarity: <T bold size={12}>{results.polarity.dominantPolarity}</T>
+            </T>
+          </View>
+        )}
+      </DetailSheetModal>
     </>
   );
 }
@@ -568,8 +586,7 @@ export function MissingBirthDateEmptyState({
         Missing Birth Date in Profile
       </T>
       <T muted size={13} style={styles.emptyDescription}>
-        No birth date and time found in your profile. Please add them to unlock your full
-        Astrology Super-App.
+        Add your birth date, time, and city to unlock your personal Astrology Studio.
       </T>
       <Pill selected onPress={onGoToProfile}>
         <User size={14} color="#FFFFFF" /> Set Birth Details

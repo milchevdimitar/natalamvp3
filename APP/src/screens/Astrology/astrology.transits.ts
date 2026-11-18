@@ -9,7 +9,6 @@ import {
   computeNatalChart,
   degToZodiac,
   extractUserBirthDateTime,
-  getHouseForPlanet,
   getTrueNorthNodeLongitude,
 } from './astrology.calculations';
 import {
@@ -115,40 +114,40 @@ export function getMoonPhaseInfo(targetDate: Date): MoonPhaseInfo {
 
   let name = 'New Moon';
   let symbol = '🌑';
-  let guidance = 'Засаждане на намерения, тишина и ясен фокус върху нов личен цикъл.';
+  let guidance = 'Set clear intentions, embrace stillness, and plant seeds for a new personal cycle.';
 
   if (phaseAngle < 22.5 || phaseAngle >= 337.5) {
     name = 'New Moon';
     symbol = '🌑';
-    guidance = 'Време за ново начало, вътрешна настройка и формулиране на ясни намерения.';
+    guidance = 'A time for new beginnings, inward alignment, and setting clear intentions.';
   } else if (phaseAngle < 67.5) {
     name = 'Waxing Crescent';
     symbol = '🌒';
-    guidance = 'Първи конкретни стъпки. Събирай ресурси и тествай идеите си в действие.';
+    guidance = 'Take initial concrete steps. Gather momentum and test your ideas in motion.';
   } else if (phaseAngle < 112.5) {
     name = 'First Quarter';
     symbol = '🌓';
-    guidance = 'Момент за смели решения и преодоляване на първото съпротивление.';
+    guidance = 'A turning point for decisive action and overcoming initial resistance.';
   } else if (phaseAngle < 157.5) {
     name = 'Waxing Gibbous';
     symbol = '🌔';
-    guidance = 'Прецизиране на детайлите и подготовка преди кулминацията.';
+    guidance = 'Refine the details and prepare before the upcoming culmination.';
   } else if (phaseAngle < 202.5) {
     name = 'Full Moon';
     symbol = '🌕';
-    guidance = 'Емоционална кулминация, яснота и осветяване на скрити истини във връзките.';
+    guidance = 'Emotional culmination, heightened clarity, and illumination in relationships.';
   } else if (phaseAngle < 247.5) {
     name = 'Waning Gibbous';
     symbol = '🌖';
-    guidance = 'Споделяне на наученото, благодарност и интегриране на опита.';
+    guidance = 'Share insights gained, practice gratitude, and integrate recent lessons.';
   } else if (phaseAngle < 292.5) {
     name = 'Last Quarter';
     symbol = '🌗';
-    guidance = 'Освобождаване от остарели навици, граници и преоценка на приоритетите.';
+    guidance = 'Release outdated habits, strengthen boundaries, and re-evaluate priorities.';
   } else {
     name = 'Waning Crescent';
     symbol = '🌘';
-    guidance = 'Почивка, сънища, интуитивно пречистване преди следващото новолуние.';
+    guidance = 'Rest, dreamwork, and intuitive clearing before the next New Moon.';
   }
 
   return {
@@ -169,43 +168,43 @@ function describeTransitInfluence(
   harmony: string
 ): { title: string; summary: string; guidance: string } {
   const houseThemes: Record<number, string> = {
-    1: 'личната идентичност и посока',
-    2: 'самооценката, ресурсите и сигурността',
-    3: 'комуникацията, мисленето и ежедневните контакти',
-    4: 'дома, корените и вътрешната емоционална основа',
-    5: 'творчеството, любовта и себеизразяването',
-    6: 'ежедневния ритъм, здравето и навиците',
-    7: 'партньорствата и огледалните отношения',
-    8: 'дълбоката трансформация, интимността и доверието',
-    9: 'мирогледа, обучението и разширяването на хоризонта',
-    10: 'кариерата, призванието и обществената роля',
-    11: 'приятелския кръг, общностите и визията за бъдещето',
-    12: 'подсъзнанието, интуицията и вътрешното освобождаване',
+    1: 'personal identity and direction',
+    2: 'self-worth, resources, and stability',
+    3: 'communication, mindset, and daily exchanges',
+    4: 'home, roots, and emotional foundations',
+    5: 'creativity, romance, and authentic self-expression',
+    6: 'daily rhythm, wellbeing, and habits',
+    7: 'partnerships and relational dynamics',
+    8: 'deep transformation, intimacy, and trust',
+    9: 'worldview, higher learning, and expansion',
+    10: 'career, vocation, and public role',
+    11: 'friendships, communities, and future vision',
+    12: 'the subconscious, intuition, and inner release',
   };
 
-  const area = houseThemes[nHouse] || 'ключова житейска сфера';
+  const area = houseThemes[nHouse] || 'a core life area';
   const title = `${tName} ${aspectType} Natal ${nName}`;
 
   if (harmony === 'harmonious') {
     return {
       title,
-      summary: `Транзитният ${tName} подкрепя твоя натален ${nName} в Дом ${nHouse} (${area}), отваряйки естествен поток от яснота и синхрон.`,
-      guidance: `Използвай този прозорец за инициативи, разговори и решения, свързани с ${area}.`,
+      summary: `Transiting ${tName} supports your natal ${nName} in House ${nHouse} (${area}), opening a natural flow of clarity and alignment.`,
+      guidance: `Use this window for initiatives, conversations, and decisions centered on ${area}.`,
     };
   }
 
   if (harmony === 'challenging') {
     return {
       title,
-      summary: `Транзитният ${tName} активира напрежение с наталния ${nName} в Дом ${nHouse} (${area}), изкарвайки на повърхността несъзнавани модели.`,
-      guidance: `Действай осъзнато без импулсивни реакции — напрежението е катализатор за пробив в ${area}.`,
+      summary: `Transiting ${tName} creates productive friction with your natal ${nName} in House ${nHouse} (${area}), surfacing unconscious patterns.`,
+      guidance: `Respond consciously rather than impulsively—this tension is a catalyst for a breakthrough in ${area}.`,
     };
   }
 
   return {
     title,
-    summary: `Транзитният ${tName} се слива с енергията на наталния ${nName} в Дом ${nHouse} (${area}) и поставя силен акцент върху тази тема.`,
-    guidance: `Наблюдавай какво се задвижва в ${area} — поставяш основите на нов цикъл.`,
+    summary: `Transiting ${tName} merges with your natal ${nName} in House ${nHouse} (${area}), placing strong focus on this domain.`,
+    guidance: `Observe what is initiating in ${area}—you are laying the groundwork for a fresh cycle.`,
   };
 }
 
@@ -359,60 +358,60 @@ export function calculateLifeCycles(
   }> = [
     {
       id: 'first_saturn_square',
-      title: 'Първи квадрат на Сатурн (Осъзнаване на границите)',
-      subtitle: 'Формиране на самостоятелност',
+      title: 'First Saturn Square (Awareness of Boundaries)',
+      subtitle: 'Early autonomy formation',
       startAge: 6.5,
       endAge: 8.5,
-      description: 'Първи сблъсък с правилата на външния свят и изграждане на лична отговорност.',
+      description: 'First encounter with external rules and developing personal accountability.',
     },
     {
       id: 'nodal_return_1',
-      title: 'Първо завръщане на Лунните възли',
-      subtitle: 'Компас на житейската посока',
+      title: 'First Lunar Nodal Return',
+      subtitle: 'Life direction compass',
       startAge: 18.0,
       endAge: 19.5,
-      description: 'Повратна точка на съзряване и избор на собствен път извън семейния сценарий.',
+      description: 'A threshold of maturation and choosing an independent path beyond family conditioning.',
     },
     {
       id: 'jupiter_return_2',
-      title: 'Второ завръщане на Юпитер',
-      subtitle: 'Разширение, визия и нови хоризонти',
+      title: 'Second Jupiter Return',
+      subtitle: 'Expansion, vision & new horizons',
       startAge: 23.0,
       endAge: 24.5,
-      description: 'Период на смело търсене на смисъл, пътувания, обучение и социален растеж.',
+      description: 'A cycle of bold exploration, study, travel, and social expansion.',
     },
     {
       id: 'saturn_return_1',
-      title: 'Първо Сатурново завръщане (Истинска зрялост)',
-      subtitle: 'Пренареждане на основите на живота',
+      title: 'First Saturn Return (True Adulthood)',
+      subtitle: 'Rebuilding life foundations',
       startAge: 28.0,
       endAge: 30.8,
       description:
-        'Сатурн се връща на наталната си позиция. Всичко неавтентично отпада, за да изградиш стабилна кариера, граници и мисия.',
+        'Saturn returns to its natal degree. Everything unauthentic falls away so you can build lasting structures, boundaries, and purpose.',
     },
     {
       id: 'nodal_return_2',
-      title: 'Второ завръщане на Лунните възли',
-      subtitle: 'Пренастройка към Северния възел',
+      title: 'Second Lunar Nodal Return',
+      subtitle: 'Realignment with the North Node',
       startAge: 36.5,
       endAge: 38.2,
-      description: 'Дълбока преоценка на житейските приоритети и съдбовни срещи.',
+      description: 'Deep reassessment of life priorities and pivotal encounters.',
     },
     {
       id: 'uranus_opposition',
-      title: 'Уранова опозиция (Пробуждане на автентичността)',
-      subtitle: 'Освобождаване от остарели роли',
+      title: 'Uranus Opposition (Awakening Authenticity)',
+      subtitle: 'Releasing outdated roles',
       startAge: 40.5,
       endAge: 43.5,
-      description: 'Силна нужда от свобода, творческо обновяване и живот според собствената истина.',
+      description: 'A powerful urge for freedom, creative renewal, and living your truth.',
     },
     {
       id: 'saturn_return_2',
-      title: 'Второ Сатурново завръщане',
-      subtitle: 'Мъдрост и наследство',
+      title: 'Second Saturn Return',
+      subtitle: 'Wisdom & legacy',
       startAge: 57.5,
       endAge: 60.5,
-      description: 'Жътва на житейския опит и фокусиране върху най-смислените проекти и връзки.',
+      description: 'Harvesting life experience and focusing on meaningful legacy and relationships.',
     },
   ];
 
@@ -435,7 +434,7 @@ export function calculateLifeCycles(
       id: c.id,
       title: c.title,
       subtitle: c.subtitle,
-      ageRange: `${c.startAge.toFixed(0)}–${c.endAge.toFixed(0)} г.`,
+      ageRange: `Age ${c.startAge.toFixed(0)}–${c.endAge.toFixed(0)}`,
       status,
       progress,
       description: c.description,
@@ -455,15 +454,15 @@ export function buildTimeTravelSnapshot(
 
   const periodInsight = topTransit
     ? {
-        title: `Ключов фокус за ${dateStr}: ${topTransit.title}`,
+        title: `Key Focus for ${dateStr}: ${topTransit.title}`,
         theme: topTransit.summary,
         advice: topTransit.guidance,
       }
     : {
-        title: `Хармоничен период за интеграция (${dateStr})`,
+        title: `Harmonious Integration Window (${dateStr})`,
         theme:
-          'Няма тежки точни транзитни сблъсъци — периодът е подходящ за спокоен ритъм и утвърждаване на постигнатото.',
-        advice: 'Фокусирай се върху ежедневните навици и вътрешния баланс.',
+          'No heavy exact transit friction—an ideal window for steady rhythm and consolidating recent progress.',
+        advice: 'Focus on daily grounding habits and inner clarity.',
       };
 
   return {
@@ -475,8 +474,6 @@ export function buildTimeTravelSnapshot(
     periodInsight,
   };
 }
-
-// --- Модули 6 и 7: Bonds, Synastry & Bond Transits ---
 
 export function analyzeBondCompatibility(
   userChart: NatalChartResults,
@@ -528,10 +525,10 @@ export function analyzeBondCompatibility(
 
           const interpretation =
             def.harmony === 'harmonious'
-              ? `${p1.name} на ${userName} в ${def.type} с ${p2.name} на ${partner.name} създава естествена подкрепа и лекота в обмена.`
+              ? `${userName}'s ${p1.name} in ${def.type} with ${partner.name}'s ${p2.name} fosters natural support and effortless exchange.`
               : def.harmony === 'challenging'
-              ? `${p1.name} на ${userName} в ${def.type} с ${p2.name} на ${partner.name} носи силно привличане, но изисква осъзнат диалог при различия.`
-              : `${p1.name} на ${userName} в съвпад с ${p2.name} на ${partner.name} усилва взаимното огледало и споделената енергия.`;
+              ? `${userName}'s ${p1.name} in ${def.type} with ${partner.name}'s ${p2.name} generates magnetic tension that rewards conscious dialogue.`
+              : `${userName}'s ${p1.name} conjunct ${partner.name}'s ${p2.name} amplifies mutual mirroring and shared intensity.`;
 
           synastryAspects.push({
             id: `syn_${k1}_${def.type.toLowerCase()}_${k2}`,
@@ -579,7 +576,7 @@ export function analyzeBondCompatibility(
 
   if (strengths.length === 0) {
     strengths.push(
-      `Споделена стихийна динамика (${userChart.elements.dominantElement} и ${partnerChart.elements.dominantElement}), която стимулира взаимно развитие.`
+      `Complementary elemental dynamic (${userChart.elements.dominantElement} and ${partnerChart.elements.dominantElement}) that stimulates mutual growth.`
     );
   }
 
@@ -589,10 +586,9 @@ export function analyzeBondCompatibility(
     .map((a) => `${a.person1Body} ${a.aspectSymbol} ${a.person2Body}: ${a.interpretation}`);
 
   if (conflicts.length === 0) {
-    conflicts.push('Минимални директни напрежения — важно е да пазите индивидуалното пространство.');
+    conflicts.push('Minimal direct friction—remember to nurture individual autonomy alongside closeness.');
   }
 
-  // Bond Transits: транзити, които едновременно докосват двете карти
   const userTransits = calculateTransitsForDate(userChart, targetDate);
   const partnerTransits = calculateTransitsForDate(partnerChart, targetDate);
   const bondTransits = [...userTransits.slice(0, 4), ...partnerTransits.slice(0, 4)].sort(
@@ -604,20 +600,15 @@ export function analyzeBondCompatibility(
 
   const romanticTimingScore = Math.max(
     45,
-    Math.min(
-      98,
-      Math.round(
-        70 + harmoniousTransits.length * 6 - challengingTransits.length * 4
-      )
-    )
+    Math.min(98, Math.round(70 + harmoniousTransits.length * 6 - challengingTransits.length * 4))
   );
 
   const phaseLabel =
     romanticTimingScore >= 80
-      ? 'Фаза на дълбоко сближаване и синхрон'
+      ? 'Phase of Deep Closeness & Alignment'
       : romanticTimingScore >= 65
-      ? 'Фаза на градивен диалог и споделен ритъм'
-      : 'Фаза на пренастройка и осъзнаване на границите';
+      ? 'Phase of Constructive Dialogue & Shared Rhythm'
+      : 'Phase of Recalibration & Boundary Awareness';
 
   return {
     partner,
@@ -632,18 +623,18 @@ export function analyzeBondCompatibility(
     strengths,
     conflicts,
     challenges: [
-      `Балансиране между ${userChart.modalities.dominantModality} темпото на ${userName} и ${partnerChart.modalities.dominantModality} подхода на ${partner.name}.`,
-      `Съгласуване на емоционалните нужди (Луна в ${userChart.planetsByKey.moon?.sign} срещу Луна в ${partnerChart.planetsByKey.moon?.sign}).`,
+      `Balancing ${userName}'s ${userChart.modalities.dominantModality} pace with ${partner.name}'s ${partnerChart.modalities.dominantModality} approach.`,
+      `Harmonizing emotional needs (${userChart.planetsByKey.moon?.sign} Moon vs. ${partnerChart.planetsByKey.moon?.sign} Moon).`,
     ],
     sharedThemes: [
-      `Еволюционна ос: Северен възел в ${userChart.planetsByKey.northNode?.sign} и ${partnerChart.planetsByKey.northNode?.sign}.`,
-      `Стихиен обмен между ${userChart.elements.dominantElement} и ${partnerChart.elements.dominantElement}.`,
+      `Evolutionary axis: North Nodes in ${userChart.planetsByKey.northNode?.sign} and ${partnerChart.planetsByKey.northNode?.sign}.`,
+      `Elemental exchange between ${userChart.elements.dominantElement} and ${partnerChart.elements.dominantElement}.`,
     ],
-    mutualInfluence: `${userName} внася енергията на ${userChart.planetsByKey.sun?.sign} (${userChart.elements.dominantElement}), докато ${partner.name} активира качествата на ${partnerChart.planetsByKey.sun?.sign} (${partnerChart.elements.dominantElement}).`,
+    mutualInfluence: `${userName} brings ${userChart.planetsByKey.sun?.sign} (${userChart.elements.dominantElement}) vitality, while ${partner.name} activates ${partnerChart.planetsByKey.sun?.sign} (${partnerChart.elements.dominantElement}) qualities.`,
     repeatingPatterns: [
-      `При активиране на ${userChart.planetsByKey.venus?.sign}/${partnerChart.planetsByKey.mars?.sign} оста връзката преминава през цикъл на интензивно привличане, последвано от нужда от ясни правила.`,
+      `Whenever the ${userChart.planetsByKey.venus?.sign}/${partnerChart.planetsByKey.mars?.sign} axis is triggered, the bond cycles through heightened attraction followed by a need for clear agreements.`,
     ],
-    personalizedSummary: `Връзката между ${userName} (${userChart.planetsByKey.sun?.sign} ☉ / ${userChart.planetsByKey.moon?.sign} ☾) и ${partner.name} (${partnerChart.planetsByKey.sun?.sign} ☉ / ${partnerChart.planetsByKey.moon?.sign} ☾) съчетава ${overall}% общ резонанс с фокус върху емоционалната честност и взаимното израстване.`,
+    personalizedSummary: `The bond between ${userName} (${userChart.planetsByKey.sun?.sign} ☉ / ${userChart.planetsByKey.moon?.sign} ☾) and ${partner.name} (${partnerChart.planetsByKey.sun?.sign} ☉ / ${partnerChart.planetsByKey.moon?.sign} ☾) carries ${overall}% overall resonance centered on emotional honesty and mutual evolution.`,
     synastryAspects: synastryAspects.slice(0, 12),
     bondTransits: bondTransits.slice(0, 6),
     romanticTiming: {
@@ -654,16 +645,14 @@ export function analyzeBondCompatibility(
           ? harmoniousTransits
               .slice(0, 2)
               .map((t) => `${t.startDateStr} – ${t.endDateStr} (${t.title})`)
-          : [`Следващите 7 дни около ${formatShortDate(targetDate)} (Лунен хармоничен прозорец)`],
+          : [`Next 7 days around ${formatShortDate(targetDate)} (Harmonious Lunar Window)`],
       tensionWindows:
         challengingTransits.length > 0
-          ? challengingTransits
-              .slice(0, 2)
-              .map((t) => `Пик на ${t.peakDateStr}: ${t.title}`)
-          : ['Няма критични напрегнати пикове за избраната дата'],
+          ? challengingTransits.slice(0, 2).map((t) => `Peak on ${t.peakDateStr}: ${t.title}`)
+          : ['No critical tension peaks for the selected date'],
       dynamicShift:
         bondTransits[0]?.summary ||
-        'Динамиката между двете карти е стабилна и благоприятна за споделени планове.',
+        'The dynamic between both charts is steady and supportive for shared plans.',
     },
   };
 }

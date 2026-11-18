@@ -34,16 +34,17 @@ import {
 import { degToZodiac, unwrapUserObject } from './astrology.calculations';
 import { useAstrologyChart } from './useAstrologyChart';
 import { buildPersonalPsychologicalInsights } from './astrology.insights';
+import { requestAstrologyAI } from './astrology.ai';
 import { NatalChartWheel } from './NatalChartWheel';
 import { NatalChart3DDome } from './NatalChart3DDome';
 import {
   PrimaryPlacementsRow,
-  BirthDetailsCard,
-  ChartBalanceMatrixCard,
-  PsychologicalInsightsSection,
-  PlanetaryPositionsList,
+  CompactBirthSummaryBar,
+  TieredChartInsightsSection,
+  ChartTechnicalDrawerTrigger,
   MissingBirthDateEmptyState,
 } from './AstrologySections';
+import { DetailSheetModal } from './AstrologyDetailModal';
 import { AstrologyTabTodayTransits } from './AstrologyTabTodayTransits';
 import { AstrologyTabPatterns } from './AstrologyTabPatterns';
 import { AstrologyTabBonds } from './AstrologyTabBonds';
@@ -64,7 +65,10 @@ export default function Astrology() {
   const { colors, setPage, user, setUser } = useApp();
   const [activeTab, setActiveTab] = useState<AstrologyAppTab>('chart');
   const [viewMode, setViewMode] = useState<ChartViewMode>('2D');
-  const [showSettingsDrawer, setShowSettingsDrawer] = useState(false);
+  const [showSettingsModal, setShowSettingsModal] = useState(false);
+
+  const [aiChartText, setAiChartText] = useState<string | null>(null);
+  const [isAiChartLoading, setIsAiChartLoading] = useState(false);
 
   const { results, userDateInfo, isInitializing, isSyncing, syncStatus } = useAstrologyChart(
     user,
@@ -87,7 +91,6 @@ export default function Astrology() {
     [results]
   );
 
-  // Колекции от профила на потребителя (Модули 1.14, 4.10, 18.6, 18.8)
   const collections: UserCollectionGroup[] = useMemo(() => {
     const existing: UserCollectionGroup[] = Array.isArray(effectiveUser.collections)
       ? effectiveUser.collections
@@ -134,7 +137,7 @@ export default function Astrology() {
       try {
         await saveUserProfile(merged);
       } catch {
-        // Запазено локално при офлайн режим
+        // Offline fallback
       }
     }
   };
@@ -194,15 +197,22 @@ export default function Astrology() {
     await persistUserPatch({ customFriends: nextCustomFriends });
   };
 
-  // Модул 16: Screen Grab / Text Sharing
+  const handleGenerateAiChart = async () => {
+    if (!results) return;
+    setIsAiChartLoading(true);
+    const res = await requestAstrologyAI('chart_synthesis', results);
+    setAiChartText(res.text);
+    setIsAiChartLoading(false);
+  };
+
   const handleShareText = async (title: string, body: string) => {
     try {
       await Share.share({
         title,
-        message: `✨ ${title}\n\n${body}\n\n— Natala Celestial Engine`,
+        message: `✨ ${title}\n\n${body}\n\n— Natala Astrology Studio`,
       });
     } catch {
-      // Игнорираме при отказ от потребителя
+      // Dismissed
     }
   };
 
@@ -211,15 +221,12 @@ export default function Astrology() {
     newInsights: true,
     personalTransits: true,
     bondTransits: true,
-    socialActivity: true,
-    friendRequests: true,
   };
 
   const subscriptionTier = effectiveUser.subscription?.tier || 'free';
 
   return (
     <>
-      {/* Горна самостоятелна лента на Астрологичното приложение */}
       <View
         style={{
           flexDirection: 'row',
@@ -255,7 +262,7 @@ export default function Astrology() {
           )}
 
           <TouchableOpacity
-            onPress={() => setShowSettingsDrawer((v) => !v)}
+            onPress={() => setShowSettingsModal(true)}
             style={{
               flexDirection: 'row',
               alignItems: 'center',
@@ -276,72 +283,11 @@ export default function Astrology() {
         </View>
       </View>
 
-      {/* Модул 17 & 18.10: Управление на известия и Go Deeper+ абонамент */}
-      {showSettingsDrawer && (
-        <Card style={{ padding: 14, gap: 10, marginBottom: 10 }}>
-          <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
-            <T bold size={14}>
-              Notifications & Go Deeper+
-            </T>
-            <TouchableOpacity
-              onPress={() =>
-                persistUserPatch({
-                  subscription: {
-                    tier: subscriptionTier === 'free' ? 'go_deeper_plus' : 'free',
-                    status: 'active',
-                  },
-                })
-              }
-              style={{
-                paddingHorizontal: 10,
-                paddingVertical: 5,
-                borderRadius: 8,
-                backgroundColor: colors.gold,
-              }}
-            >
-              <T bold size={11} style={{ color: '#FFFFFF' }}>
-                {subscriptionTier === 'go_deeper_plus'
-                  ? 'Go Deeper+ Active ✓'
-                  : 'Upgrade Go Deeper+'}
-              </T>
-            </TouchableOpacity>
-          </View>
-
-          {(
-            [
-              { key: 'dailyUpdates', label: '17.1 Ежедневни актуализации (Daily Updates)' },
-              { key: 'newInsights', label: '17.3 Нови астрологични Insights' },
-              { key: 'personalTransits', label: '17.4 Нови транзити и пикови дати' },
-              { key: 'bondTransits', label: '7.1 Известия за Bond Transits' },
-            ] as const
-          ).map((item) => (
-            <View
-              key={item.key}
-              style={{
-                flexDirection: 'row',
-                justifyContent: 'space-between',
-                alignItems: 'center',
-              }}
-            >
-              <T size={12}>{item.label}</T>
-              <Switch
-                value={Boolean(notifications[item.key])}
-                onValueChange={(val) =>
-                  persistUserPatch({
-                    notifications: { ...notifications, [item.key]: val },
-                  })
-                }
-              />
-            </View>
-          ))}
-        </Card>
-      )}
-
       <Hero
         eyebrow="NATALA ASTROLOGY STUDIO"
         first="Your"
-        accent="Cosmic Universe."
-        description="Natal Chart, Live Transits, Time Travel, Bonds & Relationship Intelligence, 360° Moon Journeys and Classes."
+        accent="Cosmic Blueprint."
+        description="Start simple, tap any card to explore deeper layers."
       />
 
       {syncStatus && (
@@ -357,7 +303,6 @@ export default function Astrology() {
         </View>
       )}
 
-      {/* Навигационна лента на самостоятелния Astrology App (5 продуктови модула) */}
       {results && (
         <View
           style={{
@@ -365,7 +310,7 @@ export default function Astrology() {
             backgroundColor: colors.surfaceAlt,
             borderRadius: 14,
             padding: 4,
-            marginBottom: 12,
+            marginBottom: 14,
             borderWidth: 1,
             borderColor: colors.line,
           }}
@@ -405,7 +350,7 @@ export default function Astrology() {
       )}
 
       {results && sunData && moonData && ascData ? (
-        <>
+        <View style={{ gap: 14 }}>
           {activeTab === 'chart' && (
             <>
               <PrimaryPlacementsRow
@@ -416,7 +361,7 @@ export default function Astrology() {
               />
 
               <View style={styles.chartSectionHeader}>
-                <Section>Astronomical Chart</Section>
+                <Section>Natal Wheel</Section>
 
                 <View
                   style={[
@@ -454,8 +399,7 @@ export default function Astrology() {
                 )}
               </Card>
 
-              <BirthDetailsCard
-                userName={effectiveUser.name}
+              <CompactBirthSummaryBar
                 dateStr={results.dateStr}
                 timeStr={results.timeStr}
                 cityName={userDateInfo?.cityName || 'Sofia, Bulgaria'}
@@ -464,10 +408,11 @@ export default function Astrology() {
                 onEditBirthData={() => setPage('profile')}
               />
 
-              <ChartBalanceMatrixCard results={results} colors={colors} />
-
-              <PsychologicalInsightsSection
+              <TieredChartInsightsSection
                 insights={psychologicalInsights}
+                aiText={aiChartText}
+                isAiLoading={isAiChartLoading}
+                onGenerateAi={handleGenerateAiChart}
                 savedIds={savedIds}
                 onSaveInsight={(item: PsychologicalInsightBlock) =>
                   toggleCollectionItem('insights', item.id, item.title, item.placementTag)
@@ -476,7 +421,11 @@ export default function Astrology() {
                 colors={colors}
               />
 
-              <PlanetaryPositionsList results={results} ascData={ascData} colors={colors} />
+              <ChartTechnicalDrawerTrigger
+                results={results}
+                ascData={ascData}
+                colors={colors}
+              />
             </>
           )}
 
@@ -512,7 +461,7 @@ export default function Astrology() {
           {activeTab === 'bonds' && (
             <AstrologyTabBonds
               results={results}
-              userName={effectiveUser.name || 'Ти'}
+              userName={effectiveUser.name || 'You'}
               customFriends={customFriends}
               colors={colors}
               savedIds={savedIds}
@@ -528,7 +477,7 @@ export default function Astrology() {
           {activeTab === 'universe' && (
             <AstrologyTabUniverse
               results={results}
-              userName={effectiveUser.name || 'Ти'}
+              userName={effectiveUser.name || 'You'}
               colors={colors}
               savedIds={savedIds}
               onSaveUniverseItem={(category, id, title, subtitle) =>
@@ -536,7 +485,7 @@ export default function Astrology() {
               }
             />
           )}
-        </>
+        </View>
       ) : isInitializing || isSyncing ? (
         <Card style={styles.emptyCard}>
           <ActivityIndicator size="large" color={colors.purple} />
@@ -547,6 +496,84 @@ export default function Astrology() {
       ) : (
         <MissingBirthDateEmptyState colors={colors} onGoToProfile={() => setPage('profile')} />
       )}
+
+      {/* Модал за известия и Go Deeper+ */}
+      <DetailSheetModal
+        visible={showSettingsModal}
+        onClose={() => setShowSettingsModal(false)}
+        eyebrow="PREFERENCES"
+        title="Notifications & Go Deeper+"
+        colors={colors}
+      >
+        <View
+          style={{
+            padding: 12,
+            borderRadius: 12,
+            backgroundColor: colors.goldSoft,
+            flexDirection: 'row',
+            justifyContent: 'space-between',
+            alignItems: 'center',
+          }}
+        >
+          <View>
+            <T bold size={13}>
+              Go Deeper+ Membership
+            </T>
+            <T muted size={11}>
+              Unlimited AI readings & Bond Time Travel
+            </T>
+          </View>
+          <TouchableOpacity
+            onPress={() =>
+              persistUserPatch({
+                subscription: {
+                  tier: subscriptionTier === 'free' ? 'go_deeper_plus' : 'free',
+                  status: 'active',
+                },
+              })
+            }
+            style={{
+              paddingHorizontal: 12,
+              paddingVertical: 6,
+              borderRadius: 8,
+              backgroundColor: colors.gold,
+            }}
+          >
+            <T bold size={11} style={{ color: '#FFFFFF' }}>
+              {subscriptionTier === 'go_deeper_plus' ? 'Active ✓' : 'Upgrade'}
+            </T>
+          </TouchableOpacity>
+        </View>
+
+        {(
+          [
+            { key: 'dailyUpdates', label: 'Daily Cosmic Updates' },
+            { key: 'newInsights', label: 'New Personalized Insights' },
+            { key: 'personalTransits', label: 'Personal Transits & Peak Alerts' },
+            { key: 'bondTransits', label: 'Bond Transits & Timing Alerts' },
+          ] as const
+        ).map((item) => (
+          <View
+            key={item.key}
+            style={{
+              flexDirection: 'row',
+              justifyContent: 'space-between',
+              alignItems: 'center',
+              paddingVertical: 4,
+            }}
+          >
+            <T size={13}>{item.label}</T>
+            <Switch
+              value={Boolean(notifications[item.key])}
+              onValueChange={(val) =>
+                persistUserPatch({
+                  notifications: { ...notifications, [item.key]: val },
+                })
+              }
+            />
+          </View>
+        ))}
+      </DetailSheetModal>
     </>
   );
 }

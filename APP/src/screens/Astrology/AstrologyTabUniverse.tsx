@@ -1,28 +1,32 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { View, TouchableOpacity, TextInput } from 'react-native';
+import { View, TouchableOpacity, TextInput, ActivityIndicator } from 'react-native';
 import {
   Headphones,
   Play,
   Pause,
-  Volume2,
-  BookOpen,
-  MessageCircle,
-  Users,
-  Heart,
   Bookmark,
   Check,
   Send,
-  Sparkles,
+  Wand2,
+  ChevronRight,
 } from 'lucide-react-native';
 import { Card, T, Section } from '../../components/UI';
-import { NatalChartResults, SharedExperienceItem } from './astrology.types';
+import {
+  AstrologyClassItem,
+  LibraryArticleItem,
+  NatalChartResults,
+} from './astrology.types';
 import {
   buildAstrologyClasses,
   buildAudioJourneys,
   buildContentLibrary,
-  INITIAL_SHARED_EXPERIENCES,
 } from './astrology.insights';
-import { getSkyPositionsForDate } from './astrology.transits';
+import {
+  calculateTransitsForDate,
+  getSkyPositionsForDate,
+} from './astrology.transits';
+import { requestAstrologyAI } from './astrology.ai';
+import { DetailSheetModal, TieredSummaryCard } from './AstrologyDetailModal';
 
 export function AstrologyTabUniverse({
   results,
@@ -42,36 +46,33 @@ export function AstrologyTabUniverse({
     subtitle: string
   ) => void;
 }) {
-  // Аудио плейър (Модул 11: 360° Immersive Audio & Moon Journeys)
   const audioList = useMemo(() => buildAudioJourneys(results), [results]);
   const [activeAudioId, setActiveAudioId] = useState<string>(audioList[0]?.id || '');
   const [isPlaying, setIsPlaying] = useState(false);
   const [elapsedSec, setElapsedSec] = useState(0);
 
-  // Обучение и разговори (Модули 12 & 13)
   const classes = useMemo(() => buildAstrologyClasses(results), [results]);
   const library = useMemo(() => buildContentLibrary(results), [results]);
-  const [expandedClassId, setExpandedClassId] = useState<string | null>(classes[0]?.id || null);
 
-  // Интерактивни разговори около Insights (Модул 12)
-  const [reflectionNote, setReflectionNote] = useState('');
+  const [selectedClass, setSelectedClass] = useState<AstrologyClassItem | null>(null);
+  const [selectedArticle, setSelectedArticle] = useState<LibraryArticleItem | null>(null);
+  const [showAiChatModal, setShowAiChatModal] = useState(false);
+
+  const [questionInput, setQuestionInput] = useState('');
+  const [isAiReplying, setIsAiReplying] = useState(false);
   const [conversationLog, setConversationLog] = useState<
     Array<{ sender: 'guide' | 'user'; text: string }>
   >(() => [
     {
       sender: 'guide',
-      text: `Добре дошъл в пространството за дълбоки разговори! С твоето Слънце в ${results.planetsByKey.sun?.sign} и Луна в ${results.planetsByKey.moon?.sign}, коя тема искаш да изследваме днес?`,
+      text: `Hello ${userName || 'there'}. With your ${results.planetsByKey.sun?.sign} Sun and ${
+        results.planetsByKey.moon?.sign
+      } Moon, what would you like to explore today?`,
     },
   ]);
 
-  // Споделени преживявания (Модул 14)
-  const [experiences, setExperiences] = useState<SharedExperienceItem[]>(
-    INITIAL_SHARED_EXPERIENCES
-  );
-  const [newPostText, setNewPostText] = useState('');
-
-  // Колективен небесен климат днес (Модул 10.1)
   const liveSky = useMemo(() => getSkyPositionsForDate(new Date()), []);
+  const currentTransits = useMemo(() => calculateTransitsForDate(results, new Date()), [results]);
 
   useEffect(() => {
     if (!isPlaying) return;
@@ -83,108 +84,102 @@ export function AstrologyTabUniverse({
 
   const activeAudio = audioList.find((a) => a.id === activeAudioId) || audioList[0];
 
-  const handleSendReflection = () => {
-    const trimmed = reflectionNote.trim();
-    if (!trimmed) return;
-    const reply = `Благодаря за споделеното! В контекста на твоя Асцендент в ${results.angles.asc.sign} и управител ${results.chartRuler.modernRuler}, това наблюдение показва осъзнато преминаване от автоматична реакция към личен избор.`;
-    setConversationLog((prev) => [
-      ...prev,
-      { sender: 'user', text: trimmed },
-      { sender: 'guide', text: reply },
-    ]);
-    setReflectionNote('');
-  };
+  const handleAskAstrologerAI = async () => {
+    const trimmed = questionInput.trim();
+    if (!trimmed || isAiReplying) return;
 
-  const handleShareExperience = () => {
-    const trimmed = newPostText.trim();
-    if (!trimmed) return;
-    const newItem: SharedExperienceItem = {
-      id: `exp_${Date.now()}`,
-      author: userName || 'Ти',
-      bigThree: `☉ ${results.planetsByKey.sun?.sign} · ☾ ${results.planetsByKey.moon?.sign} · ↑ ${results.angles.asc.sign}`,
-      topicTag: `${results.elements.dominantElement} Insight`,
-      timeAgo: 'току-що',
-      content: trimmed,
-      resonatesCount: 1,
-    };
-    setExperiences((prev) => [newItem, ...prev]);
-    setNewPostText('');
+    const nextHistory = [...conversationLog, { sender: 'user' as const, text: trimmed }];
+    setConversationLog(nextHistory);
+    setQuestionInput('');
+    setIsAiReplying(true);
+
+    const res = await requestAstrologyAI('astro_coach', results, {
+      question: trimmed,
+      transits: currentTransits,
+      history: nextHistory,
+    });
+
+    setConversationLog((prev) => [...prev, { sender: 'guide', text: res.text }]);
+    setIsAiReplying(false);
   };
 
   return (
     <View style={{ gap: 14 }}>
-      {/* Модул 10.1: Cosmic Climate Live */}
-      <Section>Cosmic Climate (Live Sky)</Section>
-      <Card style={{ padding: 14, gap: 8 }}>
-        <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6 }}>
-          {liveSky.slice(0, 8).map((b) => (
+      {/* Ниво 1: AI Astrologer вход */}
+      <TouchableOpacity activeOpacity={0.85} onPress={() => setShowAiChatModal(true)}>
+        <Card
+          style={{
+            padding: 15,
+            borderRadius: 16,
+            flexDirection: 'row',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            backgroundColor: colors.purpleSoft,
+            borderWidth: 1,
+            borderColor: colors.purple,
+          }}
+        >
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, flex: 1 }}>
             <View
-              key={b.key}
               style={{
-                paddingHorizontal: 9,
-                paddingVertical: 5,
-                borderRadius: 8,
-                backgroundColor: colors.surfaceAlt,
+                width: 38,
+                height: 38,
+                borderRadius: 12,
+                backgroundColor: colors.purple,
+                alignItems: 'center',
+                justifyContent: 'center',
               }}
             >
-              <T bold size={11}>
-                {b.symbol} {b.signSymbol} {b.sign} {b.isRetrograde ? '℞' : ''}
+              <Wand2 size={18} color="#FFFFFF" />
+            </View>
+            <View style={{ flex: 1 }}>
+              <T bold size={14} style={{ color: colors.purple }}>
+                Ask AI Astrologer
+              </T>
+              <T muted size={11}>
+                Interactive guidance tailored to your natal chart & transits
               </T>
             </View>
-          ))}
-        </View>
-      </Card>
+          </View>
+          <ChevronRight size={18} color={colors.purple} />
+        </Card>
+      </TouchableOpacity>
 
-      {/* Модул 11: 360° Immersive Audio & Moon Journeys */}
+      {/* Ниво 1: Компактен 360° Audio плейър */}
       <Section>360° Audio & Moon Journeys</Section>
-      <Card style={{ padding: 14, gap: 10 }}>
+      <Card style={{ padding: 14, borderRadius: 16, gap: 10 }}>
         {activeAudio && (
-          <View
-            style={{
-              padding: 12,
-              borderRadius: 12,
-              backgroundColor: colors.purpleSoft,
-              gap: 8,
-            }}
-          >
-            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
-              <TouchableOpacity
-                onPress={() => setIsPlaying((p) => !p)}
-                style={{
-                  width: 42,
-                  height: 42,
-                  borderRadius: 21,
-                  backgroundColor: colors.purple,
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                }}
-              >
-                {isPlaying ? (
-                  <Pause size={18} color="#FFFFFF" />
-                ) : (
-                  <Play size={18} color="#FFFFFF" />
-                )}
-              </TouchableOpacity>
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
+            <TouchableOpacity
+              onPress={() => setIsPlaying((p) => !p)}
+              style={{
+                width: 42,
+                height: 42,
+                borderRadius: 21,
+                backgroundColor: colors.purple,
+                alignItems: 'center',
+                justifyContent: 'center',
+              }}
+            >
+              {isPlaying ? (
+                <Pause size={18} color="#FFFFFF" />
+              ) : (
+                <Play size={18} color="#FFFFFF" />
+              )}
+            </TouchableOpacity>
 
-              <View style={{ flex: 1 }}>
-                <T bold size={10} style={{ color: colors.purple }}>
-                  {activeAudio.type.toUpperCase()} · {activeAudio.frequencyHz}
-                </T>
-                <T bold size={13}>
-                  {activeAudio.title}
-                </T>
-                <T muted size={11}>
-                  {Math.floor(elapsedSec / 60)}:{String(elapsedSec % 60).padStart(2, '0')} /{' '}
-                  {activeAudio.durationLabel}
-                </T>
-              </View>
-
-              <Volume2 size={18} color={colors.purple} />
+            <View style={{ flex: 1 }}>
+              <T bold size={10} style={{ color: colors.gold }}>
+                {activeAudio.type.toUpperCase()} · {activeAudio.frequencyHz}
+              </T>
+              <T bold size={13}>
+                {activeAudio.title}
+              </T>
+              <T muted size={11}>
+                {Math.floor(elapsedSec / 60)}:{String(elapsedSec % 60).padStart(2, '0')} /{' '}
+                {activeAudio.durationLabel}
+              </T>
             </View>
-
-            <T size={12} style={{ fontStyle: 'italic' }}>
-              „{activeAudio.scriptPreview}“
-            </T>
           </View>
         )}
 
@@ -198,7 +193,8 @@ export function AstrologyTabUniverse({
                   flexDirection: 'row',
                   alignItems: 'center',
                   justifyContent: 'space-between',
-                  padding: 8,
+                  paddingVertical: 6,
+                  paddingHorizontal: 8,
                   borderRadius: 10,
                   backgroundColor:
                     item.id === activeAudio?.id ? colors.surfaceAlt : 'transparent',
@@ -212,21 +208,16 @@ export function AstrologyTabUniverse({
                   }}
                   style={{ flexDirection: 'row', alignItems: 'center', gap: 8, flex: 1 }}
                 >
-                  <Headphones size={15} color={colors.purple} />
-                  <View style={{ flex: 1 }}>
-                    <T bold size={12}>
-                      {item.title}
-                    </T>
-                    <T muted size={10}>
-                      {item.type} · {item.durationLabel}
-                    </T>
-                  </View>
+                  <Headphones size={14} color={colors.purple} />
+                  <T bold size={12} numberOfLines={1} style={{ flex: 1 }}>
+                    {item.title}
+                  </T>
                 </TouchableOpacity>
                 <TouchableOpacity
                   onPress={() =>
                     onSaveUniverseItem('audio', item.id, item.title, item.subtitle)
                   }
-                  style={{ padding: 6 }}
+                  style={{ padding: 4 }}
                 >
                   {isSaved ? (
                     <Check size={14} color={colors.purple} />
@@ -240,134 +231,170 @@ export function AstrologyTabUniverse({
         </View>
       </Card>
 
-      {/* Модул 13: Astrology Classes (Astrology 101 – 108) */}
-      <Section>Astrology Classes (Interactive)</Section>
-      <View style={{ gap: 8 }}>
-        {classes.map((cls) => {
-          const isOpen = expandedClassId === cls.id;
-          const isSaved = savedIds.has(cls.id);
-          return (
-            <Card key={cls.id} style={{ padding: 14, gap: 8 }}>
-              <TouchableOpacity
-                onPress={() => setExpandedClassId(isOpen ? null : cls.id)}
-                style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}
-              >
-                <View style={{ flex: 1 }}>
-                  <T bold size={10} style={{ color: colors.gold }}>
-                    {cls.code} · {cls.level} · {cls.duration}
-                  </T>
-                  <T bold size={14} style={{ marginTop: 2 }}>
-                    {cls.title}
-                  </T>
-                </View>
-                <TouchableOpacity
-                  onPress={() =>
-                    onSaveUniverseItem('classes', cls.id, cls.title, cls.code)
-                  }
-                  style={{ padding: 6 }}
-                >
-                  {isSaved ? (
-                    <Check size={14} color={colors.purple} />
-                  ) : (
-                    <Bookmark size={14} color={colors.muted} />
-                  )}
-                </TouchableOpacity>
-              </TouchableOpacity>
-
-              {isOpen && (
-                <View style={{ gap: 6, paddingTop: 4 }}>
-                  <T size={13} style={{ lineHeight: 19 }}>
-                    {cls.concept}
-                  </T>
-                  <View style={{ padding: 9, borderRadius: 8, backgroundColor: colors.purpleSoft }}>
-                    <T bold size={11} style={{ color: colors.purple }}>
-                      В твоята карта:
-                    </T>
-                    <T size={12} style={{ marginTop: 2 }}>
-                      {cls.personalExample}
-                    </T>
-                  </View>
-                  <T muted size={11}>
-                    <BookOpen size={11} color={colors.gold} /> Извод: {cls.takeaway}
-                  </T>
-                </View>
-              )}
-            </Card>
-          );
-        })}
+      {/* Ниво 1: Astrology Classes (само заглавие + 1 ред, пълният урок е в модал) */}
+      <Section>Astrology Classes</Section>
+      <View style={{ gap: 10 }}>
+        {classes.map((cls) => (
+          <TieredSummaryCard
+            key={cls.id}
+            tag={`${cls.level} · ${cls.duration}`}
+            title={cls.title}
+            summary={cls.concept}
+            onPressMore={() => setSelectedClass(cls)}
+            colors={colors}
+          />
+        ))}
       </View>
 
-      {/* Модул 10: Content Library */}
-      <Section>Content Library & Chapters</Section>
-      <View style={{ gap: 8 }}>
-        {library.map((art) => {
-          const isSaved = savedIds.has(art.id);
-          return (
-            <Card key={art.id} style={{ padding: 14, gap: 6 }}>
-              <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
-                <T bold size={10} style={{ color: colors.purple }}>
-                  {art.category.toUpperCase()} · {art.readTime}
-                </T>
-                <TouchableOpacity
-                  onPress={() =>
-                    onSaveUniverseItem('library', art.id, art.title, art.subtitle)
-                  }
-                >
-                  {isSaved ? (
-                    <Check size={14} color={colors.purple} />
-                  ) : (
-                    <Bookmark size={14} color={colors.muted} />
-                  )}
-                </TouchableOpacity>
-              </View>
-              <T bold size={14}>
-                {art.title}
+      {/* Ниво 1: Content Library + Live Sky pills */}
+      <Section>Content Library & Cosmic Climate</Section>
+      <Card style={{ padding: 12, borderRadius: 16 }}>
+        <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6 }}>
+          {liveSky.slice(0, 6).map((b) => (
+            <View
+              key={b.key}
+              style={{
+                paddingHorizontal: 8,
+                paddingVertical: 4,
+                borderRadius: 8,
+                backgroundColor: colors.surfaceAlt,
+              }}
+            >
+              <T bold size={10}>
+                {b.symbol} {b.sign} {b.isRetrograde ? '℞' : ''}
               </T>
-              <T size={12} style={{ lineHeight: 18 }}>
-                {art.body}
-              </T>
-            </Card>
-          );
-        })}
+            </View>
+          ))}
+        </View>
+      </Card>
+
+      <View style={{ gap: 10 }}>
+        {library.map((art) => (
+          <TieredSummaryCard
+            key={art.id}
+            tag={`${art.category} · ${art.readTime}`}
+            title={art.title}
+            summary={art.subtitle}
+            onPressMore={() => setSelectedArticle(art)}
+            colors={colors}
+          />
+        ))}
       </View>
 
-      {/* Модул 12: Guided Conversations around Insights */}
-      <Section>Guided Conversations</Section>
-      <Card style={{ padding: 14, gap: 8 }}>
+      {/* Ниво 2: Модал за урок */}
+      <DetailSheetModal
+        visible={Boolean(selectedClass)}
+        onClose={() => setSelectedClass(null)}
+        eyebrow={selectedClass ? `${selectedClass.level} · ${selectedClass.duration}` : undefined}
+        title={selectedClass?.title || ''}
+        colors={colors}
+        isSaved={selectedClass ? savedIds.has(selectedClass.id) : false}
+        onSave={
+          selectedClass
+            ? () =>
+                onSaveUniverseItem(
+                  'classes',
+                  selectedClass.id,
+                  selectedClass.title,
+                  selectedClass.code
+                )
+            : undefined
+        }
+      >
+        {selectedClass && (
+          <>
+            <T size={14} style={{ lineHeight: 22 }}>
+              {selectedClass.concept}
+            </T>
+            <View style={{ padding: 12, borderRadius: 12, backgroundColor: colors.purpleSoft }}>
+              <T bold size={11} style={{ color: colors.purple }}>
+                IN YOUR CHART
+              </T>
+              <T size={13} style={{ marginTop: 3, lineHeight: 19 }}>
+                {selectedClass.personalExample}
+              </T>
+            </View>
+            <T muted size={12}>
+              Takeaway: {selectedClass.takeaway}
+            </T>
+          </>
+        )}
+      </DetailSheetModal>
+
+      {/* Ниво 2: Модал за статия от библиотеката */}
+      <DetailSheetModal
+        visible={Boolean(selectedArticle)}
+        onClose={() => setSelectedArticle(null)}
+        eyebrow={
+          selectedArticle ? `${selectedArticle.category} · ${selectedArticle.readTime}` : undefined
+        }
+        title={selectedArticle?.title || ''}
+        colors={colors}
+        isSaved={selectedArticle ? savedIds.has(selectedArticle.id) : false}
+        onSave={
+          selectedArticle
+            ? () =>
+                onSaveUniverseItem(
+                  'library',
+                  selectedArticle.id,
+                  selectedArticle.title,
+                  selectedArticle.subtitle
+                )
+            : undefined
+        }
+      >
+        {selectedArticle && (
+          <T size={14} style={{ lineHeight: 22 }}>
+            {selectedArticle.body}
+          </T>
+        )}
+      </DetailSheetModal>
+
+      {/* Ниво 3: AI Astrologer Dialogue Modal */}
+      <DetailSheetModal
+        visible={showAiChatModal}
+        onClose={() => setShowAiChatModal(false)}
+        eyebrow="CONTEXT-AWARE AI GUIDE"
+        title="Ask AI Astrologer"
+        colors={colors}
+      >
         {conversationLog.map((msg, idx) => (
           <View
             key={idx}
             style={{
-              padding: 10,
-              borderRadius: 10,
+              padding: 12,
+              borderRadius: 12,
               backgroundColor: msg.sender === 'guide' ? colors.surfaceAlt : colors.purpleSoft,
             }}
           >
-            <T bold size={10} style={{ color: colors.purple, marginBottom: 2 }}>
-              {msg.sender === 'guide' ? 'ASTROLOGY GUIDE' : userName || 'ТИ'}
+            <T bold size={10} style={{ color: colors.purple, marginBottom: 3 }}>
+              {msg.sender === 'guide' ? 'AI ASTROLOGER' : (userName || 'YOU').toUpperCase()}
             </T>
-            <T size={12}>{msg.text}</T>
+            <T size={13} style={{ lineHeight: 19 }}>
+              {msg.text}
+            </T>
           </View>
         ))}
 
         <View style={{ flexDirection: 'row', gap: 8, marginTop: 4 }}>
           <TextInput
-            value={reflectionNote}
-            onChangeText={setReflectionNote}
-            placeholder="Задай въпрос или сподели размисъл..."
+            value={questionInput}
+            onChangeText={setQuestionInput}
+            placeholder="Ask about your chart, love, or transits..."
             placeholderTextColor={colors.muted}
             style={{
               flex: 1,
               borderWidth: 1,
               borderColor: colors.line,
               borderRadius: 10,
-              paddingHorizontal: 10,
-              paddingVertical: 8,
+              paddingHorizontal: 12,
+              paddingVertical: 10,
               color: colors.text,
             }}
           />
           <TouchableOpacity
-            onPress={handleSendReflection}
+            onPress={handleAskAstrologerAI}
+            disabled={isAiReplying}
             style={{
               paddingHorizontal: 14,
               borderRadius: 10,
@@ -376,83 +403,14 @@ export function AstrologyTabUniverse({
               justifyContent: 'center',
             }}
           >
-            <Send size={15} color="#FFFFFF" />
+            {isAiReplying ? (
+              <ActivityIndicator size="small" color="#FFFFFF" />
+            ) : (
+              <Send size={16} color="#FFFFFF" />
+            )}
           </TouchableOpacity>
         </View>
-      </Card>
-
-      {/* Модул 14: Shared Experiences Community */}
-      <Section>Shared Experiences</Section>
-      <Card style={{ padding: 14, gap: 10 }}>
-        <View style={{ flexDirection: 'row', gap: 8 }}>
-          <TextInput
-            value={newPostText}
-            onChangeText={setNewPostText}
-            placeholder="Сподели свое астрологично преживяване..."
-            placeholderTextColor={colors.muted}
-            style={{
-              flex: 1,
-              borderWidth: 1,
-              borderColor: colors.line,
-              borderRadius: 10,
-              paddingHorizontal: 10,
-              paddingVertical: 8,
-              color: colors.text,
-            }}
-          />
-          <TouchableOpacity
-            onPress={handleShareExperience}
-            style={{
-              paddingHorizontal: 12,
-              borderRadius: 10,
-              backgroundColor: colors.gold,
-              alignItems: 'center',
-              justifyContent: 'center',
-            }}
-          >
-            <Sparkles size={15} color="#FFFFFF" />
-          </TouchableOpacity>
-        </View>
-
-        {experiences.map((exp) => (
-          <View
-            key={exp.id}
-            style={{
-              padding: 10,
-              borderRadius: 10,
-              backgroundColor: colors.surfaceAlt,
-              gap: 4,
-            }}
-          >
-            <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
-              <T bold size={12}>
-                {exp.author} · <T muted size={10}>{exp.bigThree}</T>
-              </T>
-              <T muted size={10}>
-                {exp.timeAgo}
-              </T>
-            </View>
-            <T size={12}>{exp.content}</T>
-            <TouchableOpacity
-              onPress={() =>
-                setExperiences((prev) =>
-                  prev.map((item) =>
-                    item.id === exp.id
-                      ? { ...item, resonatesCount: item.resonatesCount + 1 }
-                      : item
-                  )
-                )
-              }
-              style={{ flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: 2 }}
-            >
-              <Heart size={12} color={colors.purple} />
-              <T bold size={11} style={{ color: colors.purple }}>
-                Резонира ({exp.resonatesCount})
-              </T>
-            </TouchableOpacity>
-          </View>
-        ))}
-      </Card>
+      </DetailSheetModal>
     </View>
   );
 }

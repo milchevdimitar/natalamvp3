@@ -1,13 +1,6 @@
 import React, { useMemo, useState } from 'react';
 import { View, TouchableOpacity, ScrollView } from 'react-native';
-import {
-  Bookmark,
-  Check,
-  Share2,
-  Sparkles,
-  Layers,
-  Trash2,
-} from 'lucide-react-native';
+import { Layers, Trash2, ChevronRight } from 'lucide-react-native';
 import { Card, T, Section } from '../../components/UI';
 import {
   NatalChartResults,
@@ -15,6 +8,7 @@ import {
   UserCollectionGroup,
 } from './astrology.types';
 import { buildPatternAnalyses } from './astrology.insights';
+import { DetailSheetModal, TieredSummaryCard } from './AstrologyDetailModal';
 
 export function AstrologyTabPatterns({
   results,
@@ -33,11 +27,16 @@ export function AstrologyTabPatterns({
   onRemoveCollectionItem: (category: string, itemId: string) => void;
   onShareText: (title: string, body: string) => void;
 }) {
-  const [selectedGroup, setSelectedGroup] = useState<'all' | 'psyche' | 'relations' | 'destiny'>(
-    'all'
-  );
+  const [selectedGroup, setSelectedGroup] = useState<'psyche' | 'relations' | 'destiny'>('psyche');
+  const [selectedPattern, setSelectedPattern] = useState<PatternAnalysisItem | null>(null);
+  const [showCollectionsModal, setShowCollectionsModal] = useState(false);
 
   const patterns = useMemo(() => buildPatternAnalyses(results), [results]);
+
+  const totalSavedCount = useMemo(
+    () => collections.reduce((acc, c) => acc + c.items.length, 0),
+    [collections]
+  );
 
   const filteredPatterns = useMemo(() => {
     if (selectedGroup === 'psyche') {
@@ -46,188 +45,186 @@ export function AstrologyTabPatterns({
     if (selectedGroup === 'relations') {
       return patterns.filter((p) => ['2.7', '2.8', '2.9'].includes(p.code));
     }
-    if (selectedGroup === 'destiny') {
-      return patterns.filter((p) => ['2.5', '2.11', '2.12', '2.13', '2.14'].includes(p.code));
-    }
-    return patterns;
+    return patterns.filter((p) => ['2.5', '2.11', '2.12', '2.13', '2.14'].includes(p.code));
   }, [patterns, selectedGroup]);
 
   return (
     <View style={{ gap: 14 }}>
-      {/* Модул 1.14 & 18.8: Swipeable Collections */}
-      <Section>My Saved Collections (Swipeable)</Section>
-      <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-        <View style={{ flexDirection: 'row', gap: 10 }}>
-          {collections.map((col) => (
-            <Card
-              key={col.category}
+      {/* Ниво 1: Компактна лента за запазени колекции */}
+      <TouchableOpacity activeOpacity={0.85} onPress={() => setShowCollectionsModal(true)}>
+        <Card
+          style={{
+            padding: 14,
+            borderRadius: 16,
+            flexDirection: 'row',
+            justifyContent: 'space-between',
+            alignItems: 'center',
+          }}
+        >
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
+            <Layers size={18} color={colors.purple} />
+            <View>
+              <T bold size={14}>
+                Saved Collections ({totalSavedCount})
+              </T>
+              <T muted size={11}>
+                Insights, transits, patterns & classes you bookmarked
+              </T>
+            </View>
+          </View>
+          <ChevronRight size={18} color={colors.muted} />
+        </Card>
+      </TouchableOpacity>
+
+      {/* Ниво 1: 3 ясни тематични нива вместо 14 дълги блока */}
+      <Section>Life Patterns</Section>
+      <View style={{ flexDirection: 'row', gap: 6 }}>
+        {(
+          [
+            { id: 'psyche', label: 'Psyche & Roots (6)' },
+            { id: 'relations', label: 'Love & Bonds (3)' },
+            { id: 'destiny', label: 'Destiny & Gifts (5)' },
+          ] as const
+        ).map((tab) => (
+          <TouchableOpacity
+            key={tab.id}
+            onPress={() => setSelectedGroup(tab.id)}
+            style={{
+              flex: 1,
+              paddingVertical: 8,
+              borderRadius: 10,
+              alignItems: 'center',
+              backgroundColor: selectedGroup === tab.id ? colors.purple : colors.surfaceAlt,
+            }}
+          >
+            <T
+              bold
+              size={11}
+              style={{ color: selectedGroup === tab.id ? '#FFFFFF' : colors.muted }}
+            >
+              {tab.label}
+            </T>
+          </TouchableOpacity>
+        ))}
+      </View>
+
+      <View style={{ gap: 10 }}>
+        {filteredPatterns.map((pat) => (
+          <TieredSummaryCard
+            key={pat.id}
+            tag={pat.placementBasis}
+            title={pat.title}
+            summary={pat.summary}
+            onPressMore={() => setSelectedPattern(pat)}
+            colors={colors}
+          />
+        ))}
+      </View>
+
+      {/* Ниво 2: Детайлен модал за избран Pattern */}
+      <DetailSheetModal
+        visible={Boolean(selectedPattern)}
+        onClose={() => setSelectedPattern(null)}
+        eyebrow={selectedPattern?.placementBasis}
+        title={selectedPattern?.title || ''}
+        colors={colors}
+        isSaved={selectedPattern ? savedIds.has(selectedPattern.id) : false}
+        onSave={selectedPattern ? () => onSavePattern(selectedPattern) : undefined}
+        onShare={
+          selectedPattern
+            ? () =>
+                onShareText(
+                  selectedPattern.title,
+                  `${selectedPattern.placementBasis}\n\n${selectedPattern.deepDive}\n\nGrowth Key: ${selectedPattern.growthKey}`
+                )
+            : undefined
+        }
+      >
+        {selectedPattern && (
+          <>
+            <T bold size={14} style={{ color: colors.purple }}>
+              {selectedPattern.summary}
+            </T>
+            <T size={14} style={{ lineHeight: 22 }}>
+              {selectedPattern.deepDive}
+            </T>
+            <View
               style={{
-                width: 245,
                 padding: 12,
-                gap: 8,
-                borderWidth: 1,
-                borderColor: colors.line,
+                borderRadius: 12,
+                backgroundColor: colors.purpleSoft,
+                gap: 4,
               }}
             >
-              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-                <Layers size={14} color={colors.purple} />
+              <T bold size={11} style={{ color: colors.purple }}>
+                GROWTH KEY
+              </T>
+              <T size={13} style={{ lineHeight: 19 }}>
+                {selectedPattern.growthKey}
+              </T>
+            </View>
+          </>
+        )}
+      </DetailSheetModal>
+
+      {/* Ниво 2: Модал за Swipeable Collections */}
+      <DetailSheetModal
+        visible={showCollectionsModal}
+        onClose={() => setShowCollectionsModal(false)}
+        eyebrow="YOUR LIBRARY"
+        title="Saved Collections"
+        colors={colors}
+      >
+        <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+          <View style={{ flexDirection: 'row', gap: 10 }}>
+            {collections.map((col) => (
+              <View
+                key={col.category}
+                style={{
+                  width: 240,
+                  padding: 12,
+                  borderRadius: 14,
+                  backgroundColor: colors.surfaceAlt,
+                  gap: 8,
+                }}
+              >
                 <T bold size={13}>
                   {col.title} ({col.items.length})
                 </T>
-              </View>
-
-              {col.items.length === 0 ? (
-                <T muted size={11}>
-                  Натисни иконата за запазване върху всеки Insight, Транзит или Pattern.
-                </T>
-              ) : (
-                <View style={{ gap: 6 }}>
-                  {col.items.slice(0, 3).map((it) => (
+                {col.items.length === 0 ? (
+                  <T muted size={11}>
+                    No items saved in this collection yet.
+                  </T>
+                ) : (
+                  col.items.map((it) => (
                     <View
                       key={it.itemId}
                       style={{
                         flexDirection: 'row',
-                        alignItems: 'center',
                         justifyContent: 'space-between',
-                        backgroundColor: colors.surfaceAlt,
-                        padding: 6,
+                        alignItems: 'center',
+                        padding: 8,
                         borderRadius: 8,
+                        backgroundColor: colors.surface,
                       }}
                     >
                       <T size={11} numberOfLines={1} style={{ flex: 1 }}>
-                        • {it.title}
+                        {it.title}
                       </T>
                       <TouchableOpacity
                         onPress={() => onRemoveCollectionItem(col.category, it.itemId)}
-                        style={{ paddingLeft: 6 }}
+                        style={{ paddingLeft: 8 }}
                       >
-                        <Trash2 size={12} color={colors.muted} />
+                        <Trash2 size={13} color={colors.muted} />
                       </TouchableOpacity>
                     </View>
-                  ))}
-                </View>
-              )}
-            </Card>
-          ))}
-        </View>
-      </ScrollView>
-
-      {/* Филтри за 14-те личностни модела */}
-      <View
-        style={{
-          flexDirection: 'row',
-          alignItems: 'center',
-          justifyContent: 'space-between',
-        }}
-      >
-        <Section>Deep Patterns (14 Modules)</Section>
-      </View>
-
-      <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-        <View style={{ flexDirection: 'row', gap: 6 }}>
-          {(
-            [
-              { id: 'all', label: 'All (14)' },
-              { id: 'psyche', label: 'Psyche & Roots' },
-              { id: 'relations', label: 'Attachment & Love' },
-              { id: 'destiny', label: 'Talents & Life Lessons' },
-            ] as const
-          ).map((tab) => (
-            <TouchableOpacity
-              key={tab.id}
-              onPress={() => setSelectedGroup(tab.id)}
-              style={{
-                paddingHorizontal: 12,
-                paddingVertical: 6,
-                borderRadius: 10,
-                backgroundColor: selectedGroup === tab.id ? colors.purple : colors.surfaceAlt,
-              }}
-            >
-              <T
-                bold
-                size={11}
-                style={{ color: selectedGroup === tab.id ? '#FFFFFF' : colors.muted }}
-              >
-                {tab.label}
-              </T>
-            </TouchableOpacity>
-          ))}
-        </View>
-      </ScrollView>
-
-      <View style={{ gap: 10 }}>
-        {filteredPatterns.map((pat) => {
-          const isSaved = savedIds.has(pat.id);
-          return (
-            <Card key={pat.id} style={{ padding: 14, gap: 8 }}>
-              <View
-                style={{
-                  flexDirection: 'row',
-                  justifyContent: 'space-between',
-                  alignItems: 'flex-start',
-                }}
-              >
-                <View style={{ flex: 1 }}>
-                  <T bold size={10} style={{ color: colors.gold }}>
-                    {pat.code} · {pat.placementBasis}
-                  </T>
-                  <T bold size={15} style={{ marginTop: 2 }}>
-                    {pat.title}
-                  </T>
-                </View>
-
-                <View style={{ flexDirection: 'row', gap: 6 }}>
-                  <TouchableOpacity
-                    onPress={() => onSavePattern(pat)}
-                    style={{
-                      padding: 7,
-                      borderRadius: 8,
-                      backgroundColor: isSaved ? colors.purple : colors.surfaceAlt,
-                    }}
-                  >
-                    {isSaved ? (
-                      <Check size={14} color="#FFFFFF" />
-                    ) : (
-                      <Bookmark size={14} color={colors.purple} />
-                    )}
-                  </TouchableOpacity>
-                  <TouchableOpacity
-                    onPress={() =>
-                      onShareText(pat.title, `${pat.placementBasis}\n\n${pat.deepDive}`)
-                    }
-                    style={{ padding: 7, borderRadius: 8, backgroundColor: colors.surfaceAlt }}
-                  >
-                    <Share2 size={14} color={colors.muted} />
-                  </TouchableOpacity>
-                </View>
+                  ))
+                )}
               </View>
-
-              <T bold size={12} style={{ color: colors.purple }}>
-                {pat.summary}
-              </T>
-              <T size={13} style={{ lineHeight: 19 }}>
-                {pat.deepDive}
-              </T>
-
-              <View
-                style={{
-                  padding: 8,
-                  borderRadius: 8,
-                  backgroundColor: colors.surfaceAlt,
-                  flexDirection: 'row',
-                  alignItems: 'center',
-                  gap: 6,
-                }}
-              >
-                <Sparkles size={13} color={colors.gold} />
-                <T size={11} style={{ flex: 1 }}>
-                  Ключ за развитие: {pat.growthKey}
-                </T>
-              </View>
-            </Card>
-          );
-        })}
-      </View>
+            ))}
+          </View>
+        </ScrollView>
+      </DetailSheetModal>
     </View>
   );
 }

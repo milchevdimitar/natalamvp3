@@ -1,7 +1,12 @@
 import React from 'react';
 import { View, StyleSheet } from 'react-native';
 import { Card, T, Section } from '../../components/UI';
-import { BaZiChart, BaZiPillar, WuXingElement } from './bazi.types';
+import {
+  BaZiChart,
+  BaZiPillar,
+  BaZiViewComplexity,
+  WuXingElement,
+} from './bazi.types';
 
 const ELEMENT_COLORS: Record<WuXingElement, string> = {
   Wood: '#22C55E',
@@ -14,9 +19,16 @@ const ELEMENT_COLORS: Record<WuXingElement, string> = {
 interface PillarGridProps {
   chart: BaZiChart;
   colors: any;
+  mode?: BaZiViewComplexity;
+  title?: string;
 }
 
-export function PillarGrid({ chart, colors }: PillarGridProps) {
+export function PillarGrid({
+  chart,
+  colors,
+  mode = 'simple',
+  title = 'Four Pillars of Destiny (四柱)',
+}: PillarGridProps) {
   const columns: (BaZiPillar | null)[] = [
     chart.hourPillar,
     chart.dayPillar,
@@ -27,8 +39,8 @@ export function PillarGrid({ chart, colors }: PillarGridProps) {
   const columnTitles = ['HOUR', 'DAY (SELF)', 'MONTH', 'YEAR'];
 
   return (
-    <>
-      <Section>Four Pillars of Destiny (四柱)</Section>
+    <View style={{ gap: 6 }}>
+      <Section>{title}</Section>
       <Card style={styles.wrapper}>
         <View style={styles.row}>
           {columns.map((pillar, idx) => {
@@ -58,7 +70,7 @@ export function PillarGrid({ chart, colors }: PillarGridProps) {
                   size={9}
                   style={{
                     color: isDayMaster ? colors.purple : colors.muted,
-                    letterSpacing: 0.8,
+                    letterSpacing: 0.7,
                     textAlign: 'center',
                   }}
                 >
@@ -67,8 +79,22 @@ export function PillarGrid({ chart, colors }: PillarGridProps) {
 
                 {pillar ? (
                   <>
+                    {mode === 'pro' && (
+                      <T
+                        bold
+                        size={8}
+                        numberOfLines={1}
+                        style={{
+                          color: isDayMaster ? colors.purple : colors.gold,
+                          textAlign: 'center',
+                        }}
+                      >
+                        {pillar.stemTenGod}
+                      </T>
+                    )}
+
                     <View style={styles.charBox}>
-                      <T bold size={26} style={{ color: stemColor }}>
+                      <T bold size={25} style={{ color: stemColor }}>
                         {pillar.stem.hanzi}
                       </T>
                       <T bold size={11} style={{ color: colors.text }}>
@@ -88,7 +114,7 @@ export function PillarGrid({ chart, colors }: PillarGridProps) {
                     />
 
                     <View style={styles.charBox}>
-                      <T bold size={26} style={{ color: branchColor }}>
+                      <T bold size={25} style={{ color: branchColor }}>
                         {pillar.branch.hanzi}
                       </T>
                       <T bold size={11} style={{ color: colors.text }}>
@@ -99,19 +125,29 @@ export function PillarGrid({ chart, colors }: PillarGridProps) {
                       </T>
                     </View>
 
-                    <View
-                      style={[
-                        styles.hiddenBox,
-                        { backgroundColor: colors.surface },
-                      ]}
-                    >
-                      <T muted size={8} style={{ letterSpacing: 0.6 }}>
-                        HIDDEN
-                      </T>
-                      <T bold size={10} style={{ color: colors.text }}>
-                        {pillar.hiddenStems.map((h) => h.hanzi).join(' ')}
-                      </T>
-                    </View>
+                    {mode === 'pro' && (
+                      <View
+                        style={[
+                          styles.hiddenBox,
+                          { backgroundColor: colors.surface },
+                        ]}
+                      >
+                        <T muted size={7} style={{ letterSpacing: 0.5 }}>
+                          HIDDEN
+                        </T>
+                        <T bold size={10} style={{ color: colors.text }}>
+                          {pillar.hiddenStems.map((h) => h.hanzi).join(' ')}
+                        </T>
+                        <T
+                          muted
+                          size={7}
+                          numberOfLines={1}
+                          style={{ textAlign: 'center' }}
+                        >
+                          {pillar.hiddenTenGods[0]}
+                        </T>
+                      </View>
+                    )}
                   </>
                 ) : (
                   <View style={styles.unknownBox}>
@@ -119,7 +155,7 @@ export function PillarGrid({ chart, colors }: PillarGridProps) {
                       ?
                     </T>
                     <T muted size={10} style={{ textAlign: 'center' }}>
-                      No birth time saved
+                      Unknown Hour
                     </T>
                   </View>
                 )}
@@ -128,13 +164,14 @@ export function PillarGrid({ chart, colors }: PillarGridProps) {
           })}
         </View>
       </Card>
-    </>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
   wrapper: {
     padding: 12,
+    borderRadius: 16,
   },
   row: {
     flexDirection: 'row',
@@ -147,7 +184,7 @@ const styles = StyleSheet.create({
     paddingVertical: 10,
     paddingHorizontal: 4,
     alignItems: 'center',
-    gap: 8,
+    gap: 7,
   },
   charBox: {
     alignItems: 'center',
@@ -158,15 +195,16 @@ const styles = StyleSheet.create({
     height: 1,
   },
   hiddenBox: {
-    width: '90%',
+    width: '92%',
     borderRadius: 8,
     paddingVertical: 4,
+    paddingHorizontal: 2,
     alignItems: 'center',
     marginTop: 2,
   },
   unknownBox: {
     flex: 1,
-    minHeight: 140,
+    minHeight: 132,
     alignItems: 'center',
     justifyContent: 'center',
     gap: 6,

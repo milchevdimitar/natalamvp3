@@ -1,17 +1,14 @@
 import React, { useMemo, useState } from 'react';
-import { View, TouchableOpacity, ScrollView } from 'react-native';
+import { View, TouchableOpacity, ScrollView, ActivityIndicator } from 'react-native';
 import {
-  Sparkles,
   Clock,
-  Orbit,
   Bookmark,
   Check,
   Share2,
   ChevronLeft,
   ChevronRight,
   RefreshCw,
-  AlertTriangle,
-  Zap,
+  Wand2,
 } from 'lucide-react-native';
 import { Card, T, Section } from '../../components/UI';
 import { NatalChartResults, TransitAspectItem } from './astrology.types';
@@ -20,7 +17,9 @@ import {
   calculateTransitsForDate,
 } from './astrology.transits';
 import { buildDailyUpdatePackage } from './astrology.insights';
+import { requestAstrologyAI } from './astrology.ai';
 import { TransitRingSvg } from './TransitRingSvg';
+import { DetailSheetModal, TieredSummaryCard } from './AstrologyDetailModal';
 
 export function AstrologyTabTodayTransits({
   results,
@@ -39,6 +38,13 @@ export function AstrologyTabTodayTransits({
 }) {
   const [selectedDate, setSelectedDate] = useState<Date>(() => new Date());
   const [transitFilter, setTransitFilter] = useState<'all' | 'upcoming' | 'outer'>('all');
+
+  const [selectedTransit, setSelectedTransit] = useState<TransitAspectItem | null>(null);
+  const [showDailyModal, setShowDailyModal] = useState(false);
+  const [showCyclesModal, setShowCyclesModal] = useState(false);
+
+  const [aiCoachingText, setAiCoachingText] = useState<string | null>(null);
+  const [isAiLoading, setIsAiLoading] = useState(false);
 
   const isToday = useMemo(() => {
     const now = new Date();
@@ -65,7 +71,18 @@ export function AstrologyTabTodayTransits({
   );
 
   const shiftDate = (days: number) => {
+    setAiCoachingText(null);
     setSelectedDate((prev) => new Date(prev.getTime() + days * 86400000));
+  };
+
+  const handleGenerateAiTransitCoaching = async () => {
+    setIsAiLoading(true);
+    const res = await requestAstrologyAI('transit_guidance', results, {
+      dateStr: timeTravel.dateStr,
+      transits: timeTravel.activeTransits,
+    });
+    setAiCoachingText(res.text);
+    setIsAiLoading(false);
   };
 
   const displayedTransits = useMemo(() => {
@@ -78,50 +95,13 @@ export function AstrologyTabTodayTransits({
 
   return (
     <View style={{ gap: 14 }}>
-      {/* Модул 5: Time Travel Navigator */}
-      <Card style={{ padding: 14, gap: 10 }}>
-        <View
-          style={{
-            flexDirection: 'row',
-            justifyContent: 'space-between',
-            alignItems: 'center',
-          }}
-        >
-          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-            <Clock size={16} color={colors.purple} />
-            <T bold size={14}>
-              Time Travel & Cosmic Timeline
-            </T>
-          </View>
-          {!isToday && (
-            <TouchableOpacity
-              onPress={() => setSelectedDate(new Date())}
-              style={{
-                flexDirection: 'row',
-                alignItems: 'center',
-                gap: 4,
-                paddingHorizontal: 8,
-                paddingVertical: 4,
-                borderRadius: 8,
-                backgroundColor: colors.purpleSoft,
-              }}
-            >
-              <RefreshCw size={11} color={colors.purple} />
-              <T bold size={11} style={{ color: colors.purple }}>
-                Today
-              </T>
-            </TouchableOpacity>
-          )}
-        </View>
-
+      {/* Ниво 1: Компактен Time Travel контролер */}
+      <Card style={{ padding: 12, borderRadius: 16, gap: 8 }}>
         <View
           style={{
             flexDirection: 'row',
             alignItems: 'center',
             justifyContent: 'space-between',
-            backgroundColor: colors.surfaceAlt,
-            borderRadius: 12,
-            padding: 8,
           }}
         >
           <TouchableOpacity onPress={() => shiftDate(-1)} style={{ padding: 6 }}>
@@ -129,15 +109,14 @@ export function AstrologyTabTodayTransits({
           </TouchableOpacity>
 
           <View style={{ alignItems: 'center' }}>
-            <T bold size={16}>
-              {timeTravel.dateStr}
-            </T>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 5 }}>
+              <Clock size={13} color={colors.purple} />
+              <T bold size={15}>
+                {timeTravel.dateStr}
+              </T>
+            </View>
             <T muted size={10}>
-              {isToday
-                ? 'СЕГАШЕН МОМЕНТ (LIVE SKY)'
-                : selectedDate.getTime() < Date.now()
-                ? 'МИНАЛ ПЕРИОД (TIME TRAVEL)'
-                : 'БЪДЕЩ ПЕРИОД (TIME TRAVEL)'}
+              {isToday ? 'TODAY · LIVE SKY' : 'TIME TRAVEL SNAPSHOT'}
             </T>
           </View>
 
@@ -149,28 +128,36 @@ export function AstrologyTabTodayTransits({
         <ScrollView horizontal showsHorizontalScrollIndicator={false}>
           <View style={{ flexDirection: 'row', gap: 6 }}>
             {[
-              { label: '-5 г.', days: -1826 },
-              { label: '-1 г.', days: -365 },
-              { label: '-1 мес.', days: -30 },
-              { label: '-7 дни', days: -7 },
-              { label: '+7 дни', days: 7 },
-              { label: '+1 мес.', days: 30 },
-              { label: '+1 г.', days: 365 },
-              { label: '+5 г.', days: 1826 },
+              { label: '-1 yr', days: -365 },
+              { label: '-1 mo', days: -30 },
+              { label: '-7 d', days: -7 },
+              ...(isToday ? [] : [{ label: 'Today', days: 0 }]),
+              { label: '+7 d', days: 7 },
+              { label: '+1 mo', days: 30 },
+              { label: '+1 yr', days: 365 },
             ].map((step) => (
               <TouchableOpacity
                 key={step.label}
-                onPress={() => shiftDate(step.days)}
+                onPress={() => {
+                  if (step.days === 0) {
+                    setAiCoachingText(null);
+                    setSelectedDate(new Date());
+                  } else {
+                    shiftDate(step.days);
+                  }
+                }}
                 style={{
                   paddingHorizontal: 10,
-                  paddingVertical: 6,
+                  paddingVertical: 5,
                   borderRadius: 8,
-                  backgroundColor: colors.surfaceAlt,
-                  borderWidth: 1,
-                  borderColor: colors.line,
+                  backgroundColor: step.days === 0 ? colors.purple : colors.surfaceAlt,
                 }}
               >
-                <T bold size={11}>
+                <T
+                  bold
+                  size={11}
+                  style={{ color: step.days === 0 ? '#FFFFFF' : colors.muted }}
+                >
                   {step.label}
                 </T>
               </TouchableOpacity>
@@ -179,126 +166,31 @@ export function AstrologyTabTodayTransits({
         </ScrollView>
       </Card>
 
-      {/* Модул 3: Daily Updates & Moon Phase */}
-      <Section>{isToday ? 'Daily Cosmic Update' : `Cosmic Forecast (${timeTravel.dateStr})`}</Section>
-      <Card style={{ padding: 14, gap: 10 }}>
-        <View
-          style={{
-            flexDirection: 'row',
-            justifyContent: 'space-between',
-            alignItems: 'center',
-          }}
-        >
-          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-            <T size={22}>{dailyUpdate.moonPhase.symbol}</T>
-            <View>
-              <T bold size={14}>
-                {dailyUpdate.moonPhase.name} in {dailyUpdate.moonPhase.sign}
-              </T>
-              <T muted size={11}>
-                Illumination: {dailyUpdate.moonPhase.illumination}% · Alignment:{' '}
-                {dailyUpdate.cosmicScore}%
-              </T>
-            </View>
-          </View>
+      {/* Ниво 1: Кратък Daily Focus с бутон More към целия разбор */}
+      <TieredSummaryCard
+        tag={`${dailyUpdate.moonPhase.symbol} ${dailyUpdate.moonPhase.name} in ${dailyUpdate.moonPhase.sign}`}
+        badgeText={`${dailyUpdate.cosmicScore}% Alignment`}
+        title={isToday ? "Today's Cosmic Pulse" : `Forecast for ${timeTravel.dateStr}`}
+        summary={dailyUpdate.dailyMessage}
+        onPressMore={() => {
+          setShowDailyModal(true);
+          if (!aiCoachingText && !isAiLoading) {
+            handleGenerateAiTransitCoaching();
+          }
+        }}
+        colors={colors}
+      />
 
-          <View style={{ flexDirection: 'row', gap: 6 }}>
-            <TouchableOpacity
-              onPress={() =>
-                onSaveDailyInsight(
-                  `daily_${dailyUpdate.dateStr}`,
-                  `Daily Update (${dailyUpdate.dateStr})`,
-                  dailyUpdate.dailyMessage
-                )
-              }
-              style={{
-                padding: 7,
-                borderRadius: 8,
-                backgroundColor: savedIds.has(`daily_${dailyUpdate.dateStr}`)
-                  ? colors.purple
-                  : colors.surfaceAlt,
-              }}
-            >
-              {savedIds.has(`daily_${dailyUpdate.dateStr}`) ? (
-                <Check size={14} color="#FFFFFF" />
-              ) : (
-                <Bookmark size={14} color={colors.purple} />
-              )}
-            </TouchableOpacity>
-            <TouchableOpacity
-              onPress={() =>
-                onShareText(
-                  `Natala Daily (${dailyUpdate.dateStr})`,
-                  `${dailyUpdate.dailyMessage}\n\n${dailyUpdate.mindfulGuidance}`
-                )
-              }
-              style={{ padding: 7, borderRadius: 8, backgroundColor: colors.surfaceAlt }}
-            >
-              <Share2 size={14} color={colors.muted} />
-            </TouchableOpacity>
-          </View>
-        </View>
-
-        <T size={13} style={{ lineHeight: 19 }}>
-          {dailyUpdate.dailyMessage}
-        </T>
-
-        <View style={{ gap: 6 }}>
-          <View style={{ padding: 10, borderRadius: 10, backgroundColor: colors.surfaceAlt }}>
-            <T bold size={11} style={{ color: colors.purple }}>
-              Емоционална тема на деня:
-            </T>
-            <T size={12} style={{ marginTop: 2 }}>
-              {dailyUpdate.emotionalTheme}
-            </T>
-          </View>
-
-          <View style={{ padding: 10, borderRadius: 10, backgroundColor: colors.surfaceAlt }}>
-            <T bold size={11} style={{ color: colors.gold }}>
-              Активиран личностен процес:
-            </T>
-            <T size={12} style={{ marginTop: 2 }}>
-              {dailyUpdate.activatedProcess}
-            </T>
-          </View>
-
-          <View style={{ padding: 10, borderRadius: 10, backgroundColor: 'rgba(245,158,11,0.12)' }}>
-            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 5 }}>
-              <AlertTriangle size={12} color="#F59E0B" />
-              <T bold size={11} style={{ color: '#F59E0B' }}>
-                Възможно предизвикателство:
-              </T>
-            </View>
-            <T size={12} style={{ marginTop: 2 }}>
-              {dailyUpdate.potentialChallenge}
-            </T>
-          </View>
-
-          <View style={{ padding: 10, borderRadius: 10, backgroundColor: colors.purpleSoft }}>
-            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 5 }}>
-              <Sparkles size={12} color={colors.purple} />
-              <T bold size={11} style={{ color: colors.purple }}>
-                Насока за осъзнаване:
-              </T>
-            </View>
-            <T size={12} style={{ marginTop: 2 }}>
-              {dailyUpdate.mindfulGuidance}
-            </T>
-          </View>
-        </View>
-      </Card>
-
-      {/* Модул 4.9: Transit Ring Visualization */}
-      <Section>Transit Ring & Active Cycles</Section>
-      <Card style={{ padding: 14 }}>
+      {/* Ниво 1: Transit Ring */}
+      <Card style={{ padding: 14, borderRadius: 16 }}>
         <TransitRingSvg
           transits={timeTravel.activeTransits}
           colors={colors}
-          title={`TRANSIT RING (${timeTravel.dateStr})`}
+          title={`TRANSIT RING · ${timeTravel.dateStr}`}
         />
       </Card>
 
-      {/* Модул 4.1–4.11: Лични, текущи и предстоящи транзити */}
+      {/* Ниво 1: Изчистен списък с активни транзити */}
       <View
         style={{
           flexDirection: 'row',
@@ -311,8 +203,8 @@ export function AstrologyTabTodayTransits({
           {(
             [
               { id: 'all', label: `Active (${timeTravel.activeTransits.length})` },
-              { id: 'upcoming', label: 'Upcoming (+14d)' },
-              { id: 'outer', label: 'Outer Cycles' },
+              { id: 'upcoming', label: '+14d' },
+              { id: 'outer', label: 'Outer' },
             ] as const
           ).map((f) => (
             <TouchableOpacity
@@ -320,7 +212,7 @@ export function AstrologyTabTodayTransits({
               onPress={() => setTransitFilter(f.id)}
               style={{
                 paddingHorizontal: 9,
-                paddingVertical: 5,
+                paddingVertical: 4,
                 borderRadius: 8,
                 backgroundColor: transitFilter === f.id ? colors.purple : colors.surfaceAlt,
               }}
@@ -339,103 +231,231 @@ export function AstrologyTabTodayTransits({
 
       <View style={{ gap: 10 }}>
         {displayedTransits.length === 0 ? (
-          <Card style={{ padding: 16, alignItems: 'center' }}>
+          <Card style={{ padding: 16, alignItems: 'center', borderRadius: 16 }}>
             <T muted size={12}>
-              Няма точни транзити в този филтър за {timeTravel.dateStr}.
+              No exact transits in this filter for {timeTravel.dateStr}.
             </T>
           </Card>
         ) : (
-          displayedTransits.map((tr) => {
-            const isSaved = savedIds.has(tr.id);
-            return (
-              <Card key={tr.id} style={{ padding: 14, gap: 8 }}>
-                <View
-                  style={{
-                    flexDirection: 'row',
-                    justifyContent: 'space-between',
-                    alignItems: 'flex-start',
-                  }}
-                >
-                  <View style={{ flex: 1 }}>
-                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-                      <Orbit size={14} color={colors.purple} />
-                      <T bold size={10} style={{ color: colors.gold }}>
-                        {tr.timeframeLabel} · Orb {tr.orb}° · Intensity {tr.intensity}%
-                      </T>
-                    </View>
-                    <T bold size={15} style={{ marginTop: 2 }}>
-                      {tr.transitSymbol} {tr.title} {tr.natalSymbol}
-                    </T>
-                  </View>
-
-                  <View style={{ flexDirection: 'row', gap: 6 }}>
-                    <TouchableOpacity
-                      onPress={() => onSaveTransit(tr)}
-                      style={{
-                        padding: 7,
-                        borderRadius: 8,
-                        backgroundColor: isSaved ? colors.purple : colors.surfaceAlt,
-                      }}
-                    >
-                      {isSaved ? (
-                        <Check size={14} color="#FFFFFF" />
-                      ) : (
-                        <Bookmark size={14} color={colors.purple} />
-                      )}
-                    </TouchableOpacity>
-                    <TouchableOpacity
-                      onPress={() =>
-                        onShareText(
-                          tr.title,
-                          `Пик: ${tr.peakDateStr}\n${tr.summary}\n${tr.guidance}`
-                        )
-                      }
-                      style={{ padding: 7, borderRadius: 8, backgroundColor: colors.surfaceAlt }}
-                    >
-                      <Share2 size={14} color={colors.muted} />
-                    </TouchableOpacity>
-                  </View>
-                </View>
-
-                <T size={13} style={{ lineHeight: 19 }}>
-                  {tr.summary}
-                </T>
-
-                <View
-                  style={{
-                    flexDirection: 'row',
-                    justifyContent: 'space-between',
-                    paddingHorizontal: 10,
-                    paddingVertical: 6,
-                    borderRadius: 8,
-                    backgroundColor: colors.surfaceAlt,
-                  }}
-                >
-                  <T muted size={10}>
-                    Начало: {tr.startDateStr}
-                  </T>
-                  <T bold size={10} style={{ color: colors.purple }}>
-                    Пик: {tr.peakDateStr}
-                  </T>
-                  <T muted size={10}>
-                    Край: {tr.endDateStr}
-                  </T>
-                </View>
-
-                <T size={11} style={{ color: colors.purple }}>
-                  <Zap size={11} color={colors.purple} /> {tr.guidance}
-                </T>
-              </Card>
-            );
-          })
+          displayedTransits.map((tr) => (
+            <TieredSummaryCard
+              key={tr.id}
+              tag={`${tr.timeframeLabel} · Peak ${tr.peakDateStr}`}
+              badgeText={`${tr.intensity}%`}
+              title={`${tr.transitSymbol} ${tr.title}`}
+              summary={tr.summary}
+              onPressMore={() => setSelectedTransit(tr)}
+              colors={colors}
+            />
+          ))
         )}
       </View>
 
-      {/* Модул 5.4 & 5.5: Житейски цикли */}
-      <Section>Life Cycles & Evolutionary Milestones</Section>
-      <View style={{ gap: 8 }}>
+      {/* Ниво 1: Компактен вход към Life Cycles */}
+      <TouchableOpacity activeOpacity={0.85} onPress={() => setShowCyclesModal(true)}>
+        <Card
+          style={{
+            padding: 15,
+            borderRadius: 16,
+            flexDirection: 'row',
+            justifyContent: 'space-between',
+            alignItems: 'center',
+          }}
+        >
+          <View>
+            <T bold size={14}>
+              Life Cycles & Milestones
+            </T>
+            <T muted size={11}>
+              Saturn Return, Nodal Axis & major evolutionary chapters
+            </T>
+          </View>
+          <ChevronRight size={18} color={colors.muted} />
+        </Card>
+      </TouchableOpacity>
+
+      {/* Ниво 2/3: Модал за Daily Breakdown + AI Coach */}
+      <DetailSheetModal
+        visible={showDailyModal}
+        onClose={() => setShowDailyModal(false)}
+        eyebrow={`${dailyUpdate.moonPhase.symbol} ${dailyUpdate.moonPhase.name} · ${timeTravel.dateStr}`}
+        title="Daily Cosmic Breakdown"
+        colors={colors}
+        isSaved={savedIds.has(`daily_${dailyUpdate.dateStr}`)}
+        onSave={() =>
+          onSaveDailyInsight(
+            `daily_${dailyUpdate.dateStr}`,
+            `Daily Update (${dailyUpdate.dateStr})`,
+            dailyUpdate.dailyMessage
+          )
+        }
+        onShare={() =>
+          onShareText(
+            `Natala Daily (${dailyUpdate.dateStr})`,
+            `${dailyUpdate.dailyMessage}\n\n${dailyUpdate.mindfulGuidance}`
+          )
+        }
+      >
+        <T size={14} style={{ lineHeight: 21 }}>
+          {dailyUpdate.dailyMessage}
+        </T>
+
+        <View
+          style={{
+            padding: 12,
+            borderRadius: 12,
+            backgroundColor: colors.purpleSoft,
+            gap: 6,
+          }}
+        >
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+            <Wand2 size={14} color={colors.purple} />
+            <T bold size={12} style={{ color: colors.purple }}>
+              AI Transit Coach
+            </T>
+          </View>
+          {isAiLoading ? (
+            <ActivityIndicator size="small" color={colors.purple} />
+          ) : (
+            <T size={13} style={{ lineHeight: 19 }}>
+              {aiCoachingText}
+            </T>
+          )}
+        </View>
+
+        <View style={{ padding: 12, borderRadius: 12, backgroundColor: colors.surfaceAlt }}>
+          <T bold size={11} style={{ color: colors.purple }}>
+            EMOTIONAL THEME
+          </T>
+          <T size={13} style={{ marginTop: 3, lineHeight: 19 }}>
+            {dailyUpdate.emotionalTheme}
+          </T>
+        </View>
+
+        <View style={{ padding: 12, borderRadius: 12, backgroundColor: colors.surfaceAlt }}>
+          <T bold size={11} style={{ color: colors.gold }}>
+            POTENTIAL CHALLENGE
+          </T>
+          <T size={13} style={{ marginTop: 3, lineHeight: 19 }}>
+            {dailyUpdate.potentialChallenge}
+          </T>
+        </View>
+
+        <View style={{ padding: 12, borderRadius: 12, backgroundColor: colors.surfaceAlt }}>
+          <T bold size={11} style={{ color: colors.purple }}>
+            MINDFUL GUIDANCE
+          </T>
+          <T size={13} style={{ marginTop: 3, lineHeight: 19 }}>
+            {dailyUpdate.mindfulGuidance}
+          </T>
+        </View>
+      </DetailSheetModal>
+
+      {/* Ниво 2: Модал за избран транзит */}
+      <DetailSheetModal
+        visible={Boolean(selectedTransit)}
+        onClose={() => setSelectedTransit(null)}
+        eyebrow={
+          selectedTransit
+            ? `${selectedTransit.timeframeLabel} · Orb ${selectedTransit.orb}°`
+            : undefined
+        }
+        title={
+          selectedTransit
+            ? `${selectedTransit.transitSymbol} ${selectedTransit.title}`
+            : ''
+        }
+        colors={colors}
+        isSaved={selectedTransit ? savedIds.has(selectedTransit.id) : false}
+        onSave={selectedTransit ? () => onSaveTransit(selectedTransit) : undefined}
+        onShare={
+          selectedTransit
+            ? () =>
+                onShareText(
+                  selectedTransit.title,
+                  `Peak: ${selectedTransit.peakDateStr}\n\n${selectedTransit.summary}\n\n${selectedTransit.guidance}`
+                )
+            : undefined
+        }
+      >
+        {selectedTransit && (
+          <>
+            <View
+              style={{
+                flexDirection: 'row',
+                justifyContent: 'space-between',
+                padding: 12,
+                borderRadius: 12,
+                backgroundColor: colors.surfaceAlt,
+              }}
+            >
+              <View>
+                <T muted size={10}>
+                  START
+                </T>
+                <T bold size={12}>
+                  {selectedTransit.startDateStr}
+                </T>
+              </View>
+              <View>
+                <T muted size={10}>
+                  EXACT PEAK
+                </T>
+                <T bold size={12} style={{ color: colors.purple }}>
+                  {selectedTransit.peakDateStr}
+                </T>
+              </View>
+              <View>
+                <T muted size={10}>
+                  COMPLETION
+                </T>
+                <T bold size={12}>
+                  {selectedTransit.endDateStr}
+                </T>
+              </View>
+            </View>
+
+            <T size={14} style={{ lineHeight: 22 }}>
+              {selectedTransit.summary}
+            </T>
+
+            <View
+              style={{
+                padding: 12,
+                borderRadius: 12,
+                backgroundColor: colors.purpleSoft,
+                gap: 4,
+              }}
+            >
+              <T bold size={11} style={{ color: colors.purple }}>
+                HOW TO NAVIGATE
+              </T>
+              <T size={13} style={{ lineHeight: 19 }}>
+                {selectedTransit.guidance}
+              </T>
+            </View>
+          </>
+        )}
+      </DetailSheetModal>
+
+      {/* Ниво 2: Модал за Life Cycles */}
+      <DetailSheetModal
+        visible={showCyclesModal}
+        onClose={() => setShowCyclesModal(false)}
+        eyebrow="EVOLUTIONARY TIMELINE"
+        title="Life Cycles & Milestones"
+        colors={colors}
+      >
         {timeTravel.lifeCycles.map((cycle) => (
-          <Card key={cycle.id} style={{ padding: 12, gap: 4 }}>
+          <View
+            key={cycle.id}
+            style={{
+              padding: 12,
+              borderRadius: 12,
+              backgroundColor: colors.surfaceAlt,
+              gap: 4,
+            }}
+          >
             <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
               <T bold size={13} style={{ flex: 1 }}>
                 {cycle.title}
@@ -452,15 +472,15 @@ export function AstrologyTabTodayTransits({
                       : colors.gold,
                 }}
               >
-                {cycle.ageRange} · {cycle.status.toUpperCase()}
+                {cycle.ageRange}
               </T>
             </View>
-            <T muted size={12}>
+            <T muted size={12} style={{ lineHeight: 18 }}>
               {cycle.description}
             </T>
-          </Card>
+          </View>
         ))}
-      </View>
+      </DetailSheetModal>
     </View>
   );
 }

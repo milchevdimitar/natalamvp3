@@ -214,8 +214,6 @@ export interface AspectLine {
   isMajor: boolean;
 }
 
-// --- Модули 3, 4, 5: Daily Updates, Transits & Time Travel ---
-
 export interface SkyBodySnapshot {
   key: string;
   name: string;
@@ -243,8 +241,8 @@ export interface TransitAspectItem {
   orb: number;
   maxOrb: number;
   isApplying: boolean;
-  intensity: number; // 0..100
-  progress: number; // 0..1 (0 = начало на цикъла, 0.5 = пик, 1 = край)
+  intensity: number;
+  progress: number;
   harmony: AspectHarmony;
   timeframeLabel: 'Short-term' | 'Medium Cycle' | 'Deep Outer Cycle';
   startDateStr: string;
@@ -261,7 +259,7 @@ export interface LifeCycleItem {
   subtitle: string;
   ageRange: string;
   status: 'active' | 'upcoming' | 'completed';
-  progress: number; // 0..100
+  progress: number;
   description: string;
 }
 
@@ -299,8 +297,6 @@ export interface DailyUpdatePackage {
   mindfulGuidance: string;
 }
 
-// --- Модули 1 и 2: Психологически анализи и личностни модели ---
-
 export interface PsychologicalInsightBlock {
   id: string;
   code: string;
@@ -326,8 +322,6 @@ export interface PatternAnalysisItem {
   deepDive: string;
   growthKey: string;
 }
-
-// --- Модули 6, 7, 8, 9, 15: Bonds, Bond Transits, Custom Friends & Public Figures ---
 
 export type BondRelationshipType =
   | 'romantic'
@@ -395,8 +389,6 @@ export interface BondAnalysisResult {
   };
 }
 
-// --- Модули 10, 11, 12, 13, 14, 18: Universe, Audio, Classes, Collections ---
-
 export type CollectionCategory =
   | 'insights'
   | 'transits'
@@ -457,14 +449,4 @@ export interface AstrologyClassItem {
   concept: string;
   personalExample: string;
   takeaway: string;
-}
-
-export interface SharedExperienceItem {
-  id: string;
-  author: string;
-  bigThree: string;
-  topicTag: string;
-  timeAgo: string;
-  content: string;
-  resonatesCount: number;
 }

@@ -38,7 +38,6 @@ export function TransitRingSvg({
   return (
     <View style={{ alignItems: 'center', paddingVertical: 8 }}>
       <Svg width={size} height={size} viewBox={`0 0 ${size} ${size}`}>
-        {/* Фонови концентрични орбити */}
         {ringRadii.map((r, idx) => (
           <Circle
             key={`bg_${idx}`}
@@ -52,7 +51,6 @@ export function TransitRingSvg({
           />
         ))}
 
-        {/* Активни транзитни дъги */}
         {topItems.map((item, idx) => {
           const r = ringRadii[idx];
           const sweep = Math.max(28, Math.min(340, item.progress * 360));
@@ -73,12 +71,18 @@ export function TransitRingSvg({
                 strokeLinecap="round"
                 fill="none"
               />
-              <Circle cx={marker.x} cy={marker.y} r={5.5} fill="#FFFFFF" stroke={strokeColor} strokeWidth={2.5} />
+              <Circle
+                cx={marker.x}
+                cy={marker.y}
+                r={5.5}
+                fill="#FFFFFF"
+                stroke={strokeColor}
+                strokeWidth={2.5}
+              />
             </G>
           );
         })}
 
-        {/* Централен индикатор */}
         <Circle cx={cx} cy={cy} r={24} fill={colors.purpleSoft} />
         <SvgText
           x={cx}
@@ -90,22 +94,15 @@ export function TransitRingSvg({
         >
           {topItems.length} ACTIVE
         </SvgText>
-        <SvgText
-          x={cx}
-          y={cy + 9}
-          fill={colors.muted}
-          fontSize="7"
-          textAnchor="middle"
-        >
+        <SvgText x={cx} y={cy + 9} fill={colors.muted} fontSize="7" textAnchor="middle">
           CYCLES
         </SvgText>
       </Svg>
 
       <T muted size={10} style={{ letterSpacing: 1.2, marginTop: 4 }}>
-        {title} · НАЧАЛО → ПИК → ЗАВЪРШВАНЕ
+        {title} · START → PEAK → COMPLETION
       </T>
 
-      {/* Легенда на активните орбити */}
       <View style={{ width: '100%', gap: 6, marginTop: 10 }}>
         {topItems.map((item) => {
           const dotColor =
@@ -141,7 +138,7 @@ export function TransitRingSvg({
                 </T>
               </View>
               <T muted size={10}>
-                Пик: {item.peakDateStr} ({Math.round(item.progress * 100)}%)
+                Peak: {item.peakDateStr} ({Math.round(item.progress * 100)}%)
               </T>
             </View>
           );

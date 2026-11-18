@@ -150,6 +150,9 @@ app.post('/api/users/login', async (req, res) => {
   }
 });
 
+const aiAstrologyRoutes = require('./routes/aiAstrology');
+app.use('/api/ai/astrology', aiAstrologyRoutes);
+
 const reportRoutes = require('./routes/report');
 app.use(reportRoutes);
 

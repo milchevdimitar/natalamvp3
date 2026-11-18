@@ -1,3 +1,11 @@
 export { default } from './BaZi';
-export { calculateBaZiChart, CHINESE_HOURS } from './bazi.calculator';
-export type { BaZiChart, BaZiPillar, WuXingElement } from './bazi.types';
+export { calculateBaZiChart, compareBaZiCharts, CHINESE_HOURS } from './bazi.calculator';
+export { convertLocalToTrueSolarTime, CITY_PRESETS } from './bazi.solar';
+export type {
+  BaZiChart,
+  BaZiPillar,
+  WuXingElement,
+  SixBoostElement,
+  LuckPillarItem,
+  MatchMakerResult,
+} from './bazi.types';
