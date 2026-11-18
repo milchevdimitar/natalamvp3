@@ -20,7 +20,10 @@ export default function Astrology() {
   const { colors, setPage, user, setUser } = useApp();
   const [viewMode, setViewMode] = useState<ChartViewMode>('2D');
 
-  const { results, userDateInfo, isSyncing, syncStatus } = useAstrologyChart(user, setUser);
+  const { results, userDateInfo, isInitializing, isSyncing, syncStatus } = useAstrologyChart(
+    user,
+    setUser
+  );
 
   const sunData = results
     ? degToZodiac(results.planetPositions.find((p) => p.name === 'Sun')?.deg || 0)
@@ -104,7 +107,7 @@ export default function Astrology() {
           </Card>
 
           <BirthDetailsCard
-            userName={user?.name}
+            userName={user?.name || user?.user?.name}
             dateStr={results.dateStr}
             timeStr={results.timeStr}
             cityName={userDateInfo?.cityName || 'Sofia, Bulgaria'}
@@ -113,6 +116,13 @@ export default function Astrology() {
 
           <PlanetaryPositionsList results={results} ascData={ascData} colors={colors} />
         </>
+      ) : isInitializing || isSyncing ? (
+        <Card style={styles.emptyCard}>
+          <ActivityIndicator size="large" color={colors.purple} />
+          <T bold size={15}>
+            Loading Birth Chart...
+          </T>
+        </Card>
       ) : (
         <MissingBirthDateEmptyState colors={colors} onGoToProfile={() => setPage('profile')} />
       )}

@@ -37,11 +37,12 @@ export function computeProfileFeatures(
   const ageYears = computeAgeYears(user.birthdate);
   const isAdult18Plus = ageYears !== null && ageYears >= 18;
   const exactTime = hasValidatedExactBirthTime(user);
+
+  const cityAny = user.birthCity as any;
+  const latVal = cityAny?.latitude ?? cityAny?.lat;
+  const lonVal = cityAny?.longitude ?? cityAny?.lng ?? cityAny?.lon;
   const hasBirthLocation = Boolean(
-    user.birthCity &&
-      typeof user.birthCity.latitude === 'number' &&
-      typeof user.birthCity.longitude === 'number' &&
-      user.birthCity.timezone
+    cityAny && typeof latVal === 'number' && typeof lonVal === 'number'
   );
 
   const mbtiType = normalizeMbtiType(user.mbti?.type);
@@ -74,10 +75,26 @@ export function computeProfileFeatures(
         }
       : null;
 
-  // Synastry placements: omit Ascendant/MC when exact birth time or location is missing;
-  // omit Moon when exact birth time is missing and moonUncertaintyMode === 'omit'.
+  // Synastry placements: supports both numeric degrees and full PlanetPosition objects
   const synastryBodies: Partial<Record<SynastryBody, number>> = {};
-  const rawPlanets = user.natalChart?.planets || {};
+  const chartAny = user.natalChart as any;
+  const rawPlanets: Record<string, any> = { ...(chartAny?.planets || {}) };
+
+  if (Array.isArray(chartAny?.planetPositions)) {
+    for (const p of chartAny.planetPositions) {
+      const k = (p?.key || p?.name || '').toLowerCase();
+      if (k && rawPlanets[k] === undefined && typeof p?.deg === 'number') {
+        rawPlanets[k] = p.deg;
+      }
+    }
+  }
+
+  const extractDeg = (entry: any): number | null => {
+    if (typeof entry === 'number' && !Number.isNaN(entry)) return entry;
+    if (entry && typeof entry.deg === 'number' && !Number.isNaN(entry.deg)) return entry.deg;
+    return null;
+  };
+
   const allowedBaseBodies: SynastryBody[] = [
     'sun',
     'mercury',
@@ -88,40 +105,48 @@ export function computeProfileFeatures(
   ];
 
   for (const b of allowedBaseBodies) {
-    const val = rawPlanets[b];
-    if (typeof val === 'number' && !Number.isNaN(val)) {
+    const val = extractDeg(rawPlanets[b]);
+    if (val !== null) {
       synastryBodies[b] = ((val % 360) + 360) % 360;
     }
   }
 
-  if (exactTime && typeof rawPlanets.moon === 'number' && !Number.isNaN(rawPlanets.moon)) {
-    synastryBodies.moon = ((rawPlanets.moon % 360) + 360) % 360;
+  const moonVal = extractDeg(rawPlanets.moon);
+  if (exactTime && moonVal !== null) {
+    synastryBodies.moon = ((moonVal % 360) + 360) % 360;
   }
 
   if (exactTime && hasBirthLocation) {
-    if (typeof rawPlanets.asc === 'number' && !Number.isNaN(rawPlanets.asc)) {
-      synastryBodies.asc = ((rawPlanets.asc % 360) + 360) % 360;
+    const ascVal = extractDeg(rawPlanets.asc ?? chartAny?.asc);
+    if (ascVal !== null) {
+      synastryBodies.asc = ((ascVal % 360) + 360) % 360;
     }
-    if (typeof rawPlanets.mc === 'number' && !Number.isNaN(rawPlanets.mc)) {
-      synastryBodies.mc = ((rawPlanets.mc % 360) + 360) % 360;
+    const mcVal = extractDeg(rawPlanets.mc ?? chartAny?.mc);
+    if (mcVal !== null) {
+      synastryBodies.mc = ((mcVal % 360) + 360) % 360;
     }
   }
 
   const synastryReliableBodyCount = Object.keys(synastryBodies).length;
 
-  // Ba Zi: enforce 3-pillar fallback if exact birth time is absent
-  const bazi = user.bazi
-    ? {
-        ...user.bazi,
-        hasHourPillar: Boolean(exactTime && user.bazi.pillars.hour),
-        pillars: {
-          year: user.bazi.pillars.year,
-          month: user.bazi.pillars.month,
-          day: user.bazi.pillars.day,
-          hour: exactTime ? user.bazi.pillars.hour || null : null,
-        },
-      }
-    : null;
+  // Ba Zi: safely handle missing pillars (e.g. Mongoose default {}) and enforce 3-pillar fallback
+  const rawPillars = user.bazi?.pillars;
+  const hasCorePillars = Boolean(
+    rawPillars && (rawPillars.year || rawPillars.month || rawPillars.day)
+  );
+  const bazi =
+    user.bazi && hasCorePillars
+      ? {
+          ...user.bazi,
+          hasHourPillar: Boolean(exactTime && rawPillars?.hour),
+          pillars: {
+            year: rawPillars?.year || '',
+            month: rawPillars?.month || '',
+            day: rawPillars?.day || '',
+            hour: exactTime ? rawPillars?.hour || null : null,
+          },
+        }
+      : null;
 
   // Completeness score
   let availableCount = 0;

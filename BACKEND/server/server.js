@@ -1,3 +1,6 @@
+const dns = require('node:dns');
+dns.setDefaultResultOrder('ipv4first');
+
 const path = require('path');
 require('dotenv').config({ path: path.join(__dirname, '.env') });
 const express = require('express');
@@ -63,15 +66,19 @@ app.use('/api/people', peopleRoutes);
 // Запис и синхронизация на изчисления профил
 app.post('/api/users/profile', async (req, res) => {
   try {
-    const userData = req.body;
+    const userData = req.body || {};
     if (!userData.email) {
       return res.status(400).json({ success: false, error: 'Липсва имейл.' });
     }
 
     const normalizedEmail = userData.email.toLowerCase().trim();
+
+    // Премахваме системните/непроменяеми полета на MongoDB преди $set
+    const { _id, id, __v, createdAt, updatedAt, ...safeUpdateFields } = userData;
+
     const updatedUser = await User.findOneAndUpdate(
       { email: normalizedEmail },
-      { $set: { ...userData, email: normalizedEmail, lastActiveAt: new Date() } },
+      { $set: { ...safeUpdateFields, email: normalizedEmail, lastActiveAt: new Date() } },
       { new: true, upsert: true, runValidators: true }
     );
 
@@ -99,10 +106,10 @@ app.get('/api/users/profile/:email', async (req, res) => {
   }
 });
 
-// Логин / Бърза регистрация само с имейл
+// Логин / Бърза регистрация
 app.post('/api/users/login', async (req, res) => {
   try {
-    const { email, name } = req.body;
+    const { email, name, birthdate, birthTime, birthCity } = req.body || {};
 
     if (!email) {
       return res
@@ -120,8 +127,12 @@ app.post('/api/users/login', async (req, res) => {
       user = new User({
         name: name || normalizedEmail.split('@')[0],
         email: normalizedEmail,
-        birthdate: new Date(),
-        birthCity: { name: 'София', country: 'България' },
+        birthdate: birthdate || new Date(),
+        ...(birthTime ? { birthTime, hasExactBirthTime: true } : {}),
+        birthCity:
+          birthCity && typeof birthCity === 'object'
+            ? birthCity
+            : { name: typeof birthCity === 'string' && birthCity ? birthCity : 'София', country: 'България' },
         lastActiveAt: new Date(),
       });
       await user.save();
