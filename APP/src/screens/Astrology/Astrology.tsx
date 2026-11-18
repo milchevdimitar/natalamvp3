@@ -1,29 +1,78 @@
-import React, { useState } from 'react';
-import { View, TouchableOpacity, ActivityIndicator } from 'react-native';
-import { ArrowLeft, CloudUpload } from 'lucide-react-native';
+import React, { useMemo, useState } from 'react';
+import {
+  View,
+  TouchableOpacity,
+  ActivityIndicator,
+  Share,
+  Switch,
+} from 'react-native';
+import {
+  ArrowLeft,
+  CloudUpload,
+  Bell,
+  Crown,
+  Share2,
+  Compass,
+  Orbit,
+  Sparkles,
+  Heart,
+  BookOpen,
+} from 'lucide-react-native';
 import { useApp } from '../../context/AppContext';
+import { saveUserProfile } from '../../services/api';
 import { Card, T, Section, Hero } from '../../components/UI';
-import { ChartViewMode } from './astrology.types';
-import { degToZodiac } from './astrology.calculations';
+import {
+  AstrologyAppTab,
+  BondProfileInput,
+  ChartViewMode,
+  CollectionCategory,
+  PatternAnalysisItem,
+  PsychologicalInsightBlock,
+  TransitAspectItem,
+  UserCollectionGroup,
+} from './astrology.types';
+import { degToZodiac, unwrapUserObject } from './astrology.calculations';
 import { useAstrologyChart } from './useAstrologyChart';
+import { buildPersonalPsychologicalInsights } from './astrology.insights';
 import { NatalChartWheel } from './NatalChartWheel';
 import { NatalChart3DDome } from './NatalChart3DDome';
 import {
   PrimaryPlacementsRow,
   BirthDetailsCard,
+  ChartBalanceMatrixCard,
+  PsychologicalInsightsSection,
   PlanetaryPositionsList,
   MissingBirthDateEmptyState,
 } from './AstrologySections';
+import { AstrologyTabTodayTransits } from './AstrologyTabTodayTransits';
+import { AstrologyTabPatterns } from './AstrologyTabPatterns';
+import { AstrologyTabBonds } from './AstrologyTabBonds';
+import { AstrologyTabUniverse } from './AstrologyTabUniverse';
 import { styles } from './astrology.styles';
+
+const DEFAULT_COLLECTIONS: UserCollectionGroup[] = [
+  { title: 'Personal Insights', category: 'insights', items: [] },
+  { title: 'Transit Collections', category: 'transits', items: [] },
+  { title: 'Life Patterns', category: 'patterns', items: [] },
+  { title: 'Saved Bonds', category: 'bonds', items: [] },
+  { title: 'Content Library', category: 'library', items: [] },
+  { title: 'Audio & Moon Journeys', category: 'audio', items: [] },
+  { title: 'Astrology Classes', category: 'classes', items: [] },
+];
 
 export default function Astrology() {
   const { colors, setPage, user, setUser } = useApp();
+  const [activeTab, setActiveTab] = useState<AstrologyAppTab>('chart');
   const [viewMode, setViewMode] = useState<ChartViewMode>('2D');
+  const [showSettingsDrawer, setShowSettingsDrawer] = useState(false);
 
   const { results, userDateInfo, isInitializing, isSyncing, syncStatus } = useAstrologyChart(
     user,
     setUser
   );
+
+  const effectiveUser = useMemo(() => unwrapUserObject(user) || {}, [user]);
+  const isWrapped = Boolean(user && effectiveUser && effectiveUser !== user);
 
   const sunData = results
     ? degToZodiac(results.planetPositions.find((p) => p.name === 'Sun')?.deg || 0)
@@ -33,20 +82,266 @@ export default function Astrology() {
     : null;
   const ascData = results ? degToZodiac(results.asc) : null;
 
+  const psychologicalInsights = useMemo(
+    () => (results ? buildPersonalPsychologicalInsights(results) : []),
+    [results]
+  );
+
+  // Колекции от профила на потребителя (Модули 1.14, 4.10, 18.6, 18.8)
+  const collections: UserCollectionGroup[] = useMemo(() => {
+    const existing: UserCollectionGroup[] = Array.isArray(effectiveUser.collections)
+      ? effectiveUser.collections
+      : [];
+    return DEFAULT_COLLECTIONS.map((def) => {
+      const found = existing.find((c) => c.category === def.category);
+      return found ? { ...def, ...found, items: found.items || [] } : def;
+    });
+  }, [effectiveUser.collections]);
+
+  const savedIds = useMemo(() => {
+    const set = new Set<string>();
+    for (const c of collections) {
+      for (const it of c.items) {
+        set.add(it.itemId);
+      }
+    }
+    return set;
+  }, [collections]);
+
+  const customFriends: BondProfileInput[] = useMemo(() => {
+    const raw = Array.isArray(effectiveUser.customFriends) ? effectiveUser.customFriends : [];
+    return raw.map((cf: any, idx: number) => ({
+      id: String(cf._id || cf.id || `cf_${idx}`),
+      name: cf.name || 'Friend',
+      relationshipType: cf.relationshipType || 'friend',
+      birthdate:
+        typeof cf.birthdate === 'string'
+          ? cf.birthdate.split('T')[0]
+          : cf.birthdate instanceof Date
+          ? cf.birthdate.toISOString().split('T')[0]
+          : '1995-06-15',
+      birthTime: cf.birthTime,
+      birthCity: cf.birthCity,
+      bio: cf.notes,
+    }));
+  }, [effectiveUser.customFriends]);
+
+  const persistUserPatch = async (patch: Record<string, any>) => {
+    const merged = { ...effectiveUser, ...patch };
+    const nextPayload = isWrapped ? { ...user, user: merged } : merged;
+    await setUser(nextPayload);
+    if (merged.email) {
+      try {
+        await saveUserProfile(merged);
+      } catch {
+        // Запазено локално при офлайн режим
+      }
+    }
+  };
+
+  const toggleCollectionItem = async (
+    category: CollectionCategory,
+    itemId: string,
+    title: string,
+    subtitle: string
+  ) => {
+    const updatedCollections = collections.map((col) => {
+      if (col.category !== category) return col;
+      const exists = col.items.some((i) => i.itemId === itemId);
+      const nextItems = exists
+        ? col.items.filter((i) => i.itemId !== itemId)
+        : [
+            {
+              itemId,
+              itemType: category,
+              title,
+              subtitle,
+              savedAt: new Date().toISOString(),
+            },
+            ...col.items,
+          ];
+      return { ...col, items: nextItems };
+    });
+
+    await persistUserPatch({ collections: updatedCollections });
+  };
+
+  const handleRemoveCollectionItem = async (category: string, itemId: string) => {
+    const updatedCollections = collections.map((col) =>
+      col.category === category
+        ? { ...col, items: col.items.filter((i) => i.itemId !== itemId) }
+        : col
+    );
+    await persistUserPatch({ collections: updatedCollections });
+  };
+
+  const handleAddCustomFriend = async (friend: BondProfileInput) => {
+    const existingRaw = Array.isArray(effectiveUser.customFriends)
+      ? effectiveUser.customFriends
+      : [];
+    const nextCustomFriends = [
+      ...existingRaw,
+      {
+        name: friend.name,
+        relationshipType: friend.relationshipType,
+        birthdate: friend.birthdate,
+        birthTime: friend.birthTime,
+        hasExactBirthTime: Boolean(friend.birthTime),
+        birthCity: friend.birthCity || { name: 'Sofia', country: 'Bulgaria' },
+        notes: friend.bio || '',
+      },
+    ];
+    await persistUserPatch({ customFriends: nextCustomFriends });
+  };
+
+  // Модул 16: Screen Grab / Text Sharing
+  const handleShareText = async (title: string, body: string) => {
+    try {
+      await Share.share({
+        title,
+        message: `✨ ${title}\n\n${body}\n\n— Natala Celestial Engine`,
+      });
+    } catch {
+      // Игнорираме при отказ от потребителя
+    }
+  };
+
+  const notifications = effectiveUser.notifications || {
+    dailyUpdates: true,
+    newInsights: true,
+    personalTransits: true,
+    bondTransits: true,
+    socialActivity: true,
+    friendRequests: true,
+  };
+
+  const subscriptionTier = effectiveUser.subscription?.tier || 'free';
+
   return (
     <>
-      <TouchableOpacity onPress={() => setPage('explore')} style={styles.backButton}>
-        <ArrowLeft size={18} color={colors.purple} />
-        <T bold size={13} style={{ color: colors.purple }}>
-          Back to Explore
-        </T>
-      </TouchableOpacity>
+      {/* Горна самостоятелна лента на Астрологичното приложение */}
+      <View
+        style={{
+          flexDirection: 'row',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          marginBottom: 4,
+        }}
+      >
+        <TouchableOpacity onPress={() => setPage('explore')} style={styles.backButton}>
+          <ArrowLeft size={18} color={colors.purple} />
+          <T bold size={13} style={{ color: colors.purple }}>
+            Explore
+          </T>
+        </TouchableOpacity>
+
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+          {results && sunData && moonData && ascData && (
+            <TouchableOpacity
+              onPress={() =>
+                handleShareText(
+                  `${effectiveUser.name || 'My'} Natal Chart`,
+                  `☉ Sun in ${sunData.sign} · ☾ Moon in ${moonData.sign} · ↑ Rising in ${ascData.sign}`
+                )
+              }
+              style={{
+                padding: 8,
+                borderRadius: 10,
+                backgroundColor: colors.surfaceAlt,
+              }}
+            >
+              <Share2 size={15} color={colors.purple} />
+            </TouchableOpacity>
+          )}
+
+          <TouchableOpacity
+            onPress={() => setShowSettingsDrawer((v) => !v)}
+            style={{
+              flexDirection: 'row',
+              alignItems: 'center',
+              gap: 5,
+              paddingHorizontal: 10,
+              paddingVertical: 7,
+              borderRadius: 10,
+              backgroundColor:
+                subscriptionTier === 'go_deeper_plus' ? colors.goldSoft : colors.purpleSoft,
+            }}
+          >
+            <Bell size={14} color={colors.purple} />
+            <Crown
+              size={14}
+              color={subscriptionTier === 'go_deeper_plus' ? colors.gold : colors.purple}
+            />
+          </TouchableOpacity>
+        </View>
+      </View>
+
+      {/* Модул 17 & 18.10: Управление на известия и Go Deeper+ абонамент */}
+      {showSettingsDrawer && (
+        <Card style={{ padding: 14, gap: 10, marginBottom: 10 }}>
+          <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+            <T bold size={14}>
+              Notifications & Go Deeper+
+            </T>
+            <TouchableOpacity
+              onPress={() =>
+                persistUserPatch({
+                  subscription: {
+                    tier: subscriptionTier === 'free' ? 'go_deeper_plus' : 'free',
+                    status: 'active',
+                  },
+                })
+              }
+              style={{
+                paddingHorizontal: 10,
+                paddingVertical: 5,
+                borderRadius: 8,
+                backgroundColor: colors.gold,
+              }}
+            >
+              <T bold size={11} style={{ color: '#FFFFFF' }}>
+                {subscriptionTier === 'go_deeper_plus'
+                  ? 'Go Deeper+ Active ✓'
+                  : 'Upgrade Go Deeper+'}
+              </T>
+            </TouchableOpacity>
+          </View>
+
+          {(
+            [
+              { key: 'dailyUpdates', label: '17.1 Ежедневни актуализации (Daily Updates)' },
+              { key: 'newInsights', label: '17.3 Нови астрологични Insights' },
+              { key: 'personalTransits', label: '17.4 Нови транзити и пикови дати' },
+              { key: 'bondTransits', label: '7.1 Известия за Bond Transits' },
+            ] as const
+          ).map((item) => (
+            <View
+              key={item.key}
+              style={{
+                flexDirection: 'row',
+                justifyContent: 'space-between',
+                alignItems: 'center',
+              }}
+            >
+              <T size={12}>{item.label}</T>
+              <Switch
+                value={Boolean(notifications[item.key])}
+                onValueChange={(val) =>
+                  persistUserPatch({
+                    notifications: { ...notifications, [item.key]: val },
+                  })
+                }
+              />
+            </View>
+          ))}
+        </Card>
+      )}
 
       <Hero
-        eyebrow="NATAL CELESTIAL ENGINE"
+        eyebrow="NATALA ASTROLOGY STUDIO"
         first="Your"
-        accent="Natal Chart."
-        description="Global Placidus calculation system for any city worldwide. View in Classic 2D or Interactive 3D Dome."
+        accent="Cosmic Universe."
+        description="Natal Chart, Live Transits, Time Travel, Bonds & Relationship Intelligence, 360° Moon Journeys and Classes."
       />
 
       {syncStatus && (
@@ -62,59 +357,185 @@ export default function Astrology() {
         </View>
       )}
 
+      {/* Навигационна лента на самостоятелния Astrology App (5 продуктови модула) */}
+      {results && (
+        <View
+          style={{
+            flexDirection: 'row',
+            backgroundColor: colors.surfaceAlt,
+            borderRadius: 14,
+            padding: 4,
+            marginBottom: 12,
+            borderWidth: 1,
+            borderColor: colors.line,
+          }}
+        >
+          {(
+            [
+              { id: 'chart', label: 'Chart', Icon: Compass },
+              { id: 'today', label: 'Transits', Icon: Orbit },
+              { id: 'patterns', label: 'Patterns', Icon: Sparkles },
+              { id: 'bonds', label: 'Bonds', Icon: Heart },
+              { id: 'universe', label: 'Universe', Icon: BookOpen },
+            ] as const
+          ).map(({ id, label, Icon }) => {
+            const active = activeTab === id;
+            return (
+              <TouchableOpacity
+                key={id}
+                onPress={() => setActiveTab(id)}
+                style={{
+                  flex: 1,
+                  paddingVertical: 8,
+                  borderRadius: 10,
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: 3,
+                  backgroundColor: active ? colors.purple : 'transparent',
+                }}
+              >
+                <Icon size={14} color={active ? '#FFFFFF' : colors.muted} />
+                <T bold size={10} style={{ color: active ? '#FFFFFF' : colors.muted }}>
+                  {label}
+                </T>
+              </TouchableOpacity>
+            );
+          })}
+        </View>
+      )}
+
       {results && sunData && moonData && ascData ? (
         <>
-          <PrimaryPlacementsRow
-            sunData={sunData}
-            moonData={moonData}
-            ascData={ascData}
-            colors={colors}
-          />
+          {activeTab === 'chart' && (
+            <>
+              <PrimaryPlacementsRow
+                sunData={sunData}
+                moonData={moonData}
+                ascData={ascData}
+                colors={colors}
+              />
 
-          <View style={styles.chartSectionHeader}>
-            <Section>Astronomical Chart</Section>
+              <View style={styles.chartSectionHeader}>
+                <Section>Astronomical Chart</Section>
 
-            <View
-              style={[
-                styles.switchContainer,
-                { backgroundColor: colors.surfaceAlt, borderColor: colors.line },
-              ]}
-            >
-              {(['2D', '3D'] as ChartViewMode[]).map((mode) => (
-                <TouchableOpacity
-                  key={mode}
-                  onPress={() => setViewMode(mode)}
-                  activeOpacity={0.8}
+                <View
                   style={[
-                    styles.switchBtn,
-                    viewMode === mode && { backgroundColor: colors.purple },
+                    styles.switchContainer,
+                    { backgroundColor: colors.surfaceAlt, borderColor: colors.line },
                   ]}
                 >
-                  <T bold size={11} style={{ color: viewMode === mode ? '#FFFFFF' : colors.muted }}>
-                    {mode === '2D' ? '2D Flat' : '3D Dome'}
-                  </T>
-                </TouchableOpacity>
-              ))}
-            </View>
-          </View>
+                  {(['2D', '3D'] as ChartViewMode[]).map((mode) => (
+                    <TouchableOpacity
+                      key={mode}
+                      onPress={() => setViewMode(mode)}
+                      activeOpacity={0.8}
+                      style={[
+                        styles.switchBtn,
+                        viewMode === mode && { backgroundColor: colors.purple },
+                      ]}
+                    >
+                      <T
+                        bold
+                        size={11}
+                        style={{ color: viewMode === mode ? '#FFFFFF' : colors.muted }}
+                      >
+                        {mode === '2D' ? '2D Flat' : '3D Dome'}
+                      </T>
+                    </TouchableOpacity>
+                  ))}
+                </View>
+              </View>
 
-          <Card style={styles.chartCard}>
-            {viewMode === '2D' ? (
-              <NatalChartWheel results={results} colors={colors} variant="2D" />
-            ) : (
-              <NatalChart3DDome results={results} colors={colors} />
-            )}
-          </Card>
+              <Card style={styles.chartCard}>
+                {viewMode === '2D' ? (
+                  <NatalChartWheel results={results} colors={colors} variant="2D" />
+                ) : (
+                  <NatalChart3DDome results={results} colors={colors} />
+                )}
+              </Card>
 
-          <BirthDetailsCard
-            userName={user?.name || user?.user?.name}
-            dateStr={results.dateStr}
-            timeStr={results.timeStr}
-            cityName={userDateInfo?.cityName || 'Sofia, Bulgaria'}
-            colors={colors}
-          />
+              <BirthDetailsCard
+                userName={effectiveUser.name}
+                dateStr={results.dateStr}
+                timeStr={results.timeStr}
+                cityName={userDateInfo?.cityName || 'Sofia, Bulgaria'}
+                chartRuler={results.chartRuler}
+                colors={colors}
+                onEditBirthData={() => setPage('profile')}
+              />
 
-          <PlanetaryPositionsList results={results} ascData={ascData} colors={colors} />
+              <ChartBalanceMatrixCard results={results} colors={colors} />
+
+              <PsychologicalInsightsSection
+                insights={psychologicalInsights}
+                savedIds={savedIds}
+                onSaveInsight={(item: PsychologicalInsightBlock) =>
+                  toggleCollectionItem('insights', item.id, item.title, item.placementTag)
+                }
+                onShareText={handleShareText}
+                colors={colors}
+              />
+
+              <PlanetaryPositionsList results={results} ascData={ascData} colors={colors} />
+            </>
+          )}
+
+          {activeTab === 'today' && (
+            <AstrologyTabTodayTransits
+              results={results}
+              colors={colors}
+              savedIds={savedIds}
+              onSaveTransit={(tr: TransitAspectItem) =>
+                toggleCollectionItem('transits', tr.id, tr.title, `Peak: ${tr.peakDateStr}`)
+              }
+              onSaveDailyInsight={(id, title, subtitle) =>
+                toggleCollectionItem('insights', id, title, subtitle)
+              }
+              onShareText={handleShareText}
+            />
+          )}
+
+          {activeTab === 'patterns' && (
+            <AstrologyTabPatterns
+              results={results}
+              colors={colors}
+              collections={collections}
+              savedIds={savedIds}
+              onSavePattern={(pat: PatternAnalysisItem) =>
+                toggleCollectionItem('patterns', pat.id, pat.title, pat.placementBasis)
+              }
+              onRemoveCollectionItem={handleRemoveCollectionItem}
+              onShareText={handleShareText}
+            />
+          )}
+
+          {activeTab === 'bonds' && (
+            <AstrologyTabBonds
+              results={results}
+              userName={effectiveUser.name || 'Ти'}
+              customFriends={customFriends}
+              colors={colors}
+              savedIds={savedIds}
+              onAddCustomFriend={handleAddCustomFriend}
+              onSaveBondInsight={(id, title, subtitle) =>
+                toggleCollectionItem('bonds', id, title, subtitle)
+              }
+              onShareText={handleShareText}
+              onOpenPeopleOrChat={(target) => setPage(target)}
+            />
+          )}
+
+          {activeTab === 'universe' && (
+            <AstrologyTabUniverse
+              results={results}
+              userName={effectiveUser.name || 'Ти'}
+              colors={colors}
+              savedIds={savedIds}
+              onSaveUniverseItem={(category, id, title, subtitle) =>
+                toggleCollectionItem(category, id, title, subtitle)
+              }
+            />
+          )}
         </>
       ) : isInitializing || isSyncing ? (
         <Card style={styles.emptyCard}>
