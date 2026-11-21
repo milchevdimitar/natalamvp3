@@ -61,29 +61,31 @@ export function FeedErrorState({
 
 export function FeedEmptyState({
   colors,
-  onRefresh,
+  hasCompletedSystems,
+  onAction,
   onLayout,
 }: {
   colors: any;
-  onRefresh: () => void;
+  hasCompletedSystems: boolean;
+  onAction: () => void;
   onLayout: (e: LayoutChangeEvent) => void;
 }) {
   return (
     <View style={styles.centerStateContainer} onLayout={onLayout}>
       <Sparkles size={38} color={colors.gold} />
       <T bold size={15} style={{ color: '#FFFFFF', marginTop: 12 }}>
-        Няма намерени видеа
+        {hasCompletedSystems ? 'Няма намерени видеа' : 'Открий теми за твоя Feed'}
       </T>
       <T muted size={12} style={{ textAlign: 'center', marginTop: 6, maxWidth: 260 }}>
-        Не открихме YouTube Shorts за текущите критерии от профила ти.
+        {hasCompletedSystems ? 'Не открихме клипове за завършените ти системи.' : 'Завърши система в Explore, за да виждаш клипове по нейните теми.'}
       </T>
       <TouchableOpacity
-        onPress={onRefresh}
+        onPress={onAction}
         style={[styles.retryButton, { backgroundColor: colors.purple }]}
       >
-        <RefreshCw size={16} color="#FFFFFF" />
+        {hasCompletedSystems ? <RefreshCw size={16} color="#FFFFFF" /> : <Sparkles size={16} color="#FFFFFF" />}
         <T bold size={13} style={{ color: '#FFFFFF' }}>
-          Презареди
+          {hasCompletedSystems ? 'Презареди' : 'Explore'}
         </T>
       </TouchableOpacity>
     </View>

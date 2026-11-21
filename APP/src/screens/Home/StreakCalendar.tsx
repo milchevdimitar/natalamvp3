@@ -31,7 +31,7 @@ export function StreakCalendar({ today, days, count }: { today: number; days: nu
   return (
     <ScrollView contentContainerStyle={calendar.body}>
       <View style={calendar.heading}>
-        <Text style={calendar.date}>Your activity calendar</Text>
+        <Text accessibilityRole="header" style={[calendar.date, styles.eyebrow]}>Discovery streak</Text>
         <Text accessibilityRole="header" style={calendar.title}>{count} {count === 1 ? 'day' : 'days'} in a row</Text>
         <Text style={calendar.meta}>Highlighted days show when you opened Home.</Text>
       </View>
@@ -62,6 +62,7 @@ export function StreakCalendar({ today, days, count }: { today: number; days: nu
             <View key={position} style={calendar.column}>
               {number > 0 && <View testID={recorded ? 'streak-visited-day' : undefined} accessible accessibilityLabel={format(date) + (recorded ? ', streak day' : '')} style={[calendar.cell, day === today && calendar.today, recorded && styles.visited]}>
                 <Text style={[calendar.day, !recorded && { color: cosmic.muted }, recorded && styles.visitedText]}>{number}</Text>
+                {recorded && <Text style={styles.dayFlame} accessible={false}>🔥</Text>}
               </View>}
             </View>
           );
@@ -72,7 +73,9 @@ export function StreakCalendar({ today, days, count }: { today: number; days: nu
 }
 
 const styles = StyleSheet.create({
+  eyebrow: { color: '#ff9c3d' },
   flameOrb: { alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: 'rgba(246,198,109,0.28)', boxShadow: '0 0 28px rgba(246,148,59,0.24)' },
   visited: { backgroundColor: 'rgba(246,198,109,0.21)' },
   visitedText: { color: cosmic.gold, fontWeight: '800' },
+  dayFlame: { fontSize: 13, lineHeight: 16 },
 });

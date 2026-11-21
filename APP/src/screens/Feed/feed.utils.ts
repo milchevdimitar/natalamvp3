@@ -1,47 +1,24 @@
-import { FALLBACK_TAGS, ZODIAC_BG_MAP } from './feed.constants';
-import { ProfileQueryResult, UserProfileInput } from './feed.types';
+import type { ExploreRoute } from '../../data/exploreRoutes';
+import type { DashboardSystem } from '../../services/profileDashboard';
 
-export function buildSearchQueryFromProfile(
-  userProfile?: UserProfileInput | null
-): ProfileQueryResult {
-  const keywords: string[] = [];
-  const badges: string[] = [];
+const topicQueries: Record<ExploreRoute, (value: string) => string> = {
+  astrology: (value) => `${value} sun sign astrology`,
+  numerology: (value) => `life path number ${value} numerology`,
+  mbti: (value) => `${value} MBTI personality`,
+  cardology: (value) => `${value} birth card cardology`,
+  tarot: () => 'tarot card meanings',
+  ayurveda: (value) => `${value} dosha ayurveda`,
+  bazi: (value) => `${value} BaZi four pillars astrology`,
+  'chinese-zodiac': (value) => `${value} Chinese zodiac`,
+};
 
-  const rawZodiac = userProfile?.zodiacSign || userProfile?.natalChart?.sunSign;
-  const rawMbti = userProfile?.personalityType || userProfile?.mbti?.type;
-  const interests = Array.isArray(userProfile?.interests) ? userProfile.interests : [];
+export type FeedTopic = { query: string; badge: string };
 
-  if (rawZodiac && rawZodiac.trim()) {
-    const cleanZodiac = rawZodiac.trim();
-    const bgZodiac = ZODIAC_BG_MAP[cleanZodiac.toLowerCase()] || cleanZodiac;
-    keywords.push(`${cleanZodiac} zodiac`);
-    badges.push(`✨ ${bgZodiac}`);
-  }
-
-  if (rawMbti && rawMbti.trim()) {
-    const cleanMbti = rawMbti.trim().toUpperCase();
-    keywords.push(`${cleanMbti} personality`);
-    badges.push(`🧠 ${cleanMbti}`);
-  }
-
-  if (interests.length > 0) {
-    const topInterests = interests.slice(0, 2).map((i) => i.trim()).filter(Boolean);
-    keywords.push(...topInterests);
-    topInterests.forEach((interest) => badges.push(`🔮 ${interest}`));
-  }
-
-  if (keywords.length === 0) {
-    const randomFallback = FALLBACK_TAGS.slice(0, 2).join(' ');
-    return {
-      query: `${randomFallback} #shorts`,
-      badges: ['🌌 Астрология', '🔮 Таро'],
-    };
-  }
-
-  return {
-    query: `${keywords.join(' ')} #shorts`,
-    badges,
-  };
+export function buildFeedTopics(systems: readonly DashboardSystem[]): FeedTopic[] {
+  return systems.flatMap(({ route, name, value }) => {
+    const result = value?.trim();
+    return result ? [{ query: topicQueries[route](result) + ' #shorts', badge: name }] : [];
+  });
 }
 
 export function decodeHtmlEntities(text: string): string {

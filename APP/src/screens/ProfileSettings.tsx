@@ -148,7 +148,7 @@ export function ProfileSettings({ onClose, birthLabel, birthCity }: {
           <View style={styles.header}>
             <T size={40} style={styles.logo}>Natala</T>
             <Pressable accessibilityRole="button" accessibilityLabel="Close settings" disabled={saving} onPress={onClose} style={[styles.close, { backgroundColor: colors.surfaceAlt, borderColor: colors.line }]}>
-              <ArrowLeft size={20} color={colors.text} />
+              <ArrowLeft size={18} color={colors.text} />
             </Pressable>
           </View>
           <T bold size={30} style={styles.title}>Settings</T>
@@ -266,7 +266,7 @@ const styles = StyleSheet.create({
   header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 19 },
   logo: { fontFamily: 'DancingScript_700Bold', lineHeight: 49 },
   title: { letterSpacing: -1.2, marginBottom: 4, lineHeight: 38 },
-  close: { width: 40, height: 40, borderRadius: 20, alignItems: 'center', justifyContent: 'center', borderWidth: 1 },
+  close: { width: 36, height: 36, borderRadius: 18, alignItems: 'center', justifyContent: 'center', borderWidth: 1 },
   card: { gap: 10, padding: 13, marginBottom: 10 },
   row: { minHeight: 48, flexDirection: 'row', alignItems: 'center', gap: 12 },
   icon: { width: 44, height: 44, borderRadius: 22, alignItems: 'center', justifyContent: 'center' },

@@ -49,23 +49,6 @@ export interface FeedVideoItem {
   matchedBadge: string;
 }
 
-export interface UserProfileInput {
-  zodiacSign?: string;
-  personalityType?: string;
-  interests?: string[];
-  natalChart?: {
-    sunSign?: string;
-  };
-  mbti?: {
-    type?: string;
-  };
-}
-
-export interface ProfileQueryResult {
-  query: string;
-  badges: string[];
-}
-
 export interface ReelPlayerProps {
   item: FeedVideoItem;
   isActive: boolean;

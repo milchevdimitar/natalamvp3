@@ -18,7 +18,7 @@ import { FeedLoadingState, FeedErrorState, FeedEmptyState } from './FeedStateVie
 import { styles } from './feed.styles';
 
 export default function Feed() {
-  const { colors, user } = useApp();
+  const { colors, user, setPage } = useApp();
   const reducedMotion = useReducedMotion();
   const flatListRef = useRef<FlatList<FeedVideoItem>>(null);
 
@@ -33,7 +33,7 @@ export default function Feed() {
     refreshing,
     loadingMore,
     errorMsg,
-    profileQueryInfo,
+    topicBadges,
     retryFetch,
     handleLoadMore,
     handleRefresh,
@@ -86,7 +86,7 @@ export default function Feed() {
   if (loading && videos.length === 0) {
     return (
       <FeedLoadingState
-        badges={profileQueryInfo.badges}
+        badges={topicBadges}
         colors={colors}
         onLayout={handleLayout}
       />
@@ -108,7 +108,8 @@ export default function Feed() {
     return (
       <FeedEmptyState
         colors={colors}
-        onRefresh={handleRefresh}
+        hasCompletedSystems={topicBadges.length > 0}
+        onAction={topicBadges.length ? handleRefresh : () => setPage('explore')}
         onLayout={handleLayout}
       />
     );

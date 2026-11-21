@@ -1,3 +1,2 @@
 export { default } from './Feed';
-export { buildSearchQueryFromProfile } from './feed.utils';
-export type { FeedVideoItem, UserProfileInput, ProfileQueryResult } from './feed.types';
+export type { FeedVideoItem } from './feed.types';
