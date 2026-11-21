@@ -1,7 +1,6 @@
 import type { PlanetPosition } from './astrology.types';
 
-// Entries run from House 1 to House 12. The nodes are the two lunar points
-// already present in the natal chart, alongside its ten planets and luminaries.
+// Entries run from House 1 to House 12 for each supported body or lunar point.
 type Houses = readonly [string, string, string, string, string, string, string, string, string, string, string, string];
 const readings: Readonly<Partial<Record<string, Houses>>> = {
   sun: [
@@ -171,6 +170,20 @@ const readings: Readonly<Partial<Record<string, Houses>>> = {
     'Working toward recognition may feel natural. Consider what supports you in private.',
     'Group goals may come first by default. Make room for choices that are yours alone.',
     'Retreat can help you reflect. Use a small daily action to carry the insight forward.',
+  ],
+  lilith: [
+    'Notice where you adjust your appearance or manner to make yourself easier for others to read.',
+    'Reconsider any rule that makes you feel you must earn the right to want comfort or security.',
+    'Give yourself room to ask a question you usually leave unsaid.',
+    'Distinguish what feels like home to you from what your family expects home to mean.',
+    'Make space for a pleasure or creative impulse you tend to keep private.',
+    'Notice where daily obligations leave too little room to set limits or ask for help.',
+    'Naming a boundary can make a close relationship more honest about what each person wants.',
+    'Clarity about consent, trust, and shared obligations makes it easier to discuss sensitive needs.',
+    'Question beliefs that make you feel unwelcome for having a different experience.',
+    'Consider what parts of yourself you feel pressure to hide in order to be taken seriously.',
+    'Look for friendships that leave room for disagreement and individuality.',
+    'Private reflection can help you name impulses you have learned to dismiss or conceal.',
   ],
 };
 

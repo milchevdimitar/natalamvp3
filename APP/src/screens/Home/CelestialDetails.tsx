@@ -3,7 +3,7 @@ import { Animated, Easing, Modal, Platform, Pressable, ScrollView, StyleSheet, T
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { ChevronLeft, ChevronRight, X } from 'lucide-react-native';
 import { LinearGradient } from 'expo-linear-gradient';
-import Svg, { Circle, ClipPath, Defs, Ellipse, G, RadialGradient, Rect, Stop } from 'react-native-svg';
+import Svg, { Circle, ClipPath, Defs, Ellipse, G, Path, RadialGradient, Rect, Stop } from 'react-native-svg';
 import { SearchSunLongitude } from 'astronomy-engine';
 import { CosmicBackground } from './CosmicBackground';
 import { cosmic, glassPanel } from '../../theme/cosmic';
@@ -101,6 +101,9 @@ const orbColors: Record<string, readonly string[]> = {
   Uranus: ['#d6faff', '#73d3e4', '#1b7e9d'],
   Neptune: ['#9bbaff', '#3d70dd', '#152b75'],
   Pluto: ['#dbcfc8', '#a99b9d', '#5a4d63'],
+  'North Node': ['#d1fff3', '#72d9c5', '#26667d', '#182b55'],
+  'South Node': ['#ffe5c8', '#e6a57b', '#954f70', '#4b2d5f'],
+  Lilith: ['#c5a4ec', '#715293', '#34234f', '#171229'],
   Scorpio: ['#80eee2', '#279f93', '#15394c'],
   Sagittarius: ['#ffdbb5', '#dc8b39', '#752b31'],
   Libra: ['#ffe0f1', '#cd79b6', '#682e73'],
@@ -112,6 +115,9 @@ function CelestialOrb({ slide, zodiac, size }: { slide: CelestialSlide; zodiac: 
   const id = 'celestial-' + slide.title.toLowerCase();
   const banded = slide.title === 'Venus' || slide.title === 'Jupiter';
   const saturn = slide.title === 'Saturn';
+  const node = slide.title === 'North Node' || slide.title === 'South Node';
+  const lilith = slide.title === 'Lilith';
+  const orbitTint = slide.title === 'North Node' ? '#b7fff1' : '#ffdbbd';
 
   return (
     <View pointerEvents="none" style={[styles.orb, { width: size, height: size }]}>
@@ -129,8 +135,14 @@ function CelestialOrb({ slide, zodiac, size }: { slide: CelestialSlide; zodiac: 
           </G>
         </G>}
         {saturn && <Ellipse cx={100} cy={112} rx={121} ry={28} rotation={-21} origin="100,112" stroke="#e9d6ad" strokeWidth={8} opacity={0.75} fill="none" />}
+        {node && <>
+          <Ellipse cx={100} cy={100} rx={111} ry={34} rotation={-22} origin="100,100" stroke={orbitTint} strokeWidth={2} opacity={0.73} fill="none" />
+          <Ellipse cx={100} cy={100} rx={107} ry={29} rotation={22} origin="100,100" stroke={orbitTint} strokeWidth={1.5} strokeDasharray="3 7" opacity={0.55} fill="none" />
+          <Circle cx={slide.title === 'North Node' ? 181 : 19} cy={slide.title === 'North Node' ? 53 : 147} r={5} fill={orbitTint} />
+        </>}
+        {lilith && <Path d="M157 21 A97 97 0 0 1 56 185 C94 185 132 158 150 124 C168 90 173 49 157 21 Z" fill="#ddbfff" opacity={0.28} />}
       </Svg>
-      {zodiac && <Text style={[styles.symbol, { fontSize: size * 0.43 }]}>{slide.symbol}</Text>}
+      {(zodiac || node || lilith) && <Text style={[styles.symbol, { fontSize: size * 0.43 }]}>{slide.symbol}</Text>}
     </View>
   );
 }

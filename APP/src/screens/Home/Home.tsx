@@ -28,6 +28,23 @@ import { usePlanetaryData } from './usePlanetaryData';
 
 type Detail = 'sun' | 'moon' | 'codex' | 'retrogrades' | 'streak';
 const PLANET_ATLAS_TITLE = 'Your Planetary Atlas';
+const lunarPoints: Record<string, Pick<CelestialSlide, 'tagline' | 'summary' | 'description'>> = {
+  northNode: {
+    tagline: 'Growth & unfamiliar territory',
+    summary: 'The North Node describes unfamiliar experiences that can help you grow.',
+    description: 'The North Node marks where the Moon’s orbit crosses the path of the Sun in a northward direction. In astrology, its sign describes qualities worth practicing and its house points to the part of life where you can try them. It is read together with the opposite South Node.',
+  },
+  southNode: {
+    tagline: 'Instinct & familiar patterns',
+    summary: 'The South Node describes habits and strengths you already know well.',
+    description: 'The South Node marks the opposite crossing of the Moon’s orbit. Its sign describes familiar ways of responding and its house points to where those responses tend to show up. Consider what these habits still offer you and when a different choice might serve you better.',
+  },
+  lilith: {
+    tagline: 'Autonomy & the hidden self',
+    summary: 'Black Moon Lilith is used in astrology to explore autonomy, boundaries, and the parts of yourself you keep hidden.',
+    description: 'This reading uses mean Black Moon Lilith, the averaged position of the Moon’s apogee. Its sign describes how themes of autonomy may show up, while its house gives you a specific area of life to reflect on. Where would it help to state what you want more plainly?',
+  },
+};
 
 function SkyCard({ title, subtitle, hint, artwork, onPress, disabled }: {
   title: string; subtitle: string; hint?: string; artwork: React.ReactNode; onPress: () => void; disabled?: boolean;
@@ -85,18 +102,16 @@ export default function Home() {
       position: planet.signName + ' ' + planet.degInSign + '°', badge: planet.isRetrograde ? 'Retrograde' : 'Direct',
       retrograde: planet.isRetrograde, note: planet.isLiveNASA ? undefined : 'Position and motion calculated locally.',
     }));
-    const nodes = current.filter(({ key }) => key === 'northNode' || key === 'southNode').map((node) => {
-      const north = node.key === 'northNode';
-      return withReadings(node.key, {
-        title: node.name, symbol: node.symbol, tagline: north ? 'Growth & unfamiliar territory' : 'Instinct & familiar patterns',
-        summary: north ? 'The North Node describes unfamiliar experiences that can help you grow.' : 'The South Node describes habits and strengths you already know well.',
-        description: north
-          ? 'The North Node marks where the Moon’s orbit crosses the path of the Sun in a northward direction. In astrology, its sign describes qualities worth practicing and its house points to the part of life where you can try them. It is read together with the opposite South Node.'
-          : 'The South Node marks the opposite crossing of the Moon’s orbit. Its sign describes familiar ways of responding and its house points to where those responses tend to show up. Consider what these habits still offer you and when a different choice might serve you better.',
-        position: node.sign + ' ' + node.degFormatted, badge: 'Lunar node',
-      });
+    const points = current.flatMap((point) => {
+      const copy = lunarPoints[point.key];
+      if (!copy) return [];
+      return [withReadings(point.key, {
+        ...copy,
+        title: point.name, symbol: point.symbol, badge: point.key === 'lilith' ? 'Lunar apogee' : 'Lunar node',
+        position: point.sign + ' ' + point.degFormatted,
+      })];
     });
-    return [...planets, ...nodes];
+    return [...planets, ...points];
   }, [codexOpen, planetaryPositions, user, now]);
   const retrogradeCount = planetaryPositions.filter(({ isRetrograde }) => isRetrograde).length;
   const profileName = String(user?.name ?? '').trim();
@@ -152,7 +167,7 @@ export default function Home() {
 
         <View style={styles.group}>
           <Text accessibilityRole="header" style={styles.section}>The sky right now</Text>
-          <SkyCard title={PLANET_ATLAS_TITLE} subtitle={planetaryPositions.length ? 'Planet meanings, your birth chart & today’s transits' : loadingNASA ? 'Calculating planetary positions…' : 'Planetary positions unavailable'} hint="Swipe through 12 planets and lunar points" artwork={<SkyArtwork kind="codex" />} onPress={() => setDetail('codex')} disabled={!planetaryPositions.length} />
+          <SkyCard title={PLANET_ATLAS_TITLE} subtitle={planetaryPositions.length ? 'Planet meanings, your birth chart & today’s transits' : loadingNASA ? 'Calculating planetary positions…' : 'Planetary positions unavailable'} hint="Swipe through planets and lunar points" artwork={<SkyArtwork kind="codex" />} onPress={() => setDetail('codex')} disabled={!planetaryPositions.length} />
           <SkyCard title={sun.sign + ' season'} subtitle={'Sun in ' + sun.sign + ' · ' + sun.degree + '°'} hint="Swipe through the zodiac seasons" artwork={<SkyArtwork kind="sun" />} onPress={() => setDetail('sun')} />
           <SkyCard title={moon.phaseName} subtitle={'Moon · ' + moon.illuminated + '% illuminated'} hint="Moon phases · swipe month by month" artwork={<AnimatedMoonVisualizer moonPhase={moon} size={SKY_ARTWORK_SIZE} reduced={reduced} />} onPress={() => setDetail('moon')} />
         </View>

@@ -254,11 +254,11 @@ export default function Profile() {
 
       <View onLayout={visibility.section('ayurveda')}>
         <Section>Ayurveda balance</Section>
-        <Card style={styles.ayurvedaChart}>
+        <Card style={styles.ayurvedaChart} onPress={() => setPage('ayurveda')}>
           <DoshaTriangle categories={doshas} values={balances.doshas} active={!!visibility.visible.ayurveda} />
-          {!balances.doshas && <Pressable accessibilityRole="button" style={styles.chartLink} onPress={() => setPage('ayurveda')}>
+          {!balances.doshas && <View style={styles.chartLink}>
             <T size={12} style={{ color: colors.purple }}>Open the Ayurveda assessment</T><ChevronRight size={15} color={colors.purple} />
-          </Pressable>}
+          </View>}
         </Card>
       </View>
 

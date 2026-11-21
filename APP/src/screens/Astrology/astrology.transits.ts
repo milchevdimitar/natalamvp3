@@ -9,6 +9,7 @@ import {
   computeNatalChart,
   degToZodiac,
   extractUserBirthDateTime,
+  getMeanLilithLongitude,
   getTrueNorthNodeLongitude,
 } from './astrology.calculations';
 import {
@@ -36,6 +37,7 @@ const AVG_SPEED_DEG_PER_DAY: Record<string, number> = {
   pluto: 0.004,
   northNode: 0.053,
   southNode: 0.053,
+  lilith: 0.111,
 };
 
 function shortestAngularDiff(a: number, b: number): number {
@@ -68,6 +70,7 @@ export function getSkyPositionsForDate(targetDate: Date): SkyBodySnapshot[] {
       'pluto',
       'northNode',
       'southNode',
+      'lilith',
     ].includes(b.key)
   );
 
@@ -79,6 +82,8 @@ export function getSkyPositionsForDate(targetDate: Date): SkyBodySnapshot[] {
       const north = getTrueNorthNodeLongitude(safeDate);
       lon = cfg.specialType === 'south_node' ? (north + 180) % 360 : north;
       isRetro = true;
+    } else if (cfg.specialType === 'lilith') {
+      lon = getMeanLilithLongitude(safeDate);
     } else if (cfg.body) {
       const geo1 = Astronomy.GeoVector(cfg.body, safeDate, true);
       lon = ((Astronomy.Ecliptic(geo1).elon % 360) + 360) % 360;
@@ -260,7 +265,7 @@ export function calculateTransitsForDate(
 
   for (const tBody of sky) {
     const tNext = skyPlus6h.find((s) => s.key === tBody.key);
-    const isOuter = ['jupiter', 'saturn', 'uranus', 'neptune', 'pluto', 'northNode', 'southNode'].includes(
+    const isOuter = ['jupiter', 'saturn', 'uranus', 'neptune', 'pluto', 'northNode', 'southNode', 'lilith'].includes(
       tBody.key
     );
     const isFast = ['sun', 'moon', 'mercury', 'venus', 'mars'].includes(tBody.key);
