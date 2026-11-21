@@ -21,6 +21,7 @@ import {
   ExternalLink,
 } from 'lucide-react-native';
 import { T } from '../../components/UI';
+import { ShootingStar } from '../../components/ShootingStar';
 import { ReelPlayerProps } from './feed.types';
 import { buildYouTubeEmbedHtml } from './feed.utils';
 import { styles } from './feed.styles';
@@ -55,6 +56,7 @@ export const ReelPlayerItem = React.memo(function ReelPlayerItem({
   isMuted,
   containerHeight,
   colors,
+  reducedMotion,
   onToggleMute,
   onSkipNext,
 }: ReelPlayerProps) {
@@ -208,6 +210,10 @@ export const ReelPlayerItem = React.memo(function ReelPlayerItem({
           )}
         </View>
       )}
+
+      {isActive && <View style={styles.shootingStarLayer} pointerEvents="none">
+        <ShootingStar reduced={reducedMotion} />
+      </View>}
 
       {!embedBlocked && (
         <Pressable onPress={handleTapScreen} style={styles.tapOverlay}>

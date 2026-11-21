@@ -1,13 +1,26 @@
-import { Platform } from 'react-native';
+import { API_BASE_URL } from './api';
 import { PersonProfile } from '../screens/People/people.types';
 
-const DEFAULT_HOST =
-  Platform.OS === 'android' ? 'http://10.159.206.3:5000' : 'http://localhost:5000';
+const BASE_URL = API_BASE_URL;
 
-const BASE_URL = (process.env.EXPO_PUBLIC_API_URL || `${DEFAULT_HOST}/api`).replace(
-  /\/$/,
-  ''
-);
+export type SharedProfile = {
+  id: string;
+  name: string;
+  bio?: string;
+  interests?: string[];
+  relationship: 'self' | 'friend' | 'pending' | 'available';
+  chatEmail?: string;
+  stories: { id: string; imageUrl: string; createdAt: string }[];
+};
+
+export async function fetchSharedProfile(user: any, id: string): Promise<SharedProfile> {
+  const { userId, email } = getAuthPayload(user);
+  const query = new URLSearchParams({ userId: String(userId), email: String(email) });
+  const response = await fetch(`${BASE_URL}/people/shared/${encodeURIComponent(id)}?${query}`);
+  const result = await response.json().catch(() => null);
+  if (!response.ok || !result?.success) throw new Error(result?.message || 'Could not load this profile.');
+  return result.profile;
+}
 
 export interface PeopleHubResponse {
   success: boolean;

@@ -3,21 +3,24 @@ import Constants from 'expo-constants';
 import { UserProfile } from '../models/User';
 
 const getBaseUrl = (): string => {
+  const configured = process.env.EXPO_PUBLIC_API_URL?.trim();
+  if (configured) return configured.replace(/\/$/, '');
+  const port = process.env.EXPO_PUBLIC_API_PORT || '5000';
   const hostUri = Constants.expoConfig?.hostUri;
   const hostIp = hostUri ? hostUri.split(':')[0] : null;
 
   if (hostIp) {
-    return `http://${hostIp}:5000/api`;
+    return `http://${hostIp}:${port}/api`;
   }
 
   const FALLBACK_IP = '10.159.206.3';
 
   return (
     Platform.select({
-      android: `http://${FALLBACK_IP}:5000/api`,
-      ios: `http://${FALLBACK_IP}:5000/api`,
-      default: 'http://localhost:5000/api',
-    }) || `http://localhost:5000/api`
+      android: `http://${FALLBACK_IP}:${port}/api`,
+      ios: `http://${FALLBACK_IP}:${port}/api`,
+      default: `http://localhost:${port}/api`,
+    }) || `http://localhost:${port}/api`
   );
 };
 
@@ -80,7 +83,7 @@ export async function loginUser(
  * Изпраща пълния изчислен профил (MBTI, Аюрведа, Нумерология, Cardology) за синхронизация в MongoDB Atlas
  */
 export async function saveUserProfile(
-  userData: UserProfile
+  userData: Partial<UserProfile> & { email: string }
 ): Promise<{ success: boolean; user: UserProfile }> {
   try {
     const response = await fetch(`${API_BASE_URL}/users/profile`, {
@@ -223,7 +226,8 @@ export async function sendMessageApi(
   senderEmail: string,
   text: string,
   type: string = 'text',
-  storyData?: { storyId?: string; imageUrl?: string; authorName?: string }
+  storyData?: { storyId?: string; imageUrl?: string; authorName?: string },
+  replyTo?: { messageId: string; text: string; senderEmail: string }
 ): Promise<any> {
   try {
     const response = await fetch(`${API_BASE_URL}/chats/${chatId}/messages`, {
@@ -236,6 +240,7 @@ export async function sendMessageApi(
         text: text.trim(),
         type,
         storyData,
+        replyTo,
       }),
     });
 

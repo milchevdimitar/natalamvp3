@@ -145,10 +145,8 @@ export default function Home() {
       {detail === 'moon' && <DetailScreen title="Moon calendar" onClose={close} offset={still} reduced={reduced} darkBottom>
         <MoonCalendarDetail reduced={reduced} />
       </DetailScreen>}
-      {detail === 'streak' && streak && <DetailScreen title="Discovery streak" onClose={close} offset={still} reduced={reduced}>
-        <ScrollView contentContainerStyle={styles.detailBody}>
-          <StreakCalendar today={streak.day} days={streak.days} count={streak.count} />
-        </ScrollView>
+      {detail === 'streak' && streak && <DetailScreen title="Discovery streak" onClose={close} offset={still} reduced={reduced} darkBottom>
+        <StreakCalendar today={streak.day} days={streak.days} count={streak.count} />
       </DetailScreen>}
       {detail === 'retrogrades' && <DetailScreen title="Retrogrades" onClose={close} offset={still} reduced={reduced} darkBottom>
         <ScrollView contentContainerStyle={styles.detailBody}>

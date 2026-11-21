@@ -1,14 +1,18 @@
 import React, { useState } from 'react';
 import { ActivityIndicator, Alert, Platform, Pressable, ScrollView, StyleSheet, View } from 'react-native';
-import { Brain, ChevronRight, Compass, FileDown, Hash, Layers, Leaf, Orbit, Settings, Sparkles, Sun } from 'lucide-react-native';
+import { Brain, ChevronRight, Compass, FileDown, Hash, Layers, Leaf, Orbit, QrCode, Settings, Share2, Sparkles, Sun } from 'lucide-react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import * as FileSystem from 'expo-file-system/legacy';
 import * as IntentLauncher from 'expo-intent-launcher';
 import * as Sharing from 'expo-sharing';
 import { Card, Section, T } from '../components/UI';
-import { CountUp, DashboardRing, DoshaTriangle, ElementColumns, useDashboardVisibility } from '../components/DashboardCharts';
+import { CountUp, DashboardRing, DoshaTriangle, ElementSymbols, useDashboardVisibility } from '../components/DashboardCharts';
+import { DOSHA_META } from './Ayurveda/ayurveda.data';
 import { ProfileSettings } from './ProfileSettings';
+import { ProfileAvatar } from '../components/ProfileAvatar';
+import { ProfileQrCard } from '../components/ProfileQrCard';
+import { profileId, shareProfile } from '../services/profileLinks';
 import type { ExploreRoute } from '../data/exploreRoutes';
 import { useApp } from '../context/AppContext';
 import { API_BASE_URL } from '../services/api';
@@ -16,7 +20,7 @@ import { getBirthParts, getDashboardBalances, getDashboardSystems } from '../ser
 import { useSystemActivity } from '../services/systemActivity';
 
 const elements = [['Fire', '#f29986'], ['Earth', '#edc58a'], ['Air', '#b9b0ff'], ['Water', '#7ac9f5']] as const;
-const doshas = [['Vata', '#b9b0ff'], ['Pitta', '#f1ad80'], ['Kapha', '#7cd8bd']] as const;
+const doshas = (['Vata', 'Pitta', 'Kapha'] as const).map((name) => [name, DOSHA_META[name].color] as const);
 const systemIcons: Record<ExploreRoute, typeof Sun> = {
   astrology: Sun, numerology: Hash, mbti: Brain, cardology: Layers, tarot: Sparkles,
   ayurveda: Leaf, bazi: Compass, 'chinese-zodiac': Orbit,
@@ -26,6 +30,8 @@ export default function Profile() {
   const { colors, user, setPage } = useApp();
   const insets = useSafeAreaInsets();
   const [settingsOpen, setSettingsOpen] = useState(false);
+  const [qrOpen, setQrOpen] = useState(false);
+  const [shareNotice, setShareNotice] = useState('');
   const [generatingPdf, setGeneratingPdf] = useState(false);
   const activity = useSystemActivity(user?.email);
   const systems = getDashboardSystems(user, activity);
@@ -39,8 +45,24 @@ export default function Profile() {
   const visibility = useDashboardVisibility();
   const birth = getBirthParts(user);
   const name = String(user?.name || '').trim();
+  const publicId = profileId(user?._id ?? user?.id);
+  const photo = typeof user?.avatarUrl === 'string' ? user.avatarUrl : typeof user?.photoUrl === 'string' ? user.photoUrl : undefined;
   const birthLabel = birth && new Date(birth.year, birth.month - 1, birth.day).toLocaleDateString(undefined, { dateStyle: 'long' });
   const birthCity = typeof user?.birthCity === 'string' ? user.birthCity : user?.birthCity?.name;
+
+  const share = async () => {
+    if (!publicId) {
+      setShareNotice('Sign in to a saved Natala account to share your profile.');
+      return;
+    }
+    setShareNotice('');
+    try {
+      const result = await shareProfile(publicId, name);
+      if (result === 'copied') setShareNotice('Profile link copied.');
+    } catch (error) {
+      if (!(error instanceof Error && error.name === 'AbortError')) setShareNotice('Could not share the profile link.');
+    }
+  };
 
   const handleGeneratePdf = async () => {
     const userId = user?._id || user?.id;
@@ -179,8 +201,17 @@ export default function Profile() {
         </Pressable>
       </View>
       <View style={styles.identity}>
+        <ProfileAvatar name={name} source={photo} />
         <T bold size={36} style={styles.name}>{name || 'Your profile'}</T>
         {(birthLabel || birthCity || user?.email) && <T muted size={12} style={{ textAlign: 'center' }}>{[birthLabel, birthCity].filter(Boolean).join(' · ') || user?.email}</T>}
+        <View style={styles.shareActions}>
+          <Pressable accessibilityRole="button" accessibilityLabel="Share profile" onPress={share} style={[styles.shareAction, { borderColor: colors.line, backgroundColor: colors.purpleSoft }]}><Share2 color={colors.purple} size={20} /></Pressable>
+          <Pressable accessibilityRole="button" accessibilityLabel="Show profile QR code" onPress={() => {
+            if (publicId) { setShareNotice(''); setQrOpen(true); }
+            else setShareNotice('Sign in to a saved Natala account to show a QR code.');
+          }} style={[styles.shareAction, { borderColor: colors.line, backgroundColor: colors.purpleSoft }]}><QrCode color={colors.purple} size={20} /></Pressable>
+        </View>
+        {!!shareNotice && !qrOpen && <T muted size={12}>{shareNotice}</T>}
       </View>
 
       <View onLayout={visibility.section('metrics')} style={styles.metrics}>
@@ -208,7 +239,7 @@ export default function Profile() {
         <Section>Element balance</Section>
         <Card style={styles.chart}>
           <T muted size={12}>{balances.elements ? 'From your natal chart' : 'Element proportions appear when a natal chart has saved element data.'}</T>
-          <ElementColumns categories={elements} values={balances.elements} active={!!visibility.visible.elements} />
+          <ElementSymbols categories={elements} values={balances.elements} active={!!visibility.visible.elements} />
         </Card>
       </View>
 
@@ -268,6 +299,7 @@ export default function Profile() {
       </Pressable>
     </ScrollView>
     {settingsOpen && <ProfileSettings birthLabel={birthLabel} birthCity={birthCity} onClose={() => setSettingsOpen(false)} />}
+    {qrOpen && publicId && <ProfileQrCard id={publicId} name={name || 'Natala profile'} photo={photo} onClose={() => setQrOpen(false)} onShare={share} notice={shareNotice} />}
     </>
   );
 }
@@ -278,6 +310,8 @@ const styles = StyleSheet.create({
   logo: { fontFamily: 'DancingScript_700Bold', lineHeight: 49 },
   settings: { width: 36, height: 36, borderRadius: 18, alignItems: 'center', justifyContent: 'center', borderWidth: 1 },
   identity: { alignItems: 'center', paddingTop: 7, paddingBottom: 16, gap: 6 },
+  shareActions: { flexDirection: 'row', gap: 9, paddingTop: 6 },
+  shareAction: { width: 45, height: 45, borderRadius: 23, alignItems: 'center', justifyContent: 'center', borderWidth: 1 },
   name: { textAlign: 'center', lineHeight: 41, letterSpacing: -1.2 },
   metrics: { flexDirection: 'row', gap: 8 },
   metric: { flex: 1, minWidth: 0, minHeight: 122, paddingHorizontal: 4, paddingVertical: 10, gap: 3, alignItems: 'center', justifyContent: 'center', borderRadius: 21 },

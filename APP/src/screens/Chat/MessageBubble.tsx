@@ -1,6 +1,6 @@
 import React from 'react';
 import { View, TouchableOpacity, Image } from 'react-native';
-import { Sparkles, CornerUpLeft, Clock } from 'lucide-react-native';
+import { Sparkles, Clock } from 'lucide-react-native';
 import { T } from '../../components/UI';
 import { Message } from './chat.types';
 import { formatStoryAge } from './chat.utils';
@@ -128,9 +128,6 @@ export function MessageBubble({
         <T muted size={9}>
           {message.timestamp}
         </T>
-        <TouchableOpacity onPress={() => onReply(message)} style={{ padding: 2 }}>
-          <CornerUpLeft size={12} color={colors.muted} />
-        </TouchableOpacity>
       </View>
     </View>
   );

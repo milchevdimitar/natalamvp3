@@ -35,13 +35,14 @@ export function Card({ children, style, onPress, activeOpacity, treatment }: {
 export function Brand({size=39}:{size?:number}){const {colors}=useApp();return <Text style={{fontFamily:'DancingScript_700Bold',fontSize:size,color:colors.text,lineHeight:size*1.3}}>Natala</Text>}
 export function Hero({eyebrow,first,accent,description}:{eyebrow:string;first:string;accent:string;description:string}){
   const {colors,page,theme}=useApp();
+  const alignSearch = page === 'explore' || page === 'chat' || page === 'people';
   if (isCosmicPage(page)) return (
     <View style={{ paddingVertical: 14, marginBottom: 8, gap: 8 }}>
       <Text style={{ color: colors.muted, fontSize: 10, fontWeight: '800', letterSpacing: 1.1 }}>{eyebrow}</Text>
       <Text accessibilityRole="header" style={{ color: colors.text, fontSize: 29, lineHeight: 33, fontWeight: '800', letterSpacing: -1.25 }}>
         {first}{' '}<Text style={{ color: theme === 'dark' ? '#b7b4ff' : colors.purple }}>{accent}</Text>
       </Text>
-      <T muted size={12} style={{ maxWidth: 370, lineHeight: 19 }}>{description}</T>
+      <T muted size={12} style={{ maxWidth: 370, lineHeight: 19, minHeight: alignSearch ? 38 : undefined }}>{description}</T>
     </View>
   );
   return <View style={{paddingTop:10,paddingBottom:24,minHeight:185}}><T size={10} bold style={{letterSpacing:2,color:colors.purple,marginBottom:11}}>{eyebrow}</T><T size={37} bold style={{letterSpacing:-1.6,lineHeight:43}}>{first}</T><T size={37} bold style={{fontStyle:'italic',color:colors.purple,letterSpacing:-1.6,lineHeight:43}}>{accent}</T><T muted size={13} style={{marginTop:10,maxWidth:370}}>{description}</T></View>;

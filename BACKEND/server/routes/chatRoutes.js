@@ -22,6 +22,8 @@ router.get('/', async (req, res) => {
           id: chat._id.toString(),
           partnerEmail,
           partnerName,
+          partnerId: partnerUser?._id.toString(),
+          partnerAvatar: partnerUser?.avatarUrl || partnerUser?.photoUrl,
           lastMessage: chat.lastMessage,
           lastMessageTime: chat.lastMessageTime,
           messages: chat.messages.map((m) => ({
@@ -74,6 +76,8 @@ router.post('/start', async (req, res) => {
       id: chat._id.toString(),
       partnerEmail: pEmail,
       partnerName: partnerUser.name || pEmail.split('@')[0],
+      partnerId: partnerUser._id.toString(),
+      partnerAvatar: partnerUser.avatarUrl || partnerUser.photoUrl,
       lastMessage: chat.lastMessage,
       lastMessageTime: chat.lastMessageTime,
       messages: chat.messages.map((m) => ({

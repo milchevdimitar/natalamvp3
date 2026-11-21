@@ -120,10 +120,21 @@ export const styles = StyleSheet.create({
   },
   resultActionsRow: {
     flexDirection: 'row',
-    flexWrap: 'wrap',
     gap: 10,
     marginTop: 10,
+  },
+  resultAction: {
+    flex: 1,
+    minWidth: 0,
+    minHeight: 60,
+    paddingHorizontal: 8,
+    borderRadius: 19,
+    borderWidth: 1,
+    borderColor: 'transparent',
+    alignItems: 'center',
     justifyContent: 'center',
+    flexDirection: 'row',
+    gap: 7,
   },
 
   /* Offscreen 9:16 Story Card Styles */

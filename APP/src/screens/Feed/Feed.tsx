@@ -9,6 +9,7 @@ import {
   NativeScrollEvent,
 } from 'react-native';
 import { useApp } from '../../context/AppContext';
+import { useReducedMotion } from '../Home/CosmicBackground';
 import { SCREEN_HEIGHT } from './feed.constants';
 import { FeedVideoItem } from './feed.types';
 import { useFeedVideos } from './useFeedVideos';
@@ -18,6 +19,7 @@ import { styles } from './feed.styles';
 
 export default function Feed() {
   const { colors, user } = useApp();
+  const reducedMotion = useReducedMotion();
   const flatListRef = useRef<FlatList<FeedVideoItem>>(null);
 
   const [containerHeight, setContainerHeight] = useState<number>(SCREEN_HEIGHT - 85);
@@ -126,6 +128,7 @@ export default function Feed() {
             isMuted={isMuted}
             containerHeight={containerHeight}
             colors={colors}
+            reducedMotion={reducedMotion}
             onToggleMute={toggleMute}
             onSkipNext={handleSkipNext}
           />

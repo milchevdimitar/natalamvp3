@@ -1,6 +1,6 @@
 import { useState, useMemo, useEffect, useCallback } from 'react';
 import { Alert } from 'react-native';
-import AsyncStorage from '@react-native-async-storage/async-storage';
+import { useApp } from '../../context/AppContext';
 import {
   acceptConnectionRequest,
   cancelConnectionRequest,
@@ -55,6 +55,7 @@ function safeToMatchInput(person: any): MatchEngine.UserMatchInput {
 }
 
 export function usePeople(user: any, setPage: (page: any) => void) {
+  const { setSelectedChat } = useApp();
   const [search, setSearch] = useState('');
   const [activeFilter, setActiveFilter] = useState<PeopleFilterId>('all');
   const [loading, setLoading] = useState(true);
@@ -344,13 +345,8 @@ export function usePeople(user: any, setPage: (page: any) => void) {
     );
   };
 
-  const handleOpenChatWith = async (person: PersonProfile) => {
-    try {
-      await AsyncStorage.setItem(
-        'natala_active_chat_partner',
-        JSON.stringify(person)
-      );
-    } catch {}
+  const handleOpenChatWith = (person: PersonProfile) => {
+    setSelectedChat({ targetUser: person.email });
     setMatchedPerson(null);
     setInspectedPerson(null);
     setPage('chat');

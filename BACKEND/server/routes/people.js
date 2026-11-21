@@ -1,8 +1,48 @@
 const express = require('express');
 const mongoose = require('mongoose');
 const User = require('../models/User');
+const Story = require('../models/Story');
 
 const router = express.Router();
+
+router.get('/shared/:profileId', async (req, res) => {
+  const { profileId } = req.params;
+  if (!/^[a-f\d]{24}$/i.test(profileId)) {
+    return res.status(404).json({ success: false, message: 'Profile unavailable.' });
+  }
+  try {
+    const viewer = await resolveCurrentUser(req.query.userId, req.query.email);
+    if (!viewer) return res.status(401).json({ success: false, message: 'Sign in to view this profile.' });
+    const target = await User.findById(profileId)
+      .select('name email bio interests isActive isDiscoverable blockedUsers')
+      .lean();
+    const same = String(viewer._id) === profileId.toLowerCase();
+    const contains = (values, id) => (values || []).some((value) => String(value) === String(id));
+    const isFriend = contains(viewer.friends, profileId.toLowerCase());
+    if (!target || target.isActive === false || (!same && (
+      (target.isDiscoverable === false && !isFriend) ||
+      contains(target.blockedUsers, viewer._id) || contains(viewer.blockedUsers, target._id)
+    ))) {
+      return res.status(404).json({ success: false, message: 'Profile unavailable.' });
+    }
+    const stories = await Story.find({
+      userId: { $in: [String(target._id), target.email].filter(Boolean) },
+      createdAt: { $gte: new Date(Date.now() - 86400000) },
+    }).select('imageUrl createdAt').sort({ createdAt: -1 }).limit(24).lean();
+    return res.json({
+      success: true,
+      profile: {
+        id: String(target._id), name: target.name, bio: target.bio, interests: target.interests,
+        relationship: same ? 'self' : isFriend ? 'friend' : contains(viewer.sentRequests, target._id) ? 'pending' : 'available',
+        ...(isFriend ? { chatEmail: target.email } : {}),
+        stories: stories.map((story) => ({ id: String(story._id), imageUrl: story.imageUrl, createdAt: story.createdAt })),
+      },
+    });
+  } catch (error) {
+    console.error('Shared profile lookup failed:', error.message);
+    return res.status(500).json({ success: false, message: 'Could not load this profile.' });
+  }
+});
 
 // Помощна функция: намира текущия потребител по _id или email
 async function resolveCurrentUser(userId, email) {

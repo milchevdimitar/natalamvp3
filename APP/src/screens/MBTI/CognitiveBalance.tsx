@@ -1,6 +1,5 @@
 import React from 'react';
 import { StyleSheet, Text, View } from 'react-native';
-import { LinearGradient } from 'expo-linear-gradient';
 import { useApp } from '../../context/AppContext';
 import type { CognitiveRatios } from './mbti.types';
 
@@ -30,7 +29,7 @@ export function CognitiveBalance({ ratios, story = false }: { ratios: CognitiveR
               {label}{': '}<Text style={{ color: accent, fontWeight: '800' }}>{percent}%</Text>
             </Text>
             <View style={styles.rail}>
-              <LinearGradient colors={dark ? ['#101d43', '#263c77', '#101d43'] : ['#d9e1f5', '#bbc9ed', '#d9e1f5']} start={{ x: 0, y: 0.5 }} end={{ x: 1, y: 0.5 }} style={styles.track} />
+              <View style={[styles.track, { backgroundColor: dark ? 'rgba(255,255,255,0.16)' : 'rgba(255,255,255,0.42)' }]} />
               <View style={[styles.midpoint, { backgroundColor: dark ? '#8fa1d1' : '#546693' }]} />
               <View style={[styles.marker, { left: `${position}%`, backgroundColor: accent, borderColor: dark ? '#223055' : '#f6f8ff' }]} />
             </View>

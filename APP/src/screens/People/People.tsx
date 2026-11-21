@@ -12,14 +12,13 @@ import { ResonanceDetailModal } from './ResonanceDetailModal';
 import { CosmicInviteModal } from './CosmicInviteModal';
 import { styles } from './people.styles';
 
-export default function People() {
+export default function People({ onOpenProfile }: { onOpenProfile: (id: string) => void }) {
   const { colors, setPage, user } = useApp();
 
   const {
     loading,
     refreshing,
     onRefresh,
-    myCosmicId,
     search,
     setSearch,
     activeFilter,
@@ -61,7 +60,7 @@ export default function People() {
       <SearchBar
         value={search}
         onChange={setSearch}
-        placeholder="Search by name, MBTI, zodiac, city..."
+        placeholder="Search people"
         qr={() => setInviteModalVisible(true)}
       />
 
@@ -186,11 +185,9 @@ export default function People() {
       {inviteModalVisible && (
         <CosmicInviteModal
           colors={colors}
-          visible={inviteModalVisible}
-          myCosmicId={myCosmicId}
-          user={user}
           onClose={() => setInviteModalVisible(false)}
           onConnectByCode={handleConnectByCode}
+          onOpenProfile={onOpenProfile}
         />
       )}
     </>

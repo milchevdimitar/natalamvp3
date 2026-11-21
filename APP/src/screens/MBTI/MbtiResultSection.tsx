@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, ActivityIndicator } from 'react-native';
+import { View, ActivityIndicator, Pressable } from 'react-native';
 import {
   Brain,
   CheckCircle2,
@@ -9,7 +9,7 @@ import {
   Share2,
   Check,
 } from 'lucide-react-native';
-import { Card, T, Section, Pill } from '../../components/UI';
+import { Card, T, Section } from '../../components/UI';
 import { MbtiResultData } from './mbti.types';
 import { styles } from './mbti.styles';
 import { CognitiveBalance } from './CognitiveBalance';
@@ -23,7 +23,6 @@ interface MbtiResultSectionProps {
   shared: boolean;
   onRetake: () => void;
   onShareToStory: () => void;
-  onNavigateExplore: () => void;
 }
 
 export function MbtiResultSection({
@@ -35,7 +34,6 @@ export function MbtiResultSection({
   shared,
   onRetake,
   onShareToStory,
-  onNavigateExplore,
 }: MbtiResultSectionProps) {
   const { type, details, ratios } = resultData;
 
@@ -112,22 +110,21 @@ export function MbtiResultSection({
 
       {/* Бутони за управление */}
       <View style={styles.resultActionsRow}>
-        <Pill onPress={onRetake}>
-          <RotateCcw size={14} color={colors.purple} /> Retake Test
-        </Pill>
+        <Pressable accessibilityRole="button" disabled={isCapturing} onPress={onRetake} style={({ pressed }) => [styles.resultAction, { borderColor: colors.line, backgroundColor: colors.purpleSoft }, pressed && { opacity: 0.75 }]}>
+          <RotateCcw size={18} color={colors.purple} />
+          <T bold size={14} style={{ textAlign: 'center' }}>Retake Test</T>
+        </Pressable>
 
-        <Pill selected onPress={onShareToStory}>
+        <Pressable accessibilityRole="button" disabled={isCapturing || shared} onPress={onShareToStory} style={({ pressed }) => [styles.resultAction, { backgroundColor: colors.action }, pressed && { opacity: 0.78 }]}>
           {isCapturing ? (
             <ActivityIndicator size="small" color="#FFF" />
           ) : shared ? (
-            <Check size={14} color="#FFF" />
+            <Check size={18} color="#FFF" />
           ) : (
-            <Share2 size={14} color="#FFF" />
+            <Share2 size={18} color="#FFF" />
           )}
-          {shared ? 'Added!' : 'Add to Story'}
-        </Pill>
-
-        <Pill onPress={onNavigateExplore}>To Explore ↗</Pill>
+          <T bold size={14} style={{ color: '#fff', textAlign: 'center' }}>{shared ? 'Added!' : 'Add to Story'}</T>
+        </Pressable>
       </View>
     </View>
   );

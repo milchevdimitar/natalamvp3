@@ -10,11 +10,8 @@ import {
 } from './ayurveda.types';
 import { DOSHA_META } from './ayurveda.data';
 
-const DOSHA_LIST: { key: DoshaName; Icon: any }[] = [
-  { key: 'Vata', Icon: Wind },
-  { key: 'Pitta', Icon: Flame },
-  { key: 'Kapha', Icon: Droplets },
-];
+export const DOSHA_ICONS = { Vata: Wind, Pitta: Flame, Kapha: Droplets };
+const DOSHA_LIST: DoshaName[] = ['Vata', 'Pitta', 'Kapha'];
 
 const MAHABHUTA_LIST: { key: MahabhutaElement; sanskrit: string; color: string }[] = [
   { key: 'Ether', sanskrit: 'Akasha', color: '#A855F7' },
@@ -91,7 +88,8 @@ export function DoshaBalanceCard({
       <Card style={{ padding: 15, borderRadius: 16, gap: 12 }}>
         {/* 3 Dosha Columns */}
         <View style={{ flexDirection: 'row', gap: 8 }}>
-          {DOSHA_LIST.map(({ key, Icon }) => {
+          {DOSHA_LIST.map((key) => {
+            const Icon = DOSHA_ICONS[key];
             const meta = DOSHA_META[key];
             const pct = activeScores[key];
             const isTop =

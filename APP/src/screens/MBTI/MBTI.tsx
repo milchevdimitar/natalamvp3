@@ -66,7 +66,6 @@ export default function MBTI() {
           shared={shared}
           onRetake={handleRetake}
           onShareToStory={handleShareToStory}
-          onNavigateExplore={() => setPage('explore')}
         />
       ) : (
         <MbtiQuestionnaireSection

@@ -2,6 +2,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import { AccessibilityInfo, Animated, Platform, StyleSheet, View } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import Svg, { Defs, RadialGradient, Rect, Stop } from 'react-native-svg';
+import { ShootingStar } from '../../components/ShootingStar';
 
 export function useReducedMotion() {
   const [reduced, setReduced] = useState(true);
@@ -90,6 +91,7 @@ export function CosmicBackground({ offset, horizontal, reduced, travel = 1800, l
           </Animated.View>
         );
       })}
+      <ShootingStar reduced={reduced} light={light} />
     </View>
   );
 }

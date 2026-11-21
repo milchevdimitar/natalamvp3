@@ -21,7 +21,8 @@ export default function BottomNav({ blurTarget }: Pick<BlurViewProps, 'blurTarge
   const reduced = useReducedMotion();
   const [rowWidth, setRowWidth] = useState(0);
   const slot = rowWidth / items.length;
-  const index = items.findIndex(([id]) => id === page);
+  const currentTab = page === 'shared-profile' ? 'people' : page;
+  const index = items.findIndex(([id]) => id === currentTab);
   const offset = useRef(new Animated.Value(0)).current;
   const lastSlot = useRef(0);
 
@@ -65,7 +66,7 @@ export default function BottomNav({ blurTarget }: Pick<BlurViewProps, 'blurTarge
             />
           )}
           {items.map(([id, label, Icon]) => {
-            const selected = page === id;
+            const selected = currentTab === id;
             return (
               <Pressable key={id} onPress={() => setPage(id)} accessibilityRole="tab" accessibilityState={{ selected }} aria-selected={selected} style={styles.tab}>
                 <View>

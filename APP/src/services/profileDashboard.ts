@@ -93,15 +93,19 @@ export function getBirthParts(user?: BirthProfile | null) {
   }
 }
 
+export function findBirthCard({ day, month }: Pick<BirthParts, 'day' | 'month'>) {
+  return CARDOLOGY_TABLE.find((row) => row.Dates.split(';').some((token) => {
+    const [cardDay, cardMonth] = token.trim().split('.').map(Number);
+    return cardDay === day && cardMonth === month;
+  }))?.Card;
+}
+
 export function getDashboardSystems(user: DashboardProfile | null, activity?: SystemActivity): DashboardSystem[] {
   const birth = getBirthParts(user);
   const natal = user?.natalChart;
   const sun = natal?.sunSign || (birth && getZodiacInfo(SunPosition(new Date(Date.UTC(birth.year, birth.month - 1, birth.day, 12))).elon).sign);
   const lifePath = user?.numerology?.lifePathNumber ? user.numerology : birth && calculateLifePathNumber(birth.day, birth.month, birth.year);
-  const card = birth && CARDOLOGY_TABLE.find((row) => row.Dates.split(';').some((token) => {
-    const [day, month] = token.trim().split('.').map(Number);
-    return day === birth.day && month === birth.month;
-  }))?.Card;
+  const card = birth && findBirthCard(birth);
   const type = user?.mbti?.type;
   const dosha = user?.ayurveda?.dominantDosha;
   const bazi = activity?.bazi ?? user?.bazi;

@@ -47,7 +47,7 @@ export default function Explore() {
         accent="new lens."
         description="Explore the systems that shape your inner world and discover new perspectives."
       />
-      <SearchBar value={search} onChange={setSearch} placeholder="Search systems..." />
+      <SearchBar value={search} onChange={setSearch} placeholder="Search systems" />
 
       {available.length > 0 && <>
         <Section>Explore your systems</Section>

@@ -25,6 +25,8 @@ export interface Conversation {
   id: string;
   partnerEmail: string;
   partnerName: string;
+  partnerId?: string;
+  partnerAvatar?: string;
   lastMessage: string;
   lastMessageTime: string;
   messages: Message[];

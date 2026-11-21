@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import {
   View,
   Text,
@@ -6,6 +6,7 @@ import {
   Platform,
   StatusBar,
   ActivityIndicator,
+  Linking,
 } from 'react-native';
 import { StatusBar as ExpoStatusBar } from 'expo-status-bar';
 import { BlurTargetView } from 'expo-blur';
@@ -16,6 +17,7 @@ import {
 } from '@expo-google-fonts/dancing-script';
 import { AppProvider, useApp } from './src/context/AppContext';
 import BottomNav from './src/components/BottomNav';
+import { ShootingStar } from './src/components/ShootingStar';
 import Home from './src/screens/Home';
 import { CosmicBackground, useReducedMotion } from './src/screens/Home/CosmicBackground';
 import { isCosmicPage } from './src/theme/cosmic';
@@ -24,6 +26,8 @@ import Chat from './src/screens/Chat';
 import People from './src/screens/People';
 import Feed from './src/screens/Feed';
 import Profile from './src/screens/Profile';
+import SharedProfile from './src/screens/SharedProfile';
+import { profileFromLink } from './src/services/profileLinks';
 import Astrology from './src/screens/Astrology';
 import MBTI from './src/screens/MBTI';
 import Tarot from './src/screens/Tarot';
@@ -37,7 +41,9 @@ import { checkHealth } from './src/services/api';
 import { registerForPushNotificationsAsync } from './src/services/notifications';
 
 function Shell() {
-  const { page, colors, theme, user, hideBottomNav } = useApp();
+  const { page, setPage, colors, theme, user, hideBottomNav } = useApp();
+  const [pendingProfile, setPendingProfile] = useState<string | null>(null);
+  const [sharedProfile, setSharedProfile] = useState<string | null>(null);
   const [showSplash, setShowSplash] = useState(true);
   const fade = useRef(new Animated.Value(1)).current;
   const navBlurTarget = useRef<React.ComponentRef<typeof BlurTargetView>>(null);
@@ -45,6 +51,26 @@ function Shell() {
   const cosmicTab = !!user && isCosmicPage(page);
   const reducedMotion = useReducedMotion();
   const tabScroll = useRef(new Animated.Value(0)).current;
+  const openSharedProfile = useCallback((id: string) => setPendingProfile(id), []);
+
+  useEffect(() => {
+    let mounted = true;
+    const handle = (url: string | null | undefined) => {
+      if (!url || !mounted) return;
+      const id = profileFromLink(url, Platform.OS === 'web' ? window.location.origin : undefined);
+      if (id) openSharedProfile(id);
+    };
+    void Linking.getInitialURL().then(handle).catch(() => undefined);
+    const subscription = Linking.addEventListener('url', ({ url }) => handle(url));
+    return () => { mounted = false; subscription.remove(); };
+  }, [openSharedProfile]);
+
+  useEffect(() => {
+    if (!user || !pendingProfile) return;
+    setSharedProfile(pendingProfile);
+    setPage('shared-profile');
+    setPendingProfile(null);
+  }, [pendingProfile, setPage, user]);
 
   useEffect(() => {
     tabScroll.setValue(0);
@@ -85,10 +111,11 @@ function Shell() {
     ayurveda: <Ayurveda />,
     bazi: <BaZi />,
     'chinese-zodiac': <ChineseZodiac />,
-    chat: <Chat />,
-    people: <People />,
+    chat: <Chat onOpenProfile={openSharedProfile} />,
+    people: <People onOpenProfile={openSharedProfile} />,
     feed: <Feed />,
     profile: <Profile />,
+    'shared-profile': sharedProfile ? <SharedProfile key={sharedProfile} id={sharedProfile} /> : <People onOpenProfile={openSharedProfile} />,
     login: <Login />,
   };
 
@@ -99,11 +126,12 @@ function Shell() {
     !user || page === 'login' || page === 'home' || page === 'chat' || page === 'feed' || page === 'profile';
 
   return (
-    <View style={{ flex: 1, backgroundColor: colors.bg }}>
+    <View style={{ flex: 1, backgroundColor: page === 'feed' ? '#000000' : colors.bg }}>
       <ExpoStatusBar style={cosmicHome || theme === 'dark' ? 'light' : 'dark'} />
 
       <BlurTargetView ref={navBlurTarget} style={{ flex: 1 }}>
       {cosmicTab && <CosmicBackground offset={tabScroll} reduced={reducedMotion} light={theme === 'light'} />}
+      {!cosmicTab && !cosmicHome && <ShootingStar reduced={reducedMotion} light={page !== 'feed' && theme === 'light'} />}
       <View
         key={user ? page : 'login'}
         style={{

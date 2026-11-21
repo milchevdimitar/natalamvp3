@@ -1,68 +1,53 @@
 import React from 'react';
 import {
   View,
-  TextInput,
   TouchableOpacity,
   ScrollView,
   ActivityIndicator,
   Image,
 } from 'react-native';
 import {
-  ArrowLeft,
-  UserPlus,
-  Search,
   MessageSquare,
   X,
 } from 'lucide-react-native';
-import { Card, T, Section, Pill, Hero } from '../../components/UI';
+import { Card, T, Section, Hero, SearchBar } from '../../components/UI';
 import { Conversation, PendingStory } from './chat.types';
 import { styles } from './chat.styles';
 
 interface ConversationsListViewProps {
   colors: any;
   conversations: Conversation[];
-  hasAnyConversations: boolean;
   isLoading: boolean;
   searchQuery: string;
   onChangeSearchQuery: (q: string) => void;
   pendingStory: PendingStory | null;
   onDismissPendingStory: () => void;
-  onOpenNewChatModal: () => void;
   onSelectConversation: (id: string) => void;
-  onBackToExplore: () => void;
 }
 
 export function ConversationsListView({
   colors,
   conversations,
-  hasAnyConversations,
   isLoading,
   searchQuery,
   onChangeSearchQuery,
   pendingStory,
   onDismissPendingStory,
-  onOpenNewChatModal,
   onSelectConversation,
-  onBackToExplore,
 }: ConversationsListViewProps) {
   return (
     <ScrollView
       showsVerticalScrollIndicator={false}
       contentContainerStyle={styles.listScrollContent}
     >
-      <TouchableOpacity accessibilityRole="button" onPress={onBackToExplore} style={styles.listBackBtn}>
-        <ArrowLeft size={18} color={colors.purple} />
-        <T bold size={13} style={{ color: colors.purple }}>
-          Back to Explore
-        </T>
-      </TouchableOpacity>
-
       <Hero
         eyebrow="COSMIC MESSAGES"
         first="Your"
         accent="Conversations."
         description="Connect with friends and astrological soulmates by email."
       />
+
+      <SearchBar value={searchQuery} onChange={onChangeSearchQuery} placeholder="Search chat" />
 
       {pendingStory && (
         <View
@@ -89,45 +74,6 @@ export function ConversationsListView({
         </View>
       )}
 
-      <Card style={styles.newChatCard}>
-        <TouchableOpacity onPress={onOpenNewChatModal} style={styles.newChatRow}>
-          <View style={styles.newChatLeft}>
-            <View
-              style={[
-                styles.newChatIconCircle,
-                { backgroundColor: colors.purpleSoft },
-              ]}
-            >
-              <UserPlus size={20} color={colors.purple} />
-            </View>
-            <View>
-              <T bold size={14}>
-                Start New Chat
-              </T>
-              <T muted size={11}>
-                Add a user by their email address
-              </T>
-            </View>
-          </View>
-          <Pill selected onPress={onOpenNewChatModal}>
-            + Email
-          </Pill>
-        </TouchableOpacity>
-      </Card>
-
-      {hasAnyConversations && (
-        <View style={[styles.searchBox, { backgroundColor: colors.surfaceAlt }]}>
-          <Search size={16} color={colors.muted} />
-          <TextInput
-            value={searchQuery}
-            onChangeText={onChangeSearchQuery}
-            placeholder="Search chat or email..."
-            placeholderTextColor={colors.muted}
-            style={[styles.searchInput, { color: colors.text }]}
-          />
-        </View>
-      )}
-
       <Section>Active Conversations</Section>
       <View style={styles.conversationsList}>
         {isLoading ? (
@@ -143,7 +89,7 @@ export function ConversationsListView({
               No conversations found
             </T>
             <T muted size={12} style={{ textAlign: 'center' }}>
-              Tap "+ Email" above to start a conversation by email.
+              Start a conversation from a connection in People.
             </T>
           </Card>
         ) : (

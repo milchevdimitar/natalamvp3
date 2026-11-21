@@ -1,9 +1,9 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { Animated, Easing, StyleSheet, Text, View, type LayoutChangeEvent, type NativeScrollEvent, type NativeSyntheticEvent } from 'react-native';
 import Svg, { Circle, Defs, Line, LinearGradient as SvgGradient, Polygon, Stop, Text as SvgText } from 'react-native-svg';
-import { LinearGradient } from 'expo-linear-gradient';
 import { useReducedMotion } from '../screens/Home/CosmicBackground';
 import { useApp } from '../context/AppContext';
+import { DOSHA_ICONS } from '../screens/Ayurveda/DoshaBalanceCard';
 
 type SectionId = 'metrics' | 'elements' | 'ayurveda';
 
@@ -108,35 +108,34 @@ export function DashboardRing({ value, active, accent }: { value?: number; activ
 
 type BalanceCategory = readonly [label: string, accent: string];
 
-export function ElementColumns({ categories, values, active }: {
+export function ElementSymbols({ categories, values, active }: {
   categories: readonly BalanceCategory[];
   values?: number[];
   active: boolean;
 }) {
   const { colors } = useApp();
-  const progress = useProgress(active);
+  const ordered = categories.map(([label, accent], index) => ({ label, accent, value: values?.[index] }))
+    .sort((a, b) => (b.value ?? -1) - (a.value ?? -1));
   return (
     <View style={styles.columns}>
-      {categories.map(([label, accent], index) => {
-        const value = values?.[index];
-        const height = progress.interpolate({ inputRange: [0, 1], outputRange: ['0%', (value ?? 0) + '%'] });
+      {ordered.map(({ label, accent, value }) => {
+        const up = label === 'Fire' || label === 'Air';
+        const crossed = label === 'Air' || label === 'Earth';
         return (
           <View key={label} style={styles.column}>
-            <View style={styles.columnValue}>
-              {value === undefined ? <Text style={{ color: colors.muted }}>—</Text> : <CountUp value={value} active={active} color={colors.text} size={16} suffix="%" />}
-            </View>
-            <View style={[styles.columnTrack, { borderColor: colors.line, backgroundColor: colors.purpleSoft }]}>
-              {value !== undefined && <Animated.View style={[styles.columnFill, { height }]}>
-                <LinearGradient colors={[accent, accent + '80']} style={StyleSheet.absoluteFill} />
-              </Animated.View>}
-            </View>
-            <Text style={[styles.columnLabel, { color: colors.muted }]}>{label}</Text>
+            <Svg width={54} height={54} viewBox="0 0 60 60" accessible={false}>
+              <Polygon points={up ? '30,9 53,49 7,49' : '7,11 53,11 30,51'} fill="none" stroke={accent} strokeWidth={2.4} strokeLinejoin="round" />
+              {crossed && <Line x1={16} x2={44} y1={30} y2={30} stroke={accent} strokeWidth={2.4} />}
+            </Svg>
+            <Text style={{ color: colors.text, fontSize: 12, fontWeight: '700' }}>{label}</Text>
+            {value === undefined ? <Text style={{ color: colors.muted }}>—</Text> : <CountUp value={value} active={active} color={colors.text} size={16} suffix="%" />}
           </View>
         );
       })}
     </View>
   );
 }
+
 
 const triangle = [[160, 25], [55, 25 + 105 * Math.sqrt(3)], [265, 25 + 105 * Math.sqrt(3)]] as const;
 type Point = readonly [number, number];
@@ -158,7 +157,7 @@ export function DoshaTriangle({ categories, values, active }: {
 
   return (
     <>
-      <Svg width="100%" height={224} viewBox="0 0 320 232" accessible={false}>
+      <Svg width="100%" height={157} viewBox="0 0 320 232" accessible={false}>
         <Defs>
           <SvgGradient id="dosha-fill" x1="0" y1="0" x2="1" y2="1">
             <Stop offset={0} stopColor={theme === 'dark' ? '#493c82' : '#e1d9fb'} />
@@ -179,13 +178,16 @@ export function DoshaTriangle({ categories, values, active }: {
         {categories.map(([label, accent], index) => <SvgText key={label} x={triangle[index][0]} y={index === 0 ? 15 : 226} textAnchor="middle" fontSize={12} fontWeight="700" fill={theme === 'dark' ? accent : colors.text}>{label}</SvgText>)}
       </Svg>
       <View style={styles.triangleLegend}>
-        {categories.map(([label, accent], index) => (
+        {categories.map(([label, accent], index) => {
+          const Icon = DOSHA_ICONS[label as keyof typeof DOSHA_ICONS];
+          return (
           <View key={label} style={styles.legendItem}>
-            <View style={[styles.legendDot, { backgroundColor: accent }]} />
+            <Icon size={15} color={accent} />
             <Text style={{ color: colors.muted, fontSize: 11 }}>{label}</Text>
             {values ? <CountUp value={values[index]} active={active} size={12} color={colors.text} suffix="%" /> : <Text style={{ color: colors.muted }}>—</Text>}
           </View>
-        ))}
+          );
+        })}
       </View>
     </>
   );
@@ -196,11 +198,6 @@ const styles = StyleSheet.create({
   ringLabel: { ...StyleSheet.absoluteFill, justifyContent: 'center', alignItems: 'center' },
   columns: { flexDirection: 'row', justifyContent: 'center', gap: 9 },
   column: { flex: 1, maxWidth: 96, alignItems: 'center', gap: 7 },
-  columnValue: { minHeight: 22, justifyContent: 'center' },
-  columnTrack: { width: '100%', height: 118, overflow: 'hidden', justifyContent: 'flex-end', borderRadius: 12, borderWidth: 1 },
-  columnFill: { width: '100%', overflow: 'hidden', borderTopLeftRadius: 8, borderTopRightRadius: 8 },
-  columnLabel: { fontSize: 11, fontWeight: '600' },
   triangleLegend: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'center', gap: 12 },
   legendItem: { flexDirection: 'row', alignItems: 'center', gap: 4 },
-  legendDot: { width: 6, height: 6, borderRadius: 3 },
 });

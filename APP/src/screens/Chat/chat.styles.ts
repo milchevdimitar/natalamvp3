@@ -34,6 +34,7 @@ export const styles = StyleSheet.create({
   },
   messageWrapper: {
     maxWidth: '84%',
+    flexShrink: 1,
   },
   messageBubble: {
     borderRadius: 18,
@@ -147,11 +148,15 @@ export const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 8,
+    alignSelf: 'stretch',
+    marginHorizontal: -18,
+    paddingHorizontal: 18,
     paddingVertical: 10,
     borderTopWidth: 1,
   },
   textInput: {
     flex: 1,
+    minWidth: 0,
     borderRadius: 22,
     paddingHorizontal: 16,
     paddingVertical: 10,
@@ -168,12 +173,6 @@ export const styles = StyleSheet.create({
   // Conversations List View
   listScrollContent: {
     paddingBottom: 120,
-  },
-  listBackBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-    marginBottom: 12,
   },
   listStoryBanner: {
     flexDirection: 'row',
@@ -202,19 +201,6 @@ export const styles = StyleSheet.create({
     borderRadius: 20,
     alignItems: 'center',
     justifyContent: 'center',
-  },
-  searchBox: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    borderRadius: 12,
-    paddingHorizontal: 12,
-    marginBottom: 16,
-  },
-  searchInput: {
-    flex: 1,
-    paddingVertical: 10,
-    paddingHorizontal: 10,
-    fontSize: 13,
   },
   conversationsList: {
     gap: 10,

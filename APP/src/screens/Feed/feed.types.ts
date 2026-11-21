@@ -73,6 +73,7 @@ export interface ReelPlayerProps {
   isMuted: boolean;
   containerHeight: number;
   colors: any;
+  reducedMotion: boolean;
   onToggleMute: () => void;
   onSkipNext: () => void;
 }

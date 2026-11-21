@@ -40,15 +40,18 @@ export function useChat({
 
   // Обработка на споделено стори или директно избран потребител от друг екран
   useEffect(() => {
-    if (!selectedChat?.sharedStory) return;
+    if (!selectedChat || !currentUserEmail || isLoading) return;
 
-    setPendingStory({
-      id: selectedChat.sharedStory.id,
-      imageUrl: selectedChat.sharedStory.imageUrl,
-      authorName: selectedChat.sharedStory.authorName,
-      type: 'story_share',
-    });
+    if (selectedChat.sharedStory) {
+      setPendingStory({
+        id: selectedChat.sharedStory.id,
+        imageUrl: selectedChat.sharedStory.imageUrl,
+        authorName: selectedChat.sharedStory.authorName,
+        type: 'story_share',
+      });
+    }
 
+    let active = true;
     if (selectedChat.targetUser) {
       const targetEmail = selectedChat.targetUser.toLowerCase();
       (async () => {
@@ -57,6 +60,7 @@ export function useChat({
             currentUserEmail,
             targetEmail
           );
+          if (!active) return;
           setConversations((prev) => {
             const exists = prev.some((c) => c.id === conversation.id);
             return exists
@@ -65,13 +69,18 @@ export function useChat({
           });
           setActiveChatId(conversation.id);
         } catch (e) {
+          if (!active) return;
           console.error('Грешка при отваряне на чат:', e);
+          if (!selectedChat.sharedStory) Alert.alert('Chat unavailable', 'Could not open the conversation.');
+        } finally {
+          if (active && !selectedChat.sharedStory) setSelectedChat?.(null);
         }
       })();
     } else {
       setActiveChatId(null);
     }
-  }, [selectedChat, currentUserEmail]);
+    return () => { active = false; };
+  }, [selectedChat, currentUserEmail, isLoading, setSelectedChat]);
 
   // Скриване на долната навигация при отворен чат
   useEffect(() => {
@@ -253,6 +262,18 @@ export function useChat({
     }
   };
 
+  const forwardMessage = async (message: Message, destination: Conversation) => {
+    if (destination.id === activeChatId || !currentUserEmail) return;
+    const type = message.storyData?.imageUrl ? 'story_share' : 'text';
+    const result = await sendMessageApi(destination.id, currentUserEmail, message.text, type, message.storyData ?? undefined);
+    if (!result?.success || !result.message) throw new Error('Could not forward message.');
+    const sent = result.message as Message;
+    setConversations((previous) => previous.map((entry) => entry.id === destination.id ? {
+      ...entry, lastMessage: sent.text, lastMessageTime: sent.timestamp,
+      messages: entry.messages.some((item) => item.id === sent.id) ? entry.messages : [...entry.messages, sent],
+    } : entry));
+  };
+
   const clearPendingStory = () => {
     setPendingStory(null);
     setSelectedChat?.(null);
@@ -275,6 +296,8 @@ export function useChat({
 
   return {
     activeConversation,
+    conversations,
+    forwardMessage,
     filteredConversations,
     setActiveChatId,
     searchQuery,

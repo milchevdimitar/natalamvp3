@@ -8,7 +8,6 @@ export const styles = StyleSheet.create({
   },
   centerStateContainer: {
     flex: 1,
-    backgroundColor: '#000000',
     alignItems: 'center',
     justifyContent: 'center',
     paddingHorizontal: 24,
@@ -30,6 +29,10 @@ export const styles = StyleSheet.create({
   webView: {
     flex: 1,
     backgroundColor: 'transparent',
+  },
+  shootingStarLayer: {
+    ...StyleSheet.absoluteFill,
+    zIndex: 6,
   },
   posterOverlay: {
     ...StyleSheet.absoluteFillObject,

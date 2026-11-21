@@ -1,8 +1,11 @@
 import React, { useState } from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { Pressable, ScrollView, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
 import { ChevronLeft, ChevronRight, Flame } from 'lucide-react-native';
+import { LinearGradient } from 'expo-linear-gradient';
 import { cosmic } from '../../theme/cosmic';
 import { DAY_MS } from './useDiscoveryStreak';
+import { celestialOrbSize } from './CelestialDetails';
+import { calendarDetailStyles as calendar } from './calendarDetailStyles';
 
 const weekdays = ['Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa', 'Su'];
 const monthStart = (day: number) => {
@@ -11,6 +14,8 @@ const monthStart = (day: number) => {
 };
 
 export function StreakCalendar({ today, days, count }: { today: number; days: number[]; count: number }) {
+  const { width } = useWindowDimensions();
+  const size = celestialOrbSize(width);
   const [displayMonth, setDisplayMonth] = useState(() => monthStart(today));
   const month = new Date(displayMonth);
   const year = month.getUTCFullYear();
@@ -24,54 +29,50 @@ export function StreakCalendar({ today, days, count }: { today: number; days: nu
   const move = (delta: number) => setDisplayMonth(Date.UTC(year, index + delta, 1));
 
   return (
-    <View style={styles.card}>
-      <View style={styles.summary}>
-        <Flame color={cosmic.gold} size={24} />
-        <Text style={styles.title}>{count} {count === 1 ? 'day' : 'days'} in a row</Text>
+    <ScrollView contentContainerStyle={calendar.body}>
+      <View style={calendar.heading}>
+        <Text style={calendar.date}>Your activity calendar</Text>
+        <Text accessibilityRole="header" style={calendar.title}>{count} {count === 1 ? 'day' : 'days'} in a row</Text>
+        <Text style={calendar.meta}>Highlighted days show when you opened Home.</Text>
       </View>
-      <Text style={styles.meta}>Highlighted days show when you opened Home.</Text>
-      <View style={styles.month}>
-        <Pressable accessibilityRole="button" accessibilityLabel="Previous month" disabled={displayMonth <= earliest} onPress={() => move(-1)} style={styles.arrow}>
+      <View style={[calendar.hero, { minHeight: Math.max(175, size + 22) }]}>
+        <LinearGradient colors={['rgba(246,198,109,0.25)', 'rgba(196,79,42,0.12)']} style={[styles.flameOrb, { width: size, height: size, borderRadius: size / 2 }]}>
+          <Flame color="#ffe3a6" fill="#f8a947" size={size * 0.58} strokeWidth={1.15} />
+        </LinearGradient>
+      </View>
+      <View style={calendar.month}>
+        <Pressable accessibilityRole="button" accessibilityLabel="Previous month" disabled={displayMonth <= earliest} onPress={() => move(-1)} style={calendar.arrow}>
           <ChevronLeft color={displayMonth <= earliest ? '#63749e' : cosmic.text} />
         </Pressable>
-        <Text accessibilityRole="header" style={styles.title}>{month.toLocaleDateString(undefined, { month: 'long', year: 'numeric', timeZone: 'UTC' })}</Text>
-        <Pressable accessibilityRole="button" accessibilityLabel="Next month" disabled={displayMonth >= latest} onPress={() => move(1)} style={styles.arrow}>
+        <Text accessibilityRole="header" style={calendar.monthTitle}>{month.toLocaleDateString(undefined, { month: 'long', year: 'numeric', timeZone: 'UTC' })}</Text>
+        <Pressable accessibilityRole="button" accessibilityLabel="Next month" disabled={displayMonth >= latest} onPress={() => move(1)} style={calendar.arrow}>
           <ChevronRight color={displayMonth >= latest ? '#63749e' : cosmic.text} />
         </Pressable>
       </View>
-      <View style={styles.grid}>
-        {weekdays.map((label) => <Text key={label} style={styles.weekday}>{label}</Text>)}
+      <View style={calendar.weekdays}>
+        {weekdays.map((label) => <Text key={label} style={calendar.weekday}>{label}</Text>)}
+      </View>
+      <View style={calendar.grid}>
         {Array.from({ length: leading + length }, (_, position) => {
           const number = position - leading + 1;
           const date = new Date(Date.UTC(year, index, number));
           const day = date.getTime() / DAY_MS;
           const recorded = visited.has(day);
           return (
-            <View key={position} style={styles.column}>
-              {number > 0 && <View testID={recorded ? 'streak-visited-day' : undefined} accessible accessibilityLabel={format(date) + (recorded ? ', streak day' : '')} style={[styles.cell, day === today && styles.today, recorded && styles.visited]}>
-                <Text style={[styles.day, recorded && styles.visitedText]}>{number}</Text>
+            <View key={position} style={calendar.column}>
+              {number > 0 && <View testID={recorded ? 'streak-visited-day' : undefined} accessible accessibilityLabel={format(date) + (recorded ? ', streak day' : '')} style={[calendar.cell, day === today && calendar.today, recorded && styles.visited]}>
+                <Text style={[calendar.day, !recorded && { color: cosmic.muted }, recorded && styles.visitedText]}>{number}</Text>
               </View>}
             </View>
           );
         })}
       </View>
-    </View>
+    </ScrollView>
   );
 }
 
 const styles = StyleSheet.create({
-  card: { gap: 10, padding: 15, borderRadius: 27, borderWidth: 1, borderColor: cosmic.line, backgroundColor: 'rgba(27,47,99,0.52)' },
-  summary: { alignItems: 'center', flexDirection: 'row', gap: 8 },
-  title: { color: cosmic.text, fontSize: 16, fontWeight: '800' },
-  meta: { color: cosmic.muted, fontSize: 12 },
-  month: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
-  arrow: { width: 44, height: 44, alignItems: 'center', justifyContent: 'center' },
-  grid: { flexDirection: 'row', flexWrap: 'wrap', rowGap: 5 },
-  weekday: { width: '14.28%', textAlign: 'center', color: cosmic.muted, fontSize: 11, fontWeight: '700' },
-  column: { width: '14.28%', minHeight: 39, paddingHorizontal: 2 },
-  cell: { minHeight: 39, alignItems: 'center', justifyContent: 'center', borderRadius: 12, borderWidth: 1, borderColor: 'transparent' },
-  today: { borderColor: cosmic.purple },
+  flameOrb: { alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: 'rgba(246,198,109,0.28)', boxShadow: '0 0 28px rgba(246,148,59,0.24)' },
   visited: { backgroundColor: 'rgba(246,198,109,0.21)' },
-  day: { color: cosmic.muted, fontSize: 12 },
   visitedText: { color: cosmic.gold, fontWeight: '800' },
 });

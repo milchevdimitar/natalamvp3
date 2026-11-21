@@ -3,16 +3,16 @@ import { useApp } from '../../context/AppContext';
 import { useChat } from './useChat';
 import { ActiveChatView } from './ActiveChatView';
 import { ConversationsListView } from './ConversationsListView';
-import { NewChatModal } from './NewChatModal';
+import { profileId } from '../../services/profileLinks';
 
-export default function Chat() {
+export default function Chat({ onOpenProfile }: { onOpenProfile: (id: string) => void }) {
   const {
     colors,
-    setPage,
     user,
     setHideBottomNav,
     selectedChat,
     setSelectedChat,
+    stories,
   } = useApp();
 
   const currentUserEmail = user?.email || '';
@@ -25,8 +25,11 @@ export default function Chat() {
   });
 
   if (chat.activeConversation) {
+    const partnerId = profileId(chat.activeConversation.partnerId);
+    const ownIds = [user?._id, user?.id, currentUserEmail].filter(Boolean).map((id) => String(id).toLowerCase());
     return (
       <ActiveChatView
+        key={chat.activeConversation.id}
         conversation={chat.activeConversation}
         currentUserEmail={currentUserEmail}
         colors={colors}
@@ -39,6 +42,11 @@ export default function Chat() {
         onSelectReplyMessage={chat.setReplyingToMessage}
         onSendMessage={chat.handleSendMessage}
         onBack={() => chat.setActiveChatId(null)}
+        onOpenPartner={partnerId ? () => onOpenProfile(partnerId) : undefined}
+        destinations={chat.conversations.filter(({ id }) => id !== chat.activeConversation?.id)}
+        onForward={chat.forwardMessage}
+        ownStories={stories.filter(({ userId }) => ownIds.includes(String(userId).toLowerCase()))}
+        onAttachStory={chat.setPendingStory}
       />
     );
   }
@@ -48,26 +56,14 @@ export default function Chat() {
       <ConversationsListView
         colors={colors}
         conversations={chat.filteredConversations}
-        hasAnyConversations={chat.filteredConversations.length > 0 || Boolean(chat.searchQuery)}
         isLoading={chat.isLoading}
         searchQuery={chat.searchQuery}
         onChangeSearchQuery={chat.setSearchQuery}
         pendingStory={chat.pendingStory}
         onDismissPendingStory={chat.clearPendingStory}
-        onOpenNewChatModal={() => chat.setIsAddModalOpen(true)}
         onSelectConversation={chat.setActiveChatId}
-        onBackToExplore={() => setPage('explore')}
       />
 
-      <NewChatModal
-        visible={chat.isAddModalOpen}
-        colors={colors}
-        email={chat.newEmail}
-        onChangeEmail={chat.setNewEmail}
-        isSubmitting={chat.isSearchingUser}
-        onClose={() => chat.setIsAddModalOpen(false)}
-        onSubmit={chat.handleStartNewChat}
-      />
     </>
   );
 }
