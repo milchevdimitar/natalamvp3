@@ -7,7 +7,7 @@ import * as FileSystem from 'expo-file-system/legacy';
 import * as IntentLauncher from 'expo-intent-launcher';
 import * as Sharing from 'expo-sharing';
 import { Card, Section, T } from '../components/UI';
-import { CountUp, DashboardRing, DoshaTriangle, ElementSymbols, useDashboardVisibility } from '../components/DashboardCharts';
+import { CountUp, DashboardProgressBar, DoshaTriangle, ElementSymbols, useDashboardVisibility } from '../components/DashboardCharts';
 import { DOSHA_META } from './Ayurveda/ayurveda.data';
 import { ProfileSettings } from './ProfileSettings';
 import { ProfileAvatar } from '../components/ProfileAvatar';
@@ -39,9 +39,11 @@ export default function Profile() {
   const pending = systems.filter((system) => !system.value);
   const balances = getDashboardBalances(user, activity);
   const numerology = ready.find(({ route }) => route === 'numerology');
+  const astrology = ready.find(({ route }) => route === 'astrology');
+  const archetype = ready.find(({ route }) => route === 'mbti');
   const ayurveda = ready.find(({ route }) => route === 'ayurveda');
-  const chinese = ready.find(({ route }) => route === 'chinese-zodiac');
-  const insights = ready.filter((system) => system !== numerology && system !== ayurveda && system !== chinese);
+  const insights = ready.filter((system) => system !== numerology && system !== astrology && system !== archetype && system !== ayurveda);
+  const completion = Math.round(ready.length * 100 / systems.length);
   const visibility = useDashboardVisibility();
   const birth = getBirthParts(user);
   const name = String(user?.name || '').trim();
@@ -214,42 +216,45 @@ export default function Profile() {
         {!!shareNotice && !qrOpen && <T muted size={12}>{shareNotice}</T>}
       </View>
 
-      <View onLayout={visibility.section('metrics')} style={styles.metrics}>
-        <Card style={styles.metric}>
-          <DashboardRing value={Math.round(ready.length * 100 / systems.length)} active={!!visibility.visible.metrics} accent={colors.purple} />
-          <T bold size={11} style={styles.center}>Discovery</T>
-          <View style={styles.metricCaption}>
-            <CountUp value={ready.length} active={!!visibility.visible.metrics} size={10} color={colors.muted} />
-            <T muted size={10}>of {systems.length} ready</T>
+      <View style={styles.metricsGroup} onLayout={visibility.section('metrics')}>
+        <View style={styles.metrics}>
+          <Card onPress={() => setPage('numerology')} style={[styles.metric, { backgroundColor: 'rgba(119,74,141,0.28)' }]}>
+            <Hash size={22} color={colors.gold} />
+            {numerology?.value ? <CountUp value={Number(numerology.value)} active={!!visibility.visible.metrics} color={colors.text} /> : <T bold size={26}>—</T>}
+            <T bold size={11} style={styles.center}>Life path</T>
+          </Card>
+          <Card onPress={() => setPage('astrology')} style={styles.metric}>
+            <Sun size={22} color={colors.gold} />
+            <T bold size={15} style={styles.center}>{astrology?.value || '—'}</T>
+            <T bold size={11} style={styles.center}>Sun sign</T>
+          </Card>
+          <Card onPress={() => setPage('mbti')} style={styles.metric}>
+            <Brain size={22} color={colors.purple} />
+            <T bold size={15} style={styles.center}>{archetype?.value || '—'}</T>
+            <T bold size={11} style={styles.center}>16 archetypes</T>
+          </Card>
+        </View>
+        <Card style={styles.completion}>
+          <View style={styles.completionHeading}>
+            <T bold size={12}>Discovery</T>
+            <CountUp value={completion} suffix="%" active={!!visibility.visible.metrics} size={13} color={colors.text} />
           </View>
-        </Card>
-        <Card onPress={() => setPage('numerology')} style={[styles.metric, { backgroundColor: 'rgba(119,74,141,0.28)' }]}>
-          <Hash size={22} color={colors.gold} />
-          {numerology?.value ? <CountUp value={Number(numerology.value)} active={!!visibility.visible.metrics} color={colors.text} /> : <T bold size={26}>—</T>}
-          <T bold size={11} style={styles.center}>Life path</T>
-        </Card>
-        <Card onPress={() => setPage('chinese-zodiac')} style={styles.metric}>
-          <Orbit size={22} color={colors.purple} />
-          <T bold size={15} style={styles.center}>{chinese?.value || '—'}</T>
-          <T muted size={10} style={styles.center}>Chinese Zodiac</T>
+          <DashboardProgressBar value={completion} active={!!visibility.visible.metrics} />
+          <T muted size={11}>{ready.length} of {systems.length} systems ready</T>
         </Card>
       </View>
 
       <View onLayout={visibility.section('elements')}>
         <Section>Element balance</Section>
-        <Card style={styles.chart}>
-          <T muted size={12}>{balances.elements ? 'From your natal chart' : 'Element proportions appear when a natal chart has saved element data.'}</T>
+        <Card style={styles.elementChart}>
+          {!balances.elements && <T muted size={12}>Element proportions appear when a natal chart has saved element data.</T>}
           <ElementSymbols categories={elements} values={balances.elements} active={!!visibility.visible.elements} />
         </Card>
       </View>
 
       <View onLayout={visibility.section('ayurveda')}>
         <Section>Ayurveda balance</Section>
-        <Card style={styles.chart}>
-          <View style={styles.chartHeading}>
-            <Leaf size={17} color={colors.gold} />
-            <T bold size={15}>{ayurveda?.value || 'Dosha constitution'}</T>
-          </View>
+        <Card style={styles.ayurvedaChart}>
           <DoshaTriangle categories={doshas} values={balances.doshas} active={!!visibility.visible.ayurveda} />
           {!balances.doshas && <Pressable accessibilityRole="button" style={styles.chartLink} onPress={() => setPage('ayurveda')}>
             <T size={12} style={{ color: colors.purple }}>Open the Ayurveda assessment</T><ChevronRight size={15} color={colors.purple} />
@@ -313,11 +318,14 @@ const styles = StyleSheet.create({
   shareActions: { flexDirection: 'row', gap: 9, paddingTop: 6 },
   shareAction: { width: 45, height: 45, borderRadius: 23, alignItems: 'center', justifyContent: 'center', borderWidth: 1 },
   name: { textAlign: 'center', lineHeight: 41, letterSpacing: -1.2 },
+  metricsGroup: { gap: 8 },
   metrics: { flexDirection: 'row', gap: 8 },
   metric: { flex: 1, minWidth: 0, minHeight: 122, paddingHorizontal: 4, paddingVertical: 10, gap: 3, alignItems: 'center', justifyContent: 'center', borderRadius: 21 },
   center: { textAlign: 'center' },
-  metricCaption: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 3 },
-  chart: { gap: 14, padding: 15 },
+  completion: { gap: 6, paddingVertical: 11, paddingHorizontal: 15, borderRadius: 21 },
+  completionHeading: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
+  elementChart: { gap: 8, paddingHorizontal: 12, paddingVertical: 10 },
+  ayurvedaChart: { gap: 6, paddingHorizontal: 15, paddingVertical: 10 },
   chartHeading: { flexDirection: 'row', alignItems: 'center', gap: 6 },
   chartLink: { minHeight: 40, flexDirection: 'row', alignItems: 'center', gap: 5 },
   insights: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
@@ -325,7 +333,7 @@ const styles = StyleSheet.create({
   pending: { paddingHorizontal: 15, paddingVertical: 4 },
   copy: { flex: 1, minWidth: 0, gap: 2 },
   next: { minHeight: 57, flexDirection: 'row', alignItems: 'center', gap: 10, paddingVertical: 8 },
-  report: { position: 'relative', flexDirection: 'row', alignItems: 'center', minHeight: 90, padding: 13, paddingTop: 22, gap: 10, borderRadius: 20, overflow: 'hidden', borderWidth: 1, borderColor: '#ffe3a5' },
+  report: { position: 'relative', flexDirection: 'row', alignItems: 'center', minHeight: 96, paddingHorizontal: 13, paddingVertical: 24, gap: 10, borderRadius: 20, overflow: 'hidden', borderWidth: 1, borderColor: '#ffe3a5' },
   reportInk: { color: '#442914' },
   reportIcon: { width: 42, height: 42, borderRadius: 21, alignItems: 'center', justifyContent: 'center', backgroundColor: 'rgba(98,53,19,0.14)' },
   premium: { position: 'absolute', right: 9, top: 7, borderRadius: 14, paddingHorizontal: 8, paddingVertical: 2, backgroundColor: 'rgba(255,246,214,0.55)' },
