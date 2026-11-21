@@ -89,7 +89,7 @@ export function FriendListSection({
                         onPress={() => onAcceptRequest(req)}
                         style={[
                           styles.iconSquareBtn,
-                          { backgroundColor: colors.purple },
+                          { backgroundColor: colors.action },
                         ]}
                       >
                         <Check size={18} color="#FFF" />

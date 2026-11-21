@@ -1,5 +1,6 @@
 import React, { useState } from "react";
 import { View } from "react-native";
+import { ChevronRight } from "lucide-react-native";
 import { Hero, SearchBar, Card, T, Section } from "../components/UI";
 import { systems } from "../data/demo";
 import { useApp } from "../context/AppContext";
@@ -74,17 +75,20 @@ export default function Explore() {
           return (
             <Card
               key={s.name}
-              onPress={() => setPage(route as any)}
+              onPress={() => setPage(route)}
               activeOpacity={0.7}
+              style={{ minHeight: 110, justifyContent: "center", padding: 15 }}
             >
               <View
                 style={{ flexDirection: "row", gap: 14, alignItems: "center" }}
               >
                 <View
                   style={{
-                    width: 53,
-                    height: 53,
-                    borderRadius: 17,
+                    width: 62,
+                    height: 62,
+                    borderRadius: 31,
+                    borderWidth: 1,
+                    borderColor: colors.line,
                     backgroundColor: colors.purpleSoft,
                     alignItems: "center",
                     justifyContent: "center",
@@ -102,9 +106,7 @@ export default function Explore() {
                     {s.description}
                   </T>
                 </View>
-                <T size={10} bold style={{ color: colors.purple }}>
-                  EXPLORE ↗
-                </T>
+                <ChevronRight color={colors.muted} size={18} />
               </View>
             </Card>
           );

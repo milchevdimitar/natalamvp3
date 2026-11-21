@@ -54,7 +54,7 @@ export const styles = StyleSheet.create({
     alignItems: 'center',
   },
   fullScreenConfettiOverlay: {
-    ...StyleSheet.absoluteFillObject,
+    ...StyleSheet.absoluteFill,
     zIndex: 9999,
   },
 
@@ -99,7 +99,7 @@ export const styles = StyleSheet.create({
     borderColor: 'rgba(0, 0, 0, 0.08)',
   },
   moonShadowOverlay: {
-    ...StyleSheet.absoluteFillObject,
+    ...StyleSheet.absoluteFill,
     borderRadius: 36,
   },
   illuminationBadge: {

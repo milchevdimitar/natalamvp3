@@ -1,258 +1,155 @@
-import React, { useState, useMemo } from 'react';
-import {
-  View,
-  Pressable,
-  ScrollView,
-  Modal,
-  TouchableOpacity,
-} from 'react-native';
-import { X, Calendar, ChevronLeft, ChevronRight } from 'lucide-react-native';
-import { Card, T, Section, Pill } from '../../components/UI';
-import {
-  getFallbackRawLongitudes,
-  getMoonPhaseData,
-  getZodiacInfo,
-} from './home.calculations';
-import { styles } from './home.styles';
+import React, { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
+import { Animated, Easing, PanResponder, Platform, Pressable, StyleSheet, Text, View, type ViewStyle } from 'react-native';
+import { ChevronLeft, ChevronRight } from 'lucide-react-native';
+import { EclipticGeoMoon } from 'astronomy-engine';
+import { getMoonPhaseData, getZodiacInfo } from './home.calculations';
+import { cosmic } from '../../theme/cosmic';
 
-export function MoonForecastSection({ colors }: { colors: any }) {
-  const [showCalendarModal, setShowCalendarModal] = useState(false);
-  const [selectedCalendarDate, setSelectedCalendarDate] = useState(new Date());
-  const [currentMonthDate, setCurrentMonthDate] = useState(new Date());
+const weekdays = ['Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa', 'Su'];
+const webSwipeStyle: ViewStyle & { touchAction: 'pan-y' } = { touchAction: 'pan-y' };
+const dateLabel = (date: Date) => date.toLocaleDateString(undefined, { dateStyle: 'long' });
 
-  const forecast = useMemo(() => {
-    const now = new Date();
-    return Array.from({ length: 7 }, (_, i) => {
-      const d = new Date(now.getTime() + i * 86400000);
-      const phaseData = getMoonPhaseData(d);
-      return {
-        dayName: i === 0 ? 'Today' : d.toLocaleDateString('en-US', { weekday: 'short' }),
-        dateStr: d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
-        ...phaseData,
-      };
+function getMonthPage(current: Date, delta: number) {
+  const month = new Date(current.getFullYear(), current.getMonth() + delta, 1);
+  const leading = (month.getDay() + 6) % 7;
+  const length = new Date(month.getFullYear(), month.getMonth() + 1, 0).getDate();
+  const days = Array.from({ length: 42 }, (_, i) => {
+    if (i < leading || i >= leading + length) return null;
+    const date = new Date(month.getFullYear(), month.getMonth(), i - leading + 1, 12);
+    return { date, phase: getMoonPhaseData(date) };
+  });
+  return { month, days };
+}
+
+export function MoonForecastSection({ reduced }: { reduced: boolean }) {
+  const [today] = useState(() => new Date());
+  const [selected, setSelected] = useState<number | null>(null);
+  const [month, setMonth] = useState(() => new Date(today.getFullYear(), today.getMonth(), 1));
+  const [width, setWidth] = useState(0);
+  const offset = useRef(new Animated.Value(0)).current;
+  const moving = useRef(false);
+  const animation = useRef<Animated.CompositeAnimation | null>(null);
+  const pages = useMemo(() => [-1, 0, 1].map((delta) => getMonthPage(month, delta)), [month]);
+
+  useLayoutEffect(() => {
+    offset.setValue(0);
+    moving.current = false;
+  }, [month, offset]);
+
+  useEffect(() => () => animation.current?.stop(), []);
+
+  const settle = useCallback((delta: number) => {
+    if (moving.current) return;
+    moving.current = true;
+    const finish = () => {
+      if (delta) {
+        setSelected(null);
+        setMonth((current) => new Date(current.getFullYear(), current.getMonth() + delta, 1));
+      } else {
+        offset.setValue(0);
+        moving.current = false;
+      }
+    };
+    if (reduced || !width) {
+      finish();
+      return;
+    }
+
+    animation.current = Animated.timing(offset, {
+      toValue: -delta * width,
+      duration: delta ? 240 : 160,
+      easing: Easing.out(Easing.cubic),
+      useNativeDriver: Platform.OS !== 'web',
     });
-  }, []);
+    animation.current.start(({ finished }) => {
+      animation.current = null;
+      if (finished) finish();
+      else moving.current = false;
+    });
+  }, [offset, reduced, width]);
 
-  const selectedMoonPhase = useMemo(
-    () => getMoonPhaseData(selectedCalendarDate),
-    [selectedCalendarDate]
-  );
+  const swipe = useMemo(() => PanResponder.create({
+    onMoveShouldSetPanResponder: (_, { dx, dy }) => !moving.current && Math.abs(dx) > 12 && Math.abs(dx) > 1.5 * Math.abs(dy),
+    onPanResponderMove: (_, { dx }) => {
+      if (!reduced && !moving.current) offset.setValue(Math.max(-width, Math.min(width, dx)));
+    },
+    onPanResponderRelease: (_, { dx, dy }) => settle(Math.abs(dx) > 38 && Math.abs(dx) > Math.abs(dy) ? (dx < 0 ? 1 : -1) : 0),
+    onPanResponderTerminate: () => settle(0),
+  }), [offset, reduced, settle, width]);
 
-  const selectedMoonZodiac = useMemo(() => {
-    const raw = getFallbackRawLongitudes(selectedCalendarDate);
-    return getZodiacInfo(raw.Moon);
-  }, [selectedCalendarDate]);
-
-  const calendarGrid = useMemo(() => {
-    const year = currentMonthDate.getFullYear();
-    const month = currentMonthDate.getMonth();
-    const firstDayIndex = (new Date(year, month, 1).getDay() + 6) % 7;
-    const totalDays = new Date(year, month + 1, 0).getDate();
-
-    const daysArray: Array<Date | null> = [];
-    for (let i = 0; i < firstDayIndex; i++) {
-      daysArray.push(null);
-    }
-    for (let day = 1; day <= totalDays; day++) {
-      daysArray.push(new Date(year, month, day));
-    }
-    return { daysArray };
-  }, [currentMonthDate]);
-
-  const changeMonth = (offset: number) => {
-    setCurrentMonthDate(
-      new Date(currentMonthDate.getFullYear(), currentMonthDate.getMonth() + offset, 1)
-    );
-  };
+  const selectedDay = pages[1].days.find((day) => !!day && day.date.getDate() === selected);
+  const selectedSign = selectedDay && getZodiacInfo(EclipticGeoMoon(selectedDay.date).lon);
 
   return (
-    <View style={styles.forecastSectionWrapper}>
-      <View style={styles.sectionHeaderRow}>
-        <Section>Moon 7-Day Forecast</Section>
-        <TouchableOpacity
-          activeOpacity={0.7}
-          onPress={() => setShowCalendarModal(true)}
-          style={{ padding: 4 }}
-        >
-          <Calendar size={18} color={colors.gold} />
-        </TouchableOpacity>
-      </View>
-
-      <ScrollView
-        horizontal
-        showsHorizontalScrollIndicator={false}
-        contentContainerStyle={styles.forecastScrollContent}
-      >
-        {forecast.map((item, idx) => (
-          <View
-            key={idx}
-            style={[
-              styles.forecastCard,
-              {
-                backgroundColor: item.isSpecial ? colors.surfaceAlt : colors.surface,
-                borderColor: item.isSpecial ? colors.gold : colors.line,
-              },
-            ]}
-          >
-            <T bold size={12} style={{ color: item.dayName === 'Today' ? colors.gold : colors.text }}>
-              {item.dayName}
-            </T>
-            <T muted size={9} style={{ marginBottom: 6 }}>
-              {item.dateStr}
-            </T>
-
-            <T size={26} style={{ marginVertical: 4 }}>
-              {item.symbol}
-            </T>
-
-            <T bold size={11} style={{ color: colors.text, textAlign: 'center', height: 28 }}>
-              {item.phaseName}
-            </T>
-
-            <View style={styles.forecastIllumPill}>
-              <T bold size={9} style={{ color: colors.gold }}>
-                {item.illuminated}% illum
-              </T>
-            </View>
-          </View>
-        ))}
-      </ScrollView>
-
-      <Modal
-        visible={showCalendarModal}
-        transparent
-        animationType="slide"
-        onRequestClose={() => setShowCalendarModal(false)}
-      >
-        <Pressable
-          style={styles.modalBackdrop}
-          onPress={() => setShowCalendarModal(false)}
-        >
-          <Pressable
-            onPress={(e) => e.stopPropagation()}
-            style={[
-              styles.encyclopediaModalSheet,
-              { backgroundColor: colors.surface, borderColor: colors.gold },
-            ]}
-          >
-            <View style={styles.calendarHeader}>
-              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-                <Calendar size={20} color={colors.gold} />
-                <T bold size={18} style={{ color: colors.text }}>
-                  Cosmic Moon Calendar
-                </T>
-              </View>
-              <TouchableOpacity onPress={() => setShowCalendarModal(false)}>
-                <X color={colors.text} size={22} />
-              </TouchableOpacity>
-            </View>
-
-            <View
-              style={[
-                styles.calendarMonthSwitcher,
-                { backgroundColor: colors.surfaceAlt, borderColor: colors.line },
-              ]}
-            >
-              <TouchableOpacity onPress={() => changeMonth(-1)}>
-                <ChevronLeft size={22} color={colors.gold} />
-              </TouchableOpacity>
-              <T bold size={16} style={{ color: colors.gold }}>
-                {currentMonthDate.toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}
-              </T>
-              <TouchableOpacity onPress={() => changeMonth(1)}>
-                <ChevronRight size={22} color={colors.gold} />
-              </TouchableOpacity>
-            </View>
-
-            <View style={styles.calendarWeekdaysRow}>
-              {['Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa', 'Su'].map((day, i) => (
-                <T key={i} bold size={12} style={{ color: colors.purple, width: 38, textAlign: 'center' }}>
-                  {day}
-                </T>
-              ))}
-            </View>
-
-            <View style={styles.calendarGrid}>
-              {calendarGrid.daysArray.map((dateObj, idx) => {
-                if (!dateObj) {
-                  return <View key={`empty-${idx}`} style={{ width: '14.28%', height: 42 }} />;
-                }
-
-                const isSelected = dateObj.toDateString() === selectedCalendarDate.toDateString();
-                const isToday = dateObj.toDateString() === new Date().toDateString();
-                const dayMoon = getMoonPhaseData(dateObj);
-
-                return (
-                  <TouchableOpacity
-                    key={dateObj.toISOString()}
-                    onPress={() => setSelectedCalendarDate(dateObj)}
-                    style={[
-                      styles.calendarDayCell,
-                      {
-                        backgroundColor: isSelected
-                          ? colors.gold
-                          : isToday
-                          ? colors.purpleSoft
-                          : 'transparent',
-                        borderWidth: isSelected ? 0 : isToday ? 1 : 0,
-                        borderColor: colors.purple,
-                      },
-                    ]}
-                  >
-                    <T
-                      bold={isSelected || isToday}
-                      size={12}
-                      style={{ color: isSelected ? '#000' : colors.text }}
-                    >
-                      {dateObj.getDate()}
-                    </T>
-                    <T size={10}>{dayMoon.symbol}</T>
-                  </TouchableOpacity>
-                );
-              })}
-            </View>
-
-            <Card style={{ backgroundColor: colors.surfaceAlt, borderColor: colors.gold, padding: 14 }}>
-              <T bold size={13} style={{ color: colors.gold, marginBottom: 6 }}>
-                ✦{' '}
-                {selectedCalendarDate.toLocaleDateString('en-US', {
-                  weekday: 'long',
-                  month: 'short',
-                  day: 'numeric',
-                  year: 'numeric',
-                })}
-              </T>
-
-              <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
-                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
-                  <T size={32}>{selectedMoonPhase.symbol}</T>
-                  <View>
-                    <T bold size={15} style={{ color: colors.text }}>
-                      {selectedMoonPhase.phaseName}
-                    </T>
-                    <T muted size={11}>
-                      {selectedMoonPhase.illuminated}% Illuminated · Age: {selectedMoonPhase.ageInDays}d
-                    </T>
-                  </View>
-                </View>
-
-                <View style={{ alignItems: 'flex-end' }}>
-                  <T bold size={18} style={{ color: colors.gold }}>
-                    {selectedMoonZodiac.symbol} {selectedMoonZodiac.sign}
-                  </T>
-                  <T muted size={11}>
-                    {selectedMoonZodiac.degree}° in Sign
-                  </T>
-                </View>
-              </View>
-            </Card>
-
-            <Pill selected onPress={() => setShowCalendarModal(false)}>
-              ✦ Close Moon Calendar
-            </Pill>
-          </Pressable>
+    <View style={styles.calendar}>
+      <View style={styles.monthRow}>
+        <Pressable accessibilityRole="button" accessibilityLabel="Previous month" onPress={() => settle(-1)} style={styles.arrow}>
+          <ChevronLeft size={22} color={cosmic.text} />
         </Pressable>
-      </Modal>
+        <Text accessibilityRole="header" accessibilityLiveRegion="polite" style={styles.month}>
+          {month.toLocaleDateString(undefined, { month: 'long', year: 'numeric' })}
+        </Text>
+        <Pressable accessibilityRole="button" accessibilityLabel="Next month" onPress={() => settle(1)} style={styles.arrow}>
+          <ChevronRight size={22} color={cosmic.text} />
+        </Pressable>
+      </View>
+      <View style={styles.weekdays}>
+        {weekdays.map((label) => <Text key={label} style={styles.weekday}>{label}</Text>)}
+      </View>
+      <View {...swipe.panHandlers} onLayout={(event) => setWidth(event.nativeEvent.layout.width)} style={[styles.window, Platform.OS === 'web' && webSwipeStyle]}>
+        {width > 0 && <Animated.View style={[styles.track, { width: width * 3, marginLeft: -width, transform: [{ translateX: offset }] }]}>
+          {pages.map((page, pageIndex) => {
+            const active = pageIndex === 1;
+            return (
+              <View key={page.month.toISOString()} pointerEvents={active ? 'auto' : 'none'} aria-hidden={!active} importantForAccessibility={active ? 'auto' : 'no-hide-descendants'} style={[styles.grid, { width }]}>
+                {page.days.map((day, i) => {
+                  if (!day) return <View key={i} style={styles.column} />;
+                  const isToday = day.date.toDateString() === today.toDateString();
+                  const isSelected = active && day.date.getDate() === selected;
+                  return (
+                    <View key={i} style={styles.column}>
+                      <Pressable
+                        accessibilityRole="button"
+                        accessibilityLabel={dateLabel(day.date) + ', ' + day.phase.phaseName}
+                        accessibilityState={{ selected: isSelected }}
+                        disabled={!active}
+                        onPress={() => setSelected(day.date.getDate())}
+                        style={[styles.cell, isToday && styles.today, isSelected && styles.selected]}
+                      >
+                        <Text style={[styles.day, isSelected && styles.selectedText]}>{day.date.getDate()}</Text>
+                        <Text style={styles.phase}>{day.phase.symbol}</Text>
+                      </Pressable>
+                    </View>
+                  );
+                })}
+              </View>
+            );
+          })}
+        </Animated.View>}
+      </View>
+      {selectedDay && <Text accessibilityLiveRegion="polite" style={styles.selection}>
+        {dateLabel(selectedDay.date)} · {selectedDay.phase.phaseName} · {selectedDay.phase.illuminated}% illuminated · {selectedSign?.sign}
+      </Text>}
     </View>
   );
 }
+
+const styles = StyleSheet.create({
+  calendar: { gap: 9 },
+  monthRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
+  arrow: { width: 44, height: 44, alignItems: 'center', justifyContent: 'center' },
+  month: { fontSize: 17, fontWeight: '800', textAlign: 'center', color: cosmic.text },
+  weekdays: { flexDirection: 'row' },
+  weekday: { width: '14.28%', textAlign: 'center', fontSize: 11, fontWeight: '700', color: cosmic.muted },
+  window: { overflow: 'hidden', minHeight: 284 },
+  track: { flexDirection: 'row' },
+  grid: { flexDirection: 'row', flexWrap: 'wrap', rowGap: 4 },
+  column: { width: '14.28%', minHeight: 44, paddingHorizontal: 2 },
+  cell: { minHeight: 44, alignItems: 'center', justifyContent: 'center', gap: 2, borderRadius: 11, borderWidth: 1, borderColor: 'transparent' },
+  today: { borderColor: cosmic.purple },
+  selected: { backgroundColor: cosmic.purple },
+  day: { color: cosmic.text, fontSize: 12, fontWeight: '700' },
+  selectedText: { color: cosmic.bg },
+  phase: { fontSize: 12 },
+  selection: { color: cosmic.muted, fontSize: 12, lineHeight: 18, textAlign: 'center' },
+});

@@ -1,4 +1,6 @@
-import { API_BASE_URL, ZODIAC_SIGNS_DATA } from './home.constants';
+import { Body, Ecliptic, EclipticGeoMoon, GeoVector, Illumination, MoonPhase, SearchMoonPhase, SunPosition } from 'astronomy-engine';
+import { API_BASE_URL } from '../../services/api';
+import { ZODIAC_SIGNS_DATA } from './home.constants';
 import { MoonPhaseData, ZodiacInfo } from './home.types';
 
 export function getZodiacInfo(longitude: number): ZodiacInfo {
@@ -23,7 +25,7 @@ export async function fetchJPLPlanetPosition(
   try {
     const dateStr = dateObj.toISOString().split('T')[0];
     const response = await fetch(
-      `${API_BASE_URL}/api/horizons?planet=${planetName}&date=${dateStr}`
+      `${API_BASE_URL}/horizons?planet=${planetName}&date=${dateStr}`
     );
     if (!response.ok) return null;
 
@@ -46,14 +48,11 @@ export async function fetchJPLPlanetPosition(
 /** Изчислява прецизно фазата, осветеността и възрастта на Луната */
 export function getMoonPhaseData(date = new Date()): MoonPhaseData {
   const synodicMonth = 29.53058770576;
-  const knownNewMoon = new Date('2024-01-11T11:57:00Z').getTime();
-  const diffDays = (date.getTime() - knownNewMoon) / 86400000;
-  const cyclePosition = ((diffDays % synodicMonth) + synodicMonth) % synodicMonth;
-
-  const phasePercent = (cyclePosition / synodicMonth) * 100;
-  const illuminated = Math.round(
-    ((1 - Math.cos((cyclePosition / synodicMonth) * 2 * Math.PI)) / 2) * 100
-  );
+  const phasePercent = MoonPhase(date) / 3.6;
+  const cyclePosition = phasePercent / 100 * synodicMonth;
+  const previousNewMoon = SearchMoonPhase(0, date, -31);
+  const age = previousNewMoon ? (date.getTime() - previousNewMoon.date.getTime()) / 86400000 : cyclePosition;
+  const illuminated = Math.round(Illumination(Body.Moon, date).phase_fraction * 100);
 
   let phaseName = '';
   let symbol = '';
@@ -94,59 +93,25 @@ export function getMoonPhaseData(date = new Date()): MoonPhaseData {
     phaseName,
     symbol,
     isSpecial,
-    ageInDays: cyclePosition.toFixed(1),
+    ageInDays: age.toFixed(1),
   };
 }
 
 /** Алгоритмичен резервен изчислетел (Fallback при офлайн режим) */
-export function getFallbackRawLongitudes(dObj: Date) {
-  const julianDate = dObj.getTime() / 86400000 + 2440587.5;
-  const d = julianDate - 2451545.0;
-
-  const g = (((357.529 + 0.98560028 * d) % 360) * Math.PI) / 180;
-  const sunLong =
-    (280.459 + 0.98564736 * d + 1.915 * Math.sin(g) + 0.02 * Math.sin(2 * g)) % 360;
-
-  const Lm = (218.316 + 13.176396 * d) % 360;
-  const Mm = (((134.963 + 13.064993 * d) % 360) * Math.PI) / 180;
-  const Fm = (((93.272 + 13.22935 * d) % 360) * Math.PI) / 180;
-  const moonLong =
-    (Lm + 6.289 * Math.sin(Mm) - 1.274 * Math.sin(Mm - 2 * Fm)) % 360;
-
-  const earthLong = (sunLong + 180) % 360;
-
-  const mercMean = (252.251 + 4.0923344 * d) % 360;
-  const mercLong =
-    (sunLong + 23 * Math.sin((((mercMean - sunLong) % 360) * Math.PI) / 180)) % 360;
-
-  const venusMean = (181.979 + 1.6021302 * d) % 360;
-  const venusLong =
-    (sunLong + 42 * Math.sin((((venusMean - sunLong) % 360) * Math.PI) / 180)) % 360;
-
-  const calcOuterGeocentric = (helioMeanLong: number, semiMajorAxis: number) => {
-    const alpha = (((earthLong - helioMeanLong) % 360) * Math.PI) / 180;
-    const theta = Math.atan2(Math.sin(alpha), semiMajorAxis - Math.cos(alpha));
-    return (((helioMeanLong + (theta * 180) / Math.PI) % 360) + 360) % 360;
-  };
-
-  const marsHelio = (355.433 + 0.524033 * d) % 360;
-  const jupHelio = (34.351 + 0.0830853 * d) % 360;
-  const satHelio = (50.077 + 0.0334442 * d) % 360;
-  const uranHelio = (314.055 + 0.01172834 * d) % 360;
-  const nepHelio = (304.349 + 0.00598106 * d) % 360;
-  const plutoHelio = (238.96 + 0.0039757 * d) % 360;
+export function getFallbackRawLongitudes(date: Date) {
+  const longitude = (body: Body) => Ecliptic(GeoVector(body, date, true)).elon;
 
   return {
-    Sun: sunLong,
-    Moon: moonLong,
-    Mercury: mercLong,
-    Venus: venusLong,
-    Mars: calcOuterGeocentric(marsHelio, 1.524),
-    Jupiter: calcOuterGeocentric(jupHelio, 5.204),
-    Saturn: calcOuterGeocentric(satHelio, 9.582),
-    Uranus: calcOuterGeocentric(uranHelio, 19.201),
-    Neptune: calcOuterGeocentric(nepHelio, 30.047),
-    Pluto: calcOuterGeocentric(plutoHelio, 39.482),
+    Sun: SunPosition(date).elon,
+    Moon: EclipticGeoMoon(date).lon,
+    Mercury: longitude(Body.Mercury),
+    Venus: longitude(Body.Venus),
+    Mars: longitude(Body.Mars),
+    Jupiter: longitude(Body.Jupiter),
+    Saturn: longitude(Body.Saturn),
+    Uranus: longitude(Body.Uranus),
+    Neptune: longitude(Body.Neptune),
+    Pluto: longitude(Body.Pluto),
   };
 }
 

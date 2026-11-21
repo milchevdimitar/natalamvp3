@@ -9,6 +9,7 @@ import {
   Dimensions,
   StyleSheet,
   SafeAreaView,
+  Text,
   TextInput,
   Animated,
   KeyboardAvoidingView,
@@ -22,7 +23,7 @@ import { T } from '../components/UI';
 const { width, height } = Dimensions.get('window');
 const STORY_DURATION = 5000;
 
-export function StoryViewer() {
+export function StoryViewer({ circular = false }: { circular?: boolean } = {}) {
   const {
     stories,
     colors,
@@ -275,7 +276,7 @@ export function StoryViewer() {
   if (!groupedStories || groupedStories.length === 0) {
     return (
       <View style={styles.emptyContainer}>
-        <T muted size={12}>
+        <T muted size={12} style={circular ? { color: '#b9c8ea' } : undefined}>
           Все още няма активни сторита от последните 24 часа.
         </T>
       </View>
@@ -300,9 +301,19 @@ export function StoryViewer() {
                 setUserIndex(gIdx);
                 setStoryIndex(0);
               }}
-              style={styles.fbStoryCard}
+              style={circular ? { width: 61, alignItems: 'center', gap: 6, marginHorizontal: 2 } : styles.fbStoryCard}
               activeOpacity={0.88}
+              accessibilityLabel={circular ? 'Open stories by ' + group.authorName : undefined}
             >
+              {circular ? (
+                <>
+                  <View style={{ width: 55, height: 55, borderRadius: 28, borderWidth: 2, borderColor: '#b49cff', padding: 3 }}>
+                    <Image source={{ uri: coverStory.imageUrl }} style={{ width: '100%', height: '100%', borderRadius: 26 }} />
+                  </View>
+                  <Text numberOfLines={1} style={{ color: '#d2ddf5', fontSize: 10, maxWidth: 61 }}>{group.authorName}</Text>
+                </>
+              ) : (
+              <>
               <Image
                 source={{ uri: coverStory.imageUrl }}
                 style={styles.fbCardImage}
@@ -317,13 +328,15 @@ export function StoryViewer() {
                 />
               </View>
               <View style={styles.fbCardBottomInfo}>
-                <T bold size={11} numberOfLines={1} style={styles.fbAuthorName}>
+                <Text numberOfLines={1} style={[styles.fbAuthorName, { fontSize: 11, fontWeight: '700' }]}>
                   {group.authorName}
-                </T>
+                </Text>
                 <T size={9} style={{ color: 'rgba(255, 255, 255, 0.75)' }}>
                   {group.stories.length} {group.stories.length === 1 ? 'story' : 'stories'}
                 </T>
               </View>
+              </>
+              )}
             </TouchableOpacity>
           );
         })}
@@ -608,12 +621,12 @@ const styles = StyleSheet.create({
     elevation: 4,
   },
   fbCardImage: {
-    ...StyleSheet.absoluteFillObject,
+    ...StyleSheet.absoluteFill,
     width: '100%',
     height: '100%',
   },
   fbCardOverlay: {
-    ...StyleSheet.absoluteFillObject,
+    ...StyleSheet.absoluteFill,
     backgroundColor: 'rgba(0, 0, 0, 0.28)',
   },
   fbAvatarBadge: {
@@ -658,7 +671,7 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
   },
   fullStoryImage: {
-    ...StyleSheet.absoluteFillObject,
+    ...StyleSheet.absoluteFill,
     width: '100%',
     height: '100%',
   },

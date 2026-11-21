@@ -32,10 +32,11 @@ export function usePlanetaryData() {
         const jplToday = resultsToday[idx];
         const jplTomorrow = resultsTomorrow[idx];
 
-        const longitude = jplToday
+        const isLiveNASA = !!(jplToday && jplTomorrow);
+        const longitude = isLiveNASA
           ? jplToday.longitude
           : fallbackLongsToday[name as keyof typeof fallbackLongsToday];
-        const tomorrowLong = jplTomorrow
+        const tomorrowLong = isLiveNASA
           ? jplTomorrow.longitude
           : fallbackLongsTomorrow[name as keyof typeof fallbackLongsTomorrow];
 
@@ -54,7 +55,7 @@ export function usePlanetaryData() {
           progressPercent,
           isRetrograde,
           longitude,
-          isLiveNASA: !!jplToday,
+          isLiveNASA,
           meta,
         };
       });

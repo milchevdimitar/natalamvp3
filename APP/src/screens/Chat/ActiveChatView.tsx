@@ -176,7 +176,7 @@ export function ActiveChatView({
         <TouchableOpacity
           onPress={onSendMessage}
           disabled={isSending}
-          style={[styles.sendButton, { backgroundColor: colors.purple }]}
+          style={[styles.sendButton, { backgroundColor: colors.action }]}
         >
           {isSending ? (
             <ActivityIndicator size="small" color="#FFFFFF" />

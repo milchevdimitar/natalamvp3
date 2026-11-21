@@ -1,7 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import {
   View,
-  ScrollView,
   Text,
   Animated,
   Platform,
@@ -9,6 +8,8 @@ import {
   ActivityIndicator,
 } from 'react-native';
 import { StatusBar as ExpoStatusBar } from 'expo-status-bar';
+import { BlurTargetView } from 'expo-blur';
+import { SafeAreaProvider } from 'react-native-safe-area-context';
 import {
   useFonts,
   DancingScript_700Bold,
@@ -16,6 +17,8 @@ import {
 import { AppProvider, useApp } from './src/context/AppContext';
 import BottomNav from './src/components/BottomNav';
 import Home from './src/screens/Home';
+import { CosmicBackground, useReducedMotion } from './src/screens/Home/CosmicBackground';
+import { isCosmicTab } from './src/theme/cosmic';
 import Explore from './src/screens/Explore';
 import Chat from './src/screens/Chat';
 import People from './src/screens/People';
@@ -36,6 +39,15 @@ function Shell() {
   const { page, colors, theme, user, hideBottomNav } = useApp();
   const [showSplash, setShowSplash] = useState(true);
   const fade = useRef(new Animated.Value(1)).current;
+  const navBlurTarget = useRef<React.ComponentRef<typeof BlurTargetView>>(null);
+  const cosmicHome = !!user && page === 'home';
+  const cosmicTab = !!user && isCosmicTab(page);
+  const reducedMotion = useReducedMotion();
+  const tabScroll = useRef(new Animated.Value(0)).current;
+
+  useEffect(() => {
+    tabScroll.setValue(0);
+  }, [page, tabScroll]);
 
   useEffect(() => {
     // Регистрация на права за нотификации в Android/iOS
@@ -86,39 +98,44 @@ function Shell() {
 
   return (
     <View style={{ flex: 1, backgroundColor: colors.bg }}>
-      <ExpoStatusBar style={theme === 'dark' ? 'light' : 'dark'} />
+      <ExpoStatusBar style={cosmicHome || theme === 'dark' ? 'light' : 'dark'} />
 
+      <BlurTargetView ref={navBlurTarget} style={{ flex: 1 }}>
+      {cosmicTab && <CosmicBackground offset={tabScroll} reduced={reducedMotion} light={theme === 'light'} />}
       <View
         key={user ? page : 'login'}
         style={{
           flex: 1,
           paddingTop:
-            Platform.OS === 'web'
+            cosmicHome ? 0 : Platform.OS === 'web'
               ? 30
               : Math.max((StatusBar.currentHeight || 0) + 16, 28),
-          paddingHorizontal: page === 'feed' ? 0 : 18,
+          paddingHorizontal: cosmicHome || page === 'feed' ? 0 : 18,
           width: '100%',
-          maxWidth: page === 'feed' ? '100%' : 720,
+          maxWidth: cosmicHome || page === 'feed' ? '100%' : cosmicTab ? 620 : 720,
           alignSelf: 'center',
         }}
       >
         {isFullHeightPage ? (
           activePageNode
         ) : (
-          <ScrollView
+          <Animated.ScrollView
             showsVerticalScrollIndicator={false}
             keyboardShouldPersistTaps="handled"
+            scrollEventThrottle={cosmicTab ? 16 : undefined}
+            onScroll={cosmicTab ? Animated.event([{ nativeEvent: { contentOffset: { y: tabScroll } } }], { useNativeDriver: Platform.OS !== 'web' }) : undefined}
             contentContainerStyle={{
               paddingBottom: user ? 120 : 40,
             }}
           >
             {activePageNode}
-          </ScrollView>
+          </Animated.ScrollView>
         )}
       </View>
+      </BlurTargetView>
 
       {/* Навигацията отдолу е видима само след успешен вход и когато hideBottomNav не е активен */}
-      {user && !hideBottomNav && <BottomNav />}
+      {user && !hideBottomNav && <BottomNav blurTarget={navBlurTarget} />}
 
       {showSplash && (
         <Animated.View
@@ -169,8 +186,10 @@ export default function App() {
       </View>
     );
   return (
-    <AppProvider>
-      <Shell />
-    </AppProvider>
+    <SafeAreaProvider>
+      <AppProvider>
+        <Shell />
+      </AppProvider>
+    </SafeAreaProvider>
   );
 }

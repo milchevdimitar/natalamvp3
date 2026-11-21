@@ -1,9 +1,12 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { UserProfile } from '../models/User';
+import { cosmicTabColors, isCosmicTab } from '../theme/cosmic';
 
 const SESSION_KEY = '@natala_active_user_session';
-const API_BASE_URL = 'http://10.159.206.3:5000';
+import { API_BASE_URL as API_URL } from '../services/api';
+
+const API_BASE_URL = API_URL.replace(/\/api$/, '');
 
 export interface AppStory {
   _id: string;
@@ -61,7 +64,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const [hideBottomNav, setHideBottomNav] = useState(false);
   const [selectedChat, setSelectedChat] = useState<SelectedChatData | null>(null);
 
-  const colors = {
+  const colors = isCosmicTab(page) ? cosmicTabColors[theme] : {
     bg: theme === 'dark' ? '#0F0D15' : '#F7F6FB',
     surface: theme === 'dark' ? '#1A1726' : '#FFFFFF',
     surfaceAlt: theme === 'dark' ? '#252136' : '#F0EEF8',

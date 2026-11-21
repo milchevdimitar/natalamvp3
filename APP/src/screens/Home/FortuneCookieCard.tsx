@@ -1,5 +1,5 @@
 
-import React, { useRef, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import {
   View,
   Text,
@@ -9,7 +9,10 @@ import {
   Alert,
   ActivityIndicator,
   StyleSheet,
+  Platform,
+  Share,
 } from 'react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { captureRef } from 'react-native-view-shot';
 import { LinearGradient } from 'expo-linear-gradient';
 import {
@@ -17,12 +20,14 @@ import {
   PlusCircle,
   CheckCircle,
 } from 'lucide-react-native';
-import { Card, T, Pill } from '../../components/UI';
+import { Card, T } from '../../components/UI';
 import { DAILY_FORTUNES } from './home.constants';
 import { styles } from './home.styles';
+import { glassPanel } from '../../theme/cosmic';
 
 interface FortuneCookieCardProps {
   colors: any;
+  email?: string;
   addStory: (base64Image: string) => Promise<void>;
   onOpenConfetti: () => void;
 }
@@ -226,6 +231,7 @@ function CookieShell({
 
 export function FortuneCookieCard({
   colors,
+  email,
   addStory,
   onOpenConfetti,
 }: FortuneCookieCardProps) {
@@ -234,8 +240,10 @@ export function FortuneCookieCard({
   const [isPostingStory, setIsPostingStory] = useState(false);
   const [hasPostedToStory, setHasPostedToStory] = useState(false);
   const [fortuneIndex, setFortuneIndex] = useState(0);
+  const [savedKey, setSavedKey] = useState<string | null>(null);
+  const [notice, setNotice] = useState('');
 
-  const storyRef = useRef<View>(null);
+  const storyRef = useRef<React.ComponentRef<typeof View>>(null);
 
   const shake = useRef(new Animated.Value(0)).current;
   const split = useRef(new Animated.Value(0)).current;
@@ -243,12 +251,51 @@ export function FortuneCookieCard({
   const glow = useRef(new Animated.Value(0)).current;
 
   const currentFortune = DAILY_FORTUNES[fortuneIndex];
+  const saveKey = email ? 'natala:fortune:' + email.trim().toLowerCase() + ':' + fortuneIndex : null;
+
+  useEffect(() => {
+    if (!saveKey || !isOpened) return;
+    let mounted = true;
+    void AsyncStorage.getItem(saveKey).then((value) => {
+      if (mounted && value) setSavedKey(saveKey);
+    }).catch(() => undefined);
+    return () => { mounted = false; };
+  }, [saveKey, isOpened]);
+
+  const saveFortune = async () => {
+    if (!saveKey) return;
+    try {
+      await AsyncStorage.setItem(saveKey, currentFortune);
+      setSavedKey(saveKey);
+      setNotice('');
+    } catch {
+      setNotice('Could not save this fortune.');
+    }
+  };
+
+  const shareFortune = async () => {
+    try {
+      if (Platform.OS === 'web') {
+        if (typeof navigator.share === 'function') {
+          await navigator.share({ text: currentFortune });
+        } else {
+          await navigator.clipboard.writeText(currentFortune);
+          setNotice('Fortune copied.');
+        }
+      } else {
+        await Share.share({ message: currentFortune });
+      }
+    } catch (error) {
+      if (!(error instanceof Error && error.name === 'AbortError')) setNotice('Could not share this fortune.');
+    }
+  };
 
   const handleCrackCookie = () => {
     if (isAnimating) return;
 
     setIsAnimating(true);
     setHasPostedToStory(false);
+    setNotice('');
 
     if (isOpened) {
       Animated.parallel([
@@ -400,7 +447,8 @@ export function FortuneCookieCard({
 
   return (
     <>
-      <Card style={styles.cookieMainCard}>
+      <Card style={{ ...styles.cookieMainCard, borderRadius: 28, borderWidth: 1, borderColor: glassPanel.border, backgroundColor: glassPanel.background }}>
+        <LinearGradient colors={glassPanel.colors} start={glassPanel.start} end={glassPanel.end} style={StyleSheet.absoluteFill} pointerEvents="none" />
         <View style={{ alignItems: 'center', gap: 5 }}>
           <T
             bold
@@ -411,8 +459,8 @@ export function FortuneCookieCard({
             }}
           >
             {isOpened
-              ? 'Your Daily Fortune'
-              : 'Cosmic Fortune Cookie'}
+              ? 'Your fortune'
+              : 'Your fortune awaits.'}
           </T>
           <T
             muted
@@ -558,15 +606,28 @@ export function FortuneCookieCard({
             marginTop: 8,
           }}
         >
-          <Pill
-            selected={isOpened}
+          <TouchableOpacity
+            accessibilityRole="button"
+            style={{ ...styles.storyActionButton, backgroundColor: '#f6c66d', minHeight: 44 }}
             disabled={isAnimating}
             onPress={handleCrackCookie}
           >
-            {isOpened
-              ? '✦ Crack Another Fortune Cookie'
-              : '✦ Reveal My Fortune'}
-          </Pill>
+            <Text style={{ color: '#282034', fontWeight: '800' }}>
+              {isOpened ? 'Another fortune' : '✦ Reveal my fortune'}
+            </Text>
+          </TouchableOpacity>
+
+          {isOpened && (
+            <View style={{ flexDirection: 'row', gap: 8 }}>
+              {saveKey && <TouchableOpacity accessibilityRole="button" onPress={saveFortune} disabled={savedKey === saveKey} style={styles.storyActionButton}>
+                <Text style={{ color: colors.gold }}>{savedKey === saveKey ? 'Saved' : 'Save'}</Text>
+              </TouchableOpacity>}
+              <TouchableOpacity accessibilityRole="button" onPress={shareFortune} style={styles.storyActionButton}>
+                <Text style={{ color: colors.gold }}>Share</Text>
+              </TouchableOpacity>
+            </View>
+          )}
+          {!!notice && <Text accessibilityLiveRegion="polite" style={{ color: colors.text }}>{notice}</Text>}
 
           {isOpened && (
             <TouchableOpacity

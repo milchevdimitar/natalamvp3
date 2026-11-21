@@ -3,7 +3,6 @@ import { PlanetMeta, ZodiacSignData } from './home.types';
 
 export const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
 
-export const API_BASE_URL = 'http://10.159.206.3:5000';
 
 export const ZODIAC_SIGNS_DATA: ZodiacSignData[] = [
   { name: 'Aries', symbol: '♈', element: 'Fire' },

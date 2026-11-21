@@ -34,7 +34,9 @@ export function MessageBubble({
         style={[
           styles.messageBubble,
           {
-            backgroundColor: isMe ? colors.purple : colors.surfaceAlt,
+            backgroundColor: isMe ? colors.action : colors.surfaceAlt,
+            borderWidth: 1,
+            borderColor: colors.line,
             borderBottomRightRadius: isMe ? 3 : 18,
             borderBottomLeftRadius: isMe ? 18 : 3,
           },

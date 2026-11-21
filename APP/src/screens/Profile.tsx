@@ -431,13 +431,15 @@ export default function Profile() {
         </View>
       </View>
 
-      <View style={{ alignItems: 'center', gap: 8, paddingVertical: 23 }}>
+      <Card style={{ alignItems: 'center', gap: 8, paddingVertical: 23, marginBottom: 12 }}>
         <View
           style={{
             width: 96,
             height: 96,
             borderRadius: 48,
             backgroundColor: colors.purpleSoft,
+            borderWidth: 1,
+            borderColor: colors.line,
             alignItems: 'center',
             justifyContent: 'center',
           }}
@@ -450,7 +452,7 @@ export default function Profile() {
             </T>
           )}
         </View>
-        <T bold size={30}>
+        <T bold size={29} style={{ letterSpacing: -1.25, textAlign: 'center' }}>
           {user?.name || 'Потребител'}
         </T>
         <T muted size={12}>
@@ -459,7 +461,7 @@ export default function Profile() {
         <T bold size={12} style={{ color: colors.purple, marginBottom: 10 }}>
           {mbtiText}
         </T>
-      </View>
+      </Card>
 
       <View style={{ flexDirection: 'row', gap: 8, marginBottom: 20 }}>
         {stats.map((s) => (
@@ -584,7 +586,7 @@ export default function Profile() {
             alignItems: 'center',
             justifyContent: 'center',
             gap: 8,
-            backgroundColor: colors.purple,
+            backgroundColor: colors.action,
             paddingVertical: 13,
             paddingHorizontal: 16,
             borderRadius: 12,

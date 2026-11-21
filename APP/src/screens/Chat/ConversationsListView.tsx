@@ -50,7 +50,7 @@ export function ConversationsListView({
       showsVerticalScrollIndicator={false}
       contentContainerStyle={styles.listScrollContent}
     >
-      <TouchableOpacity onPress={onBackToExplore} style={styles.listBackBtn}>
+      <TouchableOpacity accessibilityRole="button" onPress={onBackToExplore} style={styles.listBackBtn}>
         <ArrowLeft size={18} color={colors.purple} />
         <T bold size={13} style={{ color: colors.purple }}>
           Back to Explore

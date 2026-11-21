@@ -86,9 +86,11 @@ export default function People() {
           accessibilityLabel="Refresh people"
           onPress={onRefresh}
           style={{
-            padding: 9,
+            padding: 10,
             borderRadius: 12,
             backgroundColor: colors.surfaceAlt,
+            borderWidth: 1,
+            borderColor: colors.line,
           }}
         >
           {refreshing ? (

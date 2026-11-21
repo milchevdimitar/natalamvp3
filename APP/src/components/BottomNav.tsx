@@ -1,122 +1,95 @@
-import React from "react";
-import { View, Pressable, Text, Platform } from "react-native";
-import { BlurView } from "expo-blur";
-import { LinearGradient } from "expo-linear-gradient";
-import {
-  House,
-  Compass,
-  MessageCircle,
-  UsersRound,
-  Film,
-  UserRound,
-} from "lucide-react-native";
-import { useApp, Page } from "../context/AppContext";
+import React, { useLayoutEffect, useRef, useState } from 'react';
+import { Animated, Easing, Platform, Pressable, StyleSheet, Text, View } from 'react-native';
+import { BlurView, type BlurViewProps } from 'expo-blur';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { House, Compass, MessageCircle, UsersRound, Film, UserRound } from 'lucide-react-native';
+import { useApp } from '../context/AppContext';
+import { useReducedMotion } from '../screens/Home/CosmicBackground';
 
-const items: [Page, string, any][] = [
-  ["home", "Home", House],
-  ["explore", "Explore", Compass],
-  ["chat", "Chat", MessageCircle],
-  ["people", "People", UsersRound],
-  ["feed", "Feed", Film],
-  ["profile", "Profile", UserRound],
-];
+const items = [
+  ['home', 'Home', House],
+  ['explore', 'Explore', Compass],
+  ['chat', 'Chat', MessageCircle],
+  ['people', 'People', UsersRound],
+  ['feed', 'Feed', Film],
+  ['profile', 'Profile', UserRound],
+] as const;
 
-export default function BottomNav() {
-  const { page, setPage, colors, theme } = useApp();
+export default function BottomNav({ blurTarget }: Pick<BlurViewProps, 'blurTarget'>) {
+  const { page, setPage } = useApp();
+  const insets = useSafeAreaInsets();
+  const reduced = useReducedMotion();
+  const [rowWidth, setRowWidth] = useState(0);
+  const slot = rowWidth / items.length;
+  const index = items.findIndex(([id]) => id === page);
+  const offset = useRef(new Animated.Value(0)).current;
+  const lastSlot = useRef(0);
 
-  const isDark = theme === "dark";
+  useLayoutEffect(() => {
+    if (!slot || index < 0) return;
+    const toValue = slot * index;
+    if (reduced || lastSlot.current !== slot) {
+      offset.setValue(toValue);
+      lastSlot.current = slot;
+      return;
+    }
+
+    const motion = Animated.timing(offset, {
+      toValue,
+      duration: 265,
+      easing: Easing.out(Easing.cubic),
+      useNativeDriver: Platform.OS !== 'web',
+    });
+    motion.start();
+    return () => motion.stop();
+  }, [index, offset, reduced, slot]);
 
   return (
-    <View
-      style={{
-        position: "absolute",
-        bottom: Platform.OS === "web" ? 16 : 13,
-        left: 16,
-        right: 16,
-        alignItems: "center",
-        pointerEvents: "box-none",
-      }}
-    >
-      <View
-        style={{
-          width: "100%",
-          maxWidth: 530,
-          borderRadius: 28,
-          overflow: "hidden",
-          borderWidth: 1,
-          borderColor: colors.line,
-        }}
-      >
+    <View style={[styles.position, { bottom: Math.max(insets.bottom, 13) + 3 }]} pointerEvents="box-none">
+      <View style={styles.shell}>
         <BlurView
-          intensity={80}
-          tint={isDark ? "dark" : "light"}
-          style={{ width: "100%" }}
-        >
-          <LinearGradient
-            colors={
-              isDark
-                ? ["rgba(37, 33, 54, 0.75)", "rgba(15, 13, 21, 0.85)"]
-                : ["rgba(255, 255, 255, 0.85)", "rgba(240, 238, 248, 0.75)"]
-            }
-            style={{
-              padding: 6,
-              flexDirection: "row",
-              justifyContent: "space-between",
-            }}
-          >
-            {items.map(([id, label, Icon]) => (
-              <Pressable
-                key={id}
-                onPress={() => setPage(id)}
-                accessibilityRole="tab"
-                accessibilityState={{ selected: page === id }}
-                style={{
-                  flex: 1,
-                  height: 58,
-                  alignItems: "center",
-                  justifyContent: "center",
-                  gap: 3,
-                  borderRadius: 21,
-                  backgroundColor:
-                    page === id ? colors.purpleSoft : "transparent",
-                }}
-              >
-                <View style={{ position: "relative" }}>
-                  <Icon
-                    size={23}
-                    strokeWidth={page === id ? 2.4 : 1.9}
-                    color={page === id ? colors.purple : colors.muted}
-                  />
-                  {id === "chat" && (
-                    <View
-                      style={{
-                        position: "absolute",
-                        right: -5,
-                        top: -4,
-                        width: 13,
-                        height: 13,
-                        borderRadius: 7,
-                        backgroundColor: "#E65B63",
-                        borderWidth: 2,
-                        borderColor: colors.surface,
-                      }}
-                    />
-                  )}
+          intensity={Platform.OS === 'web' ? 15 : 22}
+          tint="default"
+          blurTarget={blurTarget}
+          blurMethod="dimezisBlurViewSdk31Plus"
+          pointerEvents="none"
+          style={StyleSheet.absoluteFill}
+        />
+        <View style={styles.tint} pointerEvents="none" />
+        <View accessibilityRole="tablist" style={styles.row} onLayout={(event) => setRowWidth(event.nativeEvent.layout.width)}>
+          {slot > 0 && index >= 0 && (
+            <Animated.View
+              testID="navbar-selection"
+              pointerEvents="none"
+              style={[styles.selector, { width: slot, transform: [{ translateX: offset }] }]}
+            />
+          )}
+          {items.map(([id, label, Icon]) => {
+            const selected = page === id;
+            return (
+              <Pressable key={id} onPress={() => setPage(id)} accessibilityRole="tab" accessibilityState={{ selected }} aria-selected={selected} style={styles.tab}>
+                <View>
+                  <Icon size={23} strokeWidth={selected ? 2.4 : 1.9} color={selected ? '#dfccff' : '#bdc9e9'} />
+                  {id === 'chat' && <View style={styles.notification} />}
                 </View>
-                <Text
-                  style={{
-                    fontSize: 10,
-                    fontWeight: page === id ? "700" : "500",
-                    color: page === id ? colors.purple : colors.muted,
-                  }}
-                >
-                  {label}
-                </Text>
+                <Text style={[styles.label, selected && styles.selectedLabel]}>{label}</Text>
               </Pressable>
-            ))}
-          </LinearGradient>
-        </BlurView>
+            );
+          })}
+        </View>
       </View>
     </View>
   );
 }
+
+const styles = StyleSheet.create({
+  position: { position: 'absolute', left: 16, right: 16, alignItems: 'center' },
+  shell: { width: '100%', maxWidth: 530, borderRadius: 28, borderWidth: 1, borderColor: 'rgba(177,195,255,0.28)', overflow: 'hidden' },
+  tint: { ...StyleSheet.absoluteFill, backgroundColor: 'rgba(9,19,53,0.59)' },
+  row: { flexDirection: 'row', margin: 6 },
+  selector: { position: 'absolute', left: 0, top: 0, bottom: 0, borderRadius: 21, backgroundColor: 'rgba(151,119,245,0.27)' },
+  tab: { flex: 1, minWidth: 0, height: 58, alignItems: 'center', justifyContent: 'center', gap: 3 },
+  notification: { position: 'absolute', right: -5, top: -4, width: 13, height: 13, borderRadius: 7, backgroundColor: '#E65B63', borderWidth: 2, borderColor: '#24365c' },
+  label: { fontSize: 10, fontWeight: '500', color: '#bdc9e9' },
+  selectedLabel: { fontWeight: '700', color: '#f0e4ff' },
+});
