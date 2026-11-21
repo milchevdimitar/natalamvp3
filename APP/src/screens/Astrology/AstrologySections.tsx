@@ -17,6 +17,7 @@ import {
   ZodiacPosition,
 } from './astrology.types';
 import { degToZodiac } from './astrology.calculations';
+import { getPlanetPlacementReading } from './planetHouseReadings';
 import { DetailSheetModal, TieredSummaryCard } from './AstrologyDetailModal';
 import { styles } from './astrology.styles';
 
@@ -339,6 +340,7 @@ export function ChartTechnicalDrawerTrigger({
 }) {
   const [open, setOpen] = useState(false);
   const [tab, setTab] = useState<'planets' | 'houses' | 'aspects' | 'balance'>('planets');
+  const [expandedPlacement, setExpandedPlacement] = useState<string | null>(null);
   const mcData = degToZodiac(results.mc);
 
   const elBars = [
@@ -424,6 +426,7 @@ export function ChartTechnicalDrawerTrigger({
                 deg: ascData.degFormatted,
                 house: 1,
                 extra: '',
+                planet: undefined,
               },
               {
                 symbol: 'MC',
@@ -432,6 +435,7 @@ export function ChartTechnicalDrawerTrigger({
                 deg: mcData.degFormatted,
                 house: 10,
                 extra: '',
+                planet: undefined,
               },
               ...results.planetPositions.map((p) => {
                 const z = degToZodiac(p.deg);
@@ -442,20 +446,27 @@ export function ChartTechnicalDrawerTrigger({
                   deg: z.degFormatted,
                   house: p.house,
                   extra: p.dignity !== 'Peregrine' ? p.dignity : '',
+                  planet: p,
                 };
               }),
-            ].map((row, idx) => (
-              <View
-                key={idx}
+            ].map((row) => {
+              const { planet } = row;
+              const placement = planet && getPlanetPlacementReading(planet, results.hasExactBirthTime);
+              const canExpand = !!placement && (!!placement.reading || !results.hasExactBirthTime);
+              const expanded = !!planet && expandedPlacement === planet.key;
+              const Row = canExpand ? TouchableOpacity : View;
+              return (
+              <Row key={planet?.key ?? row.name}
+                accessibilityRole={canExpand ? 'button' : undefined}
+                accessibilityState={canExpand ? { expanded } : undefined}
+                onPress={canExpand && planet ? () => setExpandedPlacement(expanded ? null : planet.key) : undefined}
                 style={{
-                  flexDirection: 'row',
-                  alignItems: 'center',
-                  justifyContent: 'space-between',
                   padding: 10,
                   borderRadius: 10,
                   backgroundColor: colors.surfaceAlt,
                 }}
               >
+                <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
                 <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
                   <T bold size={15} style={{ color: colors.purple, width: 32 }}>
                     {row.symbol}
@@ -469,11 +480,18 @@ export function ChartTechnicalDrawerTrigger({
                     </T>
                   </View>
                 </View>
-                <T bold size={11} style={{ color: colors.muted }}>
-                  House {row.house}
-                </T>
-              </View>
-            ))}
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 5 }}>
+                  {results.hasExactBirthTime && <T bold size={11} style={{ color: colors.muted }}>House {row.house}</T>}
+                  {canExpand && <ChevronRight size={14} color={colors.muted} style={{ transform: [{ rotate: expanded ? '90deg' : '0deg' }] }} />}
+                </View>
+                </View>
+                {expanded && placement && <View style={{ gap: 4, paddingTop: 10 }}>
+                  <T bold size={13}>{placement.title}</T>
+                  <T muted size={12}>{placement.reading ?? 'Add your exact birth time to see the house interpretation.'}</T>
+                </View>}
+              </Row>
+              );
+            })}
           </View>
         )}
 

@@ -23,7 +23,7 @@ import { T } from '../components/UI';
 const { width, height } = Dimensions.get('window');
 const STORY_DURATION = 5000;
 
-export function StoryViewer({ circular = false }: { circular?: boolean } = {}) {
+export function StoryViewer({ circular = false, circleSize = 55 }: { circular?: boolean; circleSize?: number } = {}) {
   const {
     stories,
     colors,
@@ -301,16 +301,16 @@ export function StoryViewer({ circular = false }: { circular?: boolean } = {}) {
                 setUserIndex(gIdx);
                 setStoryIndex(0);
               }}
-              style={circular ? { width: 61, alignItems: 'center', gap: 6, marginHorizontal: 2 } : styles.fbStoryCard}
+              style={circular ? { width: circleSize + 6, alignItems: 'center', gap: 6, marginHorizontal: 2 } : styles.fbStoryCard}
               activeOpacity={0.88}
               accessibilityLabel={circular ? 'Open stories by ' + group.authorName : undefined}
             >
               {circular ? (
                 <>
-                  <View style={{ width: 55, height: 55, borderRadius: 28, borderWidth: 2, borderColor: '#b49cff', padding: 3 }}>
-                    <Image source={{ uri: coverStory.imageUrl }} style={{ width: '100%', height: '100%', borderRadius: 26 }} />
+                  <View style={{ width: circleSize, height: circleSize, borderRadius: circleSize / 2, borderWidth: 2, borderColor: '#b49cff', padding: 3 }}>
+                    <Image source={{ uri: coverStory.imageUrl }} style={{ width: '100%', height: '100%', borderRadius: circleSize / 2 - 5 }} />
                   </View>
-                  <Text numberOfLines={1} style={{ color: '#d2ddf5', fontSize: 10, maxWidth: 61 }}>{group.authorName}</Text>
+                  <Text numberOfLines={1} style={{ color: '#d2ddf5', fontSize: 10, maxWidth: circleSize + 6 }}>{group.authorName}</Text>
                 </>
               ) : (
               <>

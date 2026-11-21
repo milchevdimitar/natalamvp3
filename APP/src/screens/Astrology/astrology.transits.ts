@@ -35,6 +35,7 @@ const AVG_SPEED_DEG_PER_DAY: Record<string, number> = {
   neptune: 0.006,
   pluto: 0.004,
   northNode: 0.053,
+  southNode: 0.053,
 };
 
 function shortestAngularDiff(a: number, b: number): number {
@@ -66,6 +67,7 @@ export function getSkyPositionsForDate(targetDate: Date): SkyBodySnapshot[] {
       'neptune',
       'pluto',
       'northNode',
+      'southNode',
     ].includes(b.key)
   );
 
@@ -73,8 +75,9 @@ export function getSkyPositionsForDate(targetDate: Date): SkyBodySnapshot[] {
     let lon = 0;
     let isRetro = false;
 
-    if (cfg.specialType === 'north_node') {
-      lon = getTrueNorthNodeLongitude(safeDate);
+    if (cfg.specialType === 'north_node' || cfg.specialType === 'south_node') {
+      const north = getTrueNorthNodeLongitude(safeDate);
+      lon = cfg.specialType === 'south_node' ? (north + 180) % 360 : north;
       isRetro = true;
     } else if (cfg.body) {
       const geo1 = Astronomy.GeoVector(cfg.body, safeDate, true);
@@ -257,7 +260,7 @@ export function calculateTransitsForDate(
 
   for (const tBody of sky) {
     const tNext = skyPlus6h.find((s) => s.key === tBody.key);
-    const isOuter = ['jupiter', 'saturn', 'uranus', 'neptune', 'pluto', 'northNode'].includes(
+    const isOuter = ['jupiter', 'saturn', 'uranus', 'neptune', 'pluto', 'northNode', 'southNode'].includes(
       tBody.key
     );
     const isFast = ['sun', 'moon', 'mercury', 'venus', 'mars'].includes(tBody.key);

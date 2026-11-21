@@ -7,15 +7,18 @@ import ConfettiCannon from 'react-native-confetti-cannon';
 import { SunPosition } from 'astronomy-engine';
 import { useApp } from '../../context/AppContext';
 import { StoryViewer } from '../../components/StoryViewer';
+import { computeNatalChart, extractUserBirthDateTime } from '../Astrology/astrology.calculations';
+import { calculateTransitsForDate, getSkyPositionsForDate } from '../Astrology/astrology.transits';
+import { getPlanetPlacementReading } from '../Astrology/planetHouseReadings';
 import { AnimatedMoonVisualizer } from './AnimatedMoonVisualizer';
-import { CelestialCarousel, DetailScreen, zodiacSlides } from './CelestialDetails';
+import { CelestialCarousel, DetailScreen, zodiacSlides, type CelestialSlide } from './CelestialDetails';
 import { CosmicBackground, useReducedMotion } from './CosmicBackground';
 import { FortuneCookieCard } from './FortuneCookieCard';
 import { MoonCalendarDetail } from './MoonCalendarDetail';
 import { StreakCalendar } from './StreakCalendar';
 import { planetDeepReadings } from './celestialReadings';
 import { RetrogradeSection } from './RetrogradeSection';
-import { SkyArtwork } from './SkyArtwork';
+import { SKY_ARTWORK_SIZE, SkyArtwork } from './SkyArtwork';
 import { cosmic, glassPanel } from '../../theme/cosmic';
 import { getMoonPhaseData, getZodiacInfo } from './home.calculations';
 import { SCREEN_HEIGHT, SCREEN_WIDTH } from './home.constants';
@@ -24,6 +27,7 @@ import { useDiscoveryStreak } from './useDiscoveryStreak';
 import { usePlanetaryData } from './usePlanetaryData';
 
 type Detail = 'sun' | 'moon' | 'codex' | 'retrogrades' | 'streak';
+const PLANET_ATLAS_TITLE = 'Your Planetary Atlas';
 
 function SkyCard({ title, subtitle, hint, artwork, onPress, disabled }: {
   title: string; subtitle: string; hint?: string; artwork: React.ReactNode; onPress: () => void; disabled?: boolean;
@@ -57,6 +61,43 @@ export default function Home() {
   const { loadingNASA, planetaryPositions, reloadPlanetaryData } = usePlanetaryData();
   const moon = useMemo(() => getMoonPhaseData(now), [now]);
   const sun = useMemo(() => getZodiacInfo(SunPosition(now).elon), [now]);
+  const codexOpen = detail === 'codex';
+  const codexSlides = useMemo<CelestialSlide[]>(() => {
+    if (!codexOpen) return [];
+    const today = new Date();
+    const birth = extractUserBirthDateTime(user);
+    const natal = birth && computeNatalChart(birth.dStr, birth.tStr, birth.lat, birth.lon, birth.timezone, birth.hasExactBirthTime);
+    const transits = natal?.hasExactBirthTime ? calculateTransitsForDate(natal, today) : [];
+    const current = getSkyPositionsForDate(today);
+    const withReadings = (key: string, slide: CelestialSlide): CelestialSlide => {
+      const placement = natal?.planetsByKey[key];
+      const sky = current.find((body) => body.key === key);
+      return {
+        ...slide,
+        natal: placement && natal ? getPlanetPlacementReading(placement, natal.hasExactBirthTime) : undefined,
+        today: sky ? `${sky.name} is in ${sky.sign} today.` : undefined,
+        transits: transits.filter((transit) => transit.transitKey === key),
+      };
+    };
+    const planets = planetaryPositions.map((planet) => withReadings(planet.name.toLowerCase(), {
+      title: planet.name, symbol: planet.planet, tagline: planet.meta.topic,
+      summary: planet.meta.description, description: planetDeepReadings[planet.name] ?? '',
+      position: planet.signName + ' ' + planet.degInSign + '°', badge: planet.isRetrograde ? 'Retrograde' : 'Direct',
+      retrograde: planet.isRetrograde, note: planet.isLiveNASA ? undefined : 'Position and motion calculated locally.',
+    }));
+    const nodes = current.filter(({ key }) => key === 'northNode' || key === 'southNode').map((node) => {
+      const north = node.key === 'northNode';
+      return withReadings(node.key, {
+        title: node.name, symbol: node.symbol, tagline: north ? 'Growth & unfamiliar territory' : 'Instinct & familiar patterns',
+        summary: north ? 'The North Node describes unfamiliar experiences that can help you grow.' : 'The South Node describes habits and strengths you already know well.',
+        description: north
+          ? 'The North Node marks where the Moon’s orbit crosses the path of the Sun in a northward direction. In astrology, its sign describes qualities worth practicing and its house points to the part of life where you can try them. It is read together with the opposite South Node.'
+          : 'The South Node marks the opposite crossing of the Moon’s orbit. Its sign describes familiar ways of responding and its house points to where those responses tend to show up. Consider what these habits still offer you and when a different choice might serve you better.',
+        position: node.sign + ' ' + node.degFormatted, badge: 'Lunar node',
+      });
+    });
+    return [...planets, ...nodes];
+  }, [codexOpen, planetaryPositions, user, now]);
   const retrogradeCount = planetaryPositions.filter(({ isRetrograde }) => isRetrograde).length;
   const profileName = String(user?.name ?? '').trim();
   const close = () => setDetail(null);
@@ -94,7 +135,7 @@ export default function Home() {
 
         <View style={styles.stories}>
           <Text accessibilityRole="header" style={styles.section}>Stories & inspiration</Text>
-          <StoryViewer circular />
+          <StoryViewer circular circleSize={SKY_ARTWORK_SIZE} />
         </View>
 
         <View style={styles.greeting}>
@@ -111,13 +152,9 @@ export default function Home() {
 
         <View style={styles.group}>
           <Text accessibilityRole="header" style={styles.section}>The sky right now</Text>
+          <SkyCard title={PLANET_ATLAS_TITLE} subtitle={planetaryPositions.length ? 'Planet meanings, your birth chart & today’s transits' : loadingNASA ? 'Calculating planetary positions…' : 'Planetary positions unavailable'} hint="Swipe through 12 planets and lunar points" artwork={<SkyArtwork kind="codex" />} onPress={() => setDetail('codex')} disabled={!planetaryPositions.length} />
           <SkyCard title={sun.sign + ' season'} subtitle={'Sun in ' + sun.sign + ' · ' + sun.degree + '°'} hint="Swipe through the zodiac seasons" artwork={<SkyArtwork kind="sun" />} onPress={() => setDetail('sun')} />
-          <SkyCard title={moon.phaseName} subtitle={'Moon · ' + moon.illuminated + '% illuminated'} hint="Moon phases · swipe month by month" artwork={<AnimatedMoonVisualizer moonPhase={moon} size={69} reduced={reduced} />} onPress={() => setDetail('moon')} />
-        </View>
-
-        <View style={styles.group}>
-          <Text accessibilityRole="header" style={styles.section}>Planetary Codex</Text>
-          <SkyCard title="Explore the planets" subtitle={planetaryPositions.length ? 'Sun · Moon · Mars · and more' : loadingNASA ? 'Calculating planetary positions…' : 'Planetary positions unavailable'} hint="Swipe the cards to explore their meanings" artwork={<SkyArtwork kind="codex" />} onPress={() => setDetail('codex')} disabled={!planetaryPositions.length} />
+          <SkyCard title={moon.phaseName} subtitle={'Moon · ' + moon.illuminated + '% illuminated'} hint="Moon phases · swipe month by month" artwork={<AnimatedMoonVisualizer moonPhase={moon} size={SKY_ARTWORK_SIZE} reduced={reduced} />} onPress={() => setDetail('moon')} />
         </View>
 
         <View style={styles.group}>
@@ -138,14 +175,9 @@ export default function Home() {
 
       {detail === 'sun' && <CelestialCarousel kind="zodiac" title="Zodiac seasons" slides={zodiacSlides(sun.sign, now)} onClose={close} reduced={reduced} />}
       {detail === 'codex' && <CelestialCarousel
-        title="Planetary Codex"
+        title={PLANET_ATLAS_TITLE}
         kind="codex"
-        slides={planetaryPositions.map((planet) => ({
-          title: planet.name, symbol: planet.planet, tagline: planet.meta.topic,
-          description: [planet.meta.description, planetDeepReadings[planet.name]].filter(Boolean).join('\n\n'),
-          position: planet.signName + ' ' + planet.degInSign + '°', badge: planet.isRetrograde ? 'Retrograde' : 'Direct',
-          retrograde: planet.isRetrograde, note: planet.isLiveNASA ? undefined : 'Position and motion calculated locally.',
-        }))}
+        slides={codexSlides}
         onClose={close}
         onRetrogrades={() => setDetail('retrogrades')}
         reduced={reduced}
@@ -189,7 +221,7 @@ const styles = StyleSheet.create({
   group: { gap: 11 },
   section: { color: cosmic.text, fontSize: 17, fontWeight: '800', letterSpacing: -0.4 },
   card: { flexDirection: 'row', alignItems: 'center', gap: 14, overflow: 'hidden', borderRadius: 28, borderWidth: 1, borderColor: glassPanel.border, padding: 15, minHeight: 110, backgroundColor: glassPanel.background },
-  artwork: { width: 69, height: 69, flexShrink: 0, borderRadius: 35, boxShadow: '0 0 0 5px rgba(108,146,236,0.08), 0 0 24px rgba(116,156,244,0.18)' },
+  artwork: { width: SKY_ARTWORK_SIZE, height: SKY_ARTWORK_SIZE, flexShrink: 0, borderRadius: SKY_ARTWORK_SIZE / 2, boxShadow: '0 0 0 5px rgba(108,146,236,0.08), 0 0 24px rgba(116,156,244,0.18)' },
   cardTitle: { color: cosmic.text, fontSize: 16, lineHeight: 19, fontWeight: '800' },
   cardMeta: { color: '#d1e1ff', fontSize: 12, marginTop: 4 },
   cardHint: { color: '#a9bfea', fontSize: 10.5, lineHeight: 14, marginTop: 6 },

@@ -9,8 +9,10 @@ import { CosmicBackground } from './CosmicBackground';
 import { cosmic, glassPanel } from '../../theme/cosmic';
 import { ZODIAC_SIGNS_DATA } from './home.constants';
 import { seasonReadings } from './celestialReadings';
+import type { TransitAspectItem } from '../Astrology/astrology.types';
+import type { getPlanetPlacementReading } from '../Astrology/planetHouseReadings';
 
-type CelestialSlide = {
+export type CelestialSlide = {
   title: string;
   symbol: string;
   tagline: string;
@@ -21,6 +23,9 @@ type CelestialSlide = {
   current?: boolean;
   retrograde?: boolean;
   note?: string;
+  natal?: ReturnType<typeof getPlanetPlacementReading>;
+  today?: string;
+  transits?: readonly TransitAspectItem[];
 };
 
 const seasonMeanings = [
@@ -146,6 +151,48 @@ const planetSummaries: Record<string, string> = {
 const formatIndex = (index: number) => String(index + 1).padStart(2, '0');
 export const celestialOrbSize = (width: number) => Math.min(width * 0.54, 208);
 
+function CodexReading({ slide }: { slide: CelestialSlide }) {
+  const [expanded, setExpanded] = useState(false);
+
+  return (
+    <View style={[styles.description, styles.codexDescription]}>
+      <LinearGradient pointerEvents="none" colors={glassPanel.colors} start={glassPanel.start} end={glassPanel.end} style={StyleSheet.absoluteFill} />
+      <ScrollView style={styles.track} contentContainerStyle={styles.readingContent} nestedScrollEnabled directionalLockEnabled>
+        <View style={styles.factHeader}>
+          <Text style={styles.eyebrow}>MEANING IN ASTROLOGY</Text>
+          <Text style={[styles.badge, slide.retrograde && styles.retroBadge]}>{slide.badge}</Text>
+        </View>
+        <Text style={styles.copy}>{slide.summary ?? planetSummaries[slide.title] ?? slide.tagline}</Text>
+        {expanded && <Text style={[styles.more, styles.continued]}>{slide.description}</Text>}
+        {!!slide.description && <Pressable accessibilityRole="button" accessibilityState={{ expanded }} onPress={() => setExpanded(!expanded)} style={styles.readToggle}>
+          <Text style={styles.link}>{expanded ? 'Read less' : 'Read more'}</Text>
+        </Pressable>}
+
+        <View style={styles.divider} />
+        <Text style={styles.eyebrow}>YOUR NATAL PLACEMENT</Text>
+        {slide.natal && <Text style={styles.readingTitle}>{slide.natal.title}</Text>}
+        <Text style={styles.more}>{slide.natal?.reading ?? (slide.natal
+          ? 'Add your exact birth time to see the house interpretation.'
+          : 'Add your birth details in Profile to see your natal placement.')}</Text>
+
+        <View style={styles.divider} />
+        <Text style={styles.eyebrow}>TODAY’S TRANSITS</Text>
+        {!!slide.today && <Text style={[styles.more, styles.continued]}>{slide.today}</Text>}
+        {slide.transits?.length ? slide.transits.map((transit) => (
+          <View key={transit.id} style={styles.transit}>
+            <Text style={styles.readingTitle}>{transit.title}</Text>
+            <Text style={styles.more}>{transit.summary}</Text>
+            <Text style={styles.more}>{transit.guidance}</Text>
+          </View>
+        )) : <Text style={[styles.more, styles.continued]}>{slide.natal?.reading
+          ? 'No major personal aspects from this body are active today.'
+          : 'Add your birth details, including your exact birth time, to see personal transit readings.'}</Text>}
+        {slide.note && <Text style={[styles.note, styles.continued]}>{slide.note}</Text>}
+      </ScrollView>
+    </View>
+  );
+}
+
 export function CelestialCarousel({ title, kind, slides, onClose, reduced, onRetrogrades }: {
   title: string; kind: 'zodiac' | 'codex'; slides: CelestialSlide[]; onClose: () => void; reduced: boolean;
   onRetrogrades?: () => void;
@@ -183,7 +230,7 @@ export function CelestialCarousel({ title, kind, slides, onClose, reduced, onRet
     scroller.current?.scrollTo({ x: next * width, animated: !reduced });
   };
 
-  const orbSize = celestialOrbSize(width);
+  const orbSize = zodiac ? celestialOrbSize(width) : Math.min(celestialOrbSize(width), height * 0.28);
 
   return (
     <DetailScreen title={title} onClose={onClose} offset={offset} reduced={reduced} travel={travel} darkBottom header={
@@ -220,14 +267,14 @@ export function CelestialCarousel({ title, kind, slides, onClose, reduced, onRet
           })}
           style={styles.track}
         >
-          {slides.map((slide, i) => (
-            <ScrollView key={slide.title} style={{ width, height }} contentContainerStyle={styles.slide} nestedScrollEnabled directionalLockEnabled>
+          {slides.map((slide, i) => {
+            const heading = <>
               <View style={styles.slideHeading}>
                 <Text style={styles.eyebrow}>{formatIndex(i)} · {zodiac ? 'SOLAR SEASON' : 'CELESTIAL STORY'}</Text>
                 <Text accessibilityRole="header" style={styles.slideTitle}>{slide.title.toUpperCase()}</Text>
                 <Text style={styles.subtitle}>{slide.tagline}</Text>
               </View>
-              <View style={[styles.hero, { minHeight: Math.max(175, orbSize + 22) }]}>
+              <View style={[styles.hero, { minHeight: zodiac ? Math.max(175, orbSize + 22) : orbSize + 16 }]}>
                 <Animated.View pointerEvents="none" style={{ transform: [{ translateY: float }] }}>
                   <CelestialOrb slide={slide} zodiac={zodiac} size={orbSize} />
                 </Animated.View>
@@ -236,6 +283,10 @@ export function CelestialCarousel({ title, kind, slides, onClose, reduced, onRet
                   <Text style={styles.positionText}>{slide.position}</Text>
                 </View>
               </View>
+            </>;
+            return zodiac ? (
+            <ScrollView key={slide.title} style={{ width, height }} contentContainerStyle={styles.slide} nestedScrollEnabled directionalLockEnabled>
+              {heading}
               <View style={styles.description}>
                 <LinearGradient colors={glassPanel.colors} start={glassPanel.start} end={glassPanel.end} style={StyleSheet.absoluteFill} />
                 <View style={styles.factHeader}>
@@ -248,7 +299,15 @@ export function CelestialCarousel({ title, kind, slides, onClose, reduced, onRet
               </View>
               {slide.note && <Text style={styles.note}>{slide.note}</Text>}
             </ScrollView>
-          ))}
+            ) : (
+              <View key={slide.title} style={{ width, height }}>
+                <View style={[styles.slide, styles.codexSlide]}>
+                  {heading}
+                  <CodexReading slide={slide} />
+                </View>
+              </View>
+            );
+          })}
         </Animated.ScrollView>}
       </View>
       <View style={styles.controls}>
@@ -281,6 +340,7 @@ const styles = StyleSheet.create({
   icon: { width: 42, height: 42, justifyContent: 'center', alignItems: 'center', borderRadius: 22, borderWidth: 1, borderColor: cosmic.line, backgroundColor: 'rgba(36,58,126,0.46)' },
   track: { flex: 1, minHeight: 0, width: '100%' },
   slide: { width: '100%', maxWidth: 560, alignSelf: 'center', paddingHorizontal: 20, paddingTop: 5, paddingBottom: 20, gap: 10 },
+  codexSlide: { flex: 1, minHeight: 0, paddingBottom: 4 },
   slideHeading: { alignItems: 'center', gap: 5 },
   eyebrow: { color: '#b9caff', fontSize: 10, fontWeight: '800', letterSpacing: 1.3 },
   hero: { alignItems: 'center', justifyContent: 'center', marginTop: 6 },
@@ -292,6 +352,12 @@ const styles = StyleSheet.create({
   positionSymbol: { color: cosmic.gold, fontSize: 17 },
   positionText: { color: cosmic.text, fontSize: 12, fontWeight: '800' },
   description: { width: '100%', backgroundColor: glassPanel.background, borderRadius: 28, overflow: 'hidden', padding: 17, borderWidth: 1, borderColor: glassPanel.border },
+  codexDescription: { flex: 1, minHeight: 0, padding: 0 },
+  readingContent: { padding: 17 },
+  continued: { marginTop: 7 },
+  readToggle: { alignSelf: 'flex-start', justifyContent: 'center', minHeight: 38, marginBottom: -6 },
+  readingTitle: { color: cosmic.text, fontSize: 14, fontWeight: '800', marginTop: 7, marginBottom: 4 },
+  transit: { marginTop: 6, gap: 3 },
   factHeader: { flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'space-between', gap: 6 },
   badge: { color: '#d9e6ff', fontSize: 10, fontWeight: '800', paddingHorizontal: 9, paddingVertical: 7, backgroundColor: 'rgba(71,108,195,0.14)', borderColor: cosmic.line, borderWidth: 1, borderRadius: 20 },
   retroBadge: { color: '#ffb5c1', backgroundColor: 'rgba(221,73,107,0.14)', borderColor: 'rgba(255,145,169,0.36)' },
