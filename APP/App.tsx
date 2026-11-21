@@ -114,7 +114,7 @@ function Shell() {
     chat: <Chat onOpenProfile={openSharedProfile} />,
     people: <People onOpenProfile={openSharedProfile} />,
     feed: <Feed />,
-    profile: <Profile />,
+    profile: <Profile scrollOffset={tabScroll} />,
     'shared-profile': sharedProfile ? <SharedProfile key={sharedProfile} id={sharedProfile} /> : <People onOpenProfile={openSharedProfile} />,
     login: <Login />,
   };
@@ -124,6 +124,7 @@ function Shell() {
   // Страниците Login, Home, Chat и Feed управляват сами своя скрол и клавиатура
   const isFullHeightPage =
     !user || page === 'login' || page === 'home' || page === 'chat' || page === 'feed' || page === 'profile';
+  const topInset = Platform.OS === 'web' ? 30 : Math.max((StatusBar.currentHeight || 0) + 16, 28);
 
   return (
     <View style={{ flex: 1, backgroundColor: page === 'feed' ? '#000000' : colors.bg }}>
@@ -136,10 +137,7 @@ function Shell() {
         key={user ? page : 'login'}
         style={{
           flex: 1,
-          paddingTop:
-            cosmicHome || page === 'profile' ? 0 : Platform.OS === 'web'
-              ? 30
-              : Math.max((StatusBar.currentHeight || 0) + 16, 28),
+          paddingTop: cosmicHome || page === 'profile' || page === 'explore' ? 0 : topInset,
           paddingHorizontal: cosmicHome || page === 'feed' || page === 'profile' ? 0 : 18,
           width: '100%',
           maxWidth: cosmicHome || page === 'feed' ? '100%' : cosmicTab ? 620 : 720,
@@ -155,6 +153,7 @@ function Shell() {
             scrollEventThrottle={cosmicTab ? 16 : undefined}
             onScroll={cosmicTab ? Animated.event([{ nativeEvent: { contentOffset: { y: tabScroll } } }], { useNativeDriver: Platform.OS !== 'web' }) : undefined}
             contentContainerStyle={{
+              paddingTop: page === 'explore' ? topInset : 0,
               paddingBottom: user ? 120 : 40,
             }}
           >

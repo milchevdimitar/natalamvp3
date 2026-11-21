@@ -110,7 +110,46 @@ const orbColors: Record<string, readonly string[]> = {
   Capricorn: ['#f9e9c3', '#c5a063', '#50422c'],
 };
 
-function CelestialOrb({ slide, zodiac, size }: { slide: CelestialSlide; zodiac: boolean; size: number }) {
+function SolarRays({ size, animated }: { size: number; animated: boolean }) {
+  const progress = useRef(new Animated.Value(0)).current;
+  useEffect(() => {
+    progress.setValue(0);
+    if (!animated) return;
+    const leg = (toValue: number) => Animated.timing(progress, {
+      toValue, duration: 2500, easing: Easing.inOut(Easing.sin),
+      useNativeDriver: Platform.OS !== 'web', isInteraction: false,
+    });
+    const animation = Animated.loop(Animated.sequence([leg(1), leg(0)]));
+    animation.start();
+    return () => animation.stop();
+  }, [animated, progress]);
+  const scale = progress.interpolate({ inputRange: [0, 1], outputRange: [0.91, 1.06] });
+  const opacity = progress.interpolate({ inputRange: [0, 1], outputRange: [0.38, 0.78] });
+
+  return (
+    <Animated.View style={{ position: 'absolute', zIndex: 0, opacity, transform: [{ scale }] }}>
+      <Svg width={size * 1.33} height={size * 1.33} viewBox="0 0 266 266" accessible={false}>
+        <Defs>
+          <RadialGradient id="atlas-sun-rays" gradientUnits="userSpaceOnUse" cx={133} cy={133} rx={133} ry={133}>
+            <Stop offset={0.66} stopColor="#ffbc67" stopOpacity={0.14} />
+            <Stop offset={0.84} stopColor="#ffbc67" stopOpacity={0.08} />
+            <Stop offset={1} stopColor="#ffbc67" stopOpacity={0} />
+          </RadialGradient>
+        </Defs>
+        {Array.from({ length: 8 }, (_, index) => (
+          <Path
+            key={index}
+            d="M131 53 L119 0 H147 L135 53 Z"
+            rotation={index * 45} origin="133,133"
+            fill="url(#atlas-sun-rays)"
+          />
+        ))}
+      </Svg>
+    </Animated.View>
+  );
+}
+
+function CelestialOrb({ slide, zodiac, size, animateRays }: { slide: CelestialSlide; zodiac: boolean; size: number; animateRays: boolean }) {
   const colors = orbColors[slide.title] ?? ['#b7c9ff', '#537ada', '#392b8b'];
   const id = 'celestial-' + slide.title.toLowerCase();
   const banded = slide.title === 'Venus' || slide.title === 'Jupiter';
@@ -121,7 +160,8 @@ function CelestialOrb({ slide, zodiac, size }: { slide: CelestialSlide; zodiac: 
 
   return (
     <View pointerEvents="none" style={[styles.orb, { width: size, height: size }]}>
-      <Svg width={size * 1.3} height={size} viewBox="-28 0 256 200">
+      {!zodiac && slide.title === 'Sun' && <SolarRays size={size} animated={animateRays} />}
+      <Svg width={size * 1.3} height={size} viewBox="-28 0 256 200" style={{ zIndex: 1 }}>
         <Defs>
           <RadialGradient id={id} cx="32%" cy="25%" rx="75%" ry="75%">
             {colors.map((color, i) => <Stop key={color} offset={i / (colors.length - 1)} stopColor={color} />)}
@@ -288,7 +328,7 @@ export function CelestialCarousel({ title, kind, slides, onClose, reduced, onRet
               </View>
               <View style={[styles.hero, { minHeight: zodiac ? Math.max(175, orbSize + 22) : orbSize + 16 }]}>
                 <Animated.View pointerEvents="none" style={{ transform: [{ translateY: float }] }}>
-                  <CelestialOrb slide={slide} zodiac={zodiac} size={orbSize} />
+                  <CelestialOrb slide={slide} zodiac={zodiac} size={orbSize} animateRays={!reduced && i === index} />
                 </Animated.View>
                 <View style={styles.position}>
                   <Text style={styles.positionSymbol}>{slide.symbol}</Text>
@@ -357,7 +397,7 @@ const styles = StyleSheet.create({
   eyebrow: { color: '#b9caff', fontSize: 10, fontWeight: '800', letterSpacing: 1.3 },
   hero: { alignItems: 'center', justifyContent: 'center', marginTop: 6 },
   orb: { alignItems: 'center', justifyContent: 'center' },
-  symbol: { position: 'absolute', color: '#f6f1ff', fontWeight: '700', textShadowColor: '#202852', textShadowRadius: 11, textShadowOffset: { width: 0, height: 2 } },
+  symbol: { position: 'absolute', zIndex: 2, color: '#f6f1ff', fontWeight: '700', textShadowColor: '#202852', textShadowRadius: 11, textShadowOffset: { width: 0, height: 2 } },
   slideTitle: { color: cosmic.text, fontSize: 38, lineHeight: 42, letterSpacing: 1.6, fontWeight: '800', textAlign: 'center' },
   subtitle: { color: '#bdcff5', fontSize: 12, lineHeight: 17, textAlign: 'center' },
   position: { position: 'absolute', right: 4, bottom: 6, flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: 'rgba(7,22,71,0.83)', borderColor: cosmic.line, borderWidth: 1, borderRadius: 16, paddingHorizontal: 12, paddingVertical: 8 },

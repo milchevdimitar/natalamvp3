@@ -1,9 +1,9 @@
 import React from 'react';
-import { View, TouchableOpacity } from 'react-native';
+import { Pressable, View, TouchableOpacity } from 'react-native';
 import { ArrowLeft } from 'lucide-react-native';
 import { useApp } from '../../context/AppContext';
 import { saveSystemActivity } from '../../services/systemActivity';
-import { Card, T, Pill, Hero } from '../../components/UI';
+import { Card, T, Hero } from '../../components/UI';
 import { useTarotReading } from './useTarotReading';
 import { DailyTarotSection } from './DailyTarotSection';
 import { SpreadTarotSection } from './SpreadTarotSection';
@@ -11,7 +11,7 @@ import { TarotAltarStoryCard } from './TarotAltarStoryCard';
 import { styles } from './tarot.styles';
 
 export default function Tarot() {
-  const { colors, setPage, addStory, user } = useApp();
+  const { colors, setPage, addStory, user, setSelectedChat } = useApp();
 
   const {
     mode,
@@ -32,7 +32,6 @@ export default function Tarot() {
     bottomCard,
     revealedIndices,
     clarifyingCards,
-    dailyDrawn,
     dailyCard,
     rCount,
     cCount,
@@ -47,6 +46,26 @@ export default function Tarot() {
     if (user?.email) void saveSystemActivity(user.email, 'tarot', { value, detail }).catch(console.warn);
   });
 
+  const modes = [{ value: 'daily', label: 'Daily card' }, { value: 'spread', label: 'Custom spread' }] as const;
+  const decks = [{ value: true, label: 'Full deck (78)' }, { value: false, label: 'Major Arcana (22)' }] as const;
+  const readingOptions = (
+    <View style={styles.readingOptions}>
+      {[
+        { label: 'Reading mode', options: modes.map(({ value, label }) => ({ label, selected: mode === value, choose: () => setMode(value) })) },
+        { label: 'Tarot deck', options: decks.map(({ value, label }) => ({ label, selected: useFullDeck === value, choose: () => setUseFullDeck(value) })) },
+      ].map(({ label, options }) => (
+        <View key={label} accessibilityLabel={label} style={[styles.optionTrack, { backgroundColor: colors.surfaceAlt, borderColor: colors.line }]}>
+          {options.map(({ label: option, selected, choose }) => (
+            <Pressable key={option} accessibilityRole="button" accessibilityState={{ selected }} disabled={isCapturing} onPress={choose}
+              style={[styles.option, selected && { backgroundColor: colors.purpleSoft }]}>
+              <T size={12} bold={selected} muted={!selected} style={{ textAlign: 'center' }}>{option}</T>
+            </Pressable>
+          ))}
+        </View>
+      ))}
+    </View>
+  );
+
   return (
     <>
       <TouchableOpacity onPress={() => setPage('explore')} style={styles.backButton}>
@@ -57,51 +76,29 @@ export default function Tarot() {
       </TouchableOpacity>
 
       <Hero
-        eyebrow="LOCAL PNG DECK · 78 CARDS"
+        eyebrow="CARDS OF THE UNSEEN"
         first="Tarot"
         accent="Sanctuary."
-        description="High-definition PNG tarot cards rendered directly from local image assets."
+        description="Follow a quiet question into the cards. Draw one for a moment of clarity, or lay out a spread to explore what lies beneath."
       />
-
-      {/* Deck Selection */}
-      <Card style={styles.deckCard}>
-        <View style={styles.deckRow}>
-          <T bold size={13}>
-            Deck Selection:
-          </T>
-          <View style={{ flexDirection: 'row', gap: 6 }}>
-            <Pill selected={useFullDeck} onPress={() => setUseFullDeck(true)}>
-              Full Deck (78)
-            </Pill>
-            <Pill selected={!useFullDeck} onPress={() => setUseFullDeck(false)}>
-              Major Arcana (22)
-            </Pill>
-          </View>
-        </View>
-      </Card>
-
-      {/* Mode Switch */}
-      <View style={styles.modeSwitchRow}>
-        <Pill selected={mode === 'daily'} onPress={() => setMode('daily')}>
-          ✦ Daily Card
-        </Pill>
-        <Pill selected={mode === 'spread'} onPress={() => setMode('spread')}>
-          🔮 Custom Spread Matrix
-        </Pill>
-      </View>
 
       {mode === 'daily' && (
         <DailyTarotSection
           colors={colors}
-          useFullDeck={useFullDeck}
-          dailyDrawn={dailyDrawn}
           dailyCard={dailyCard}
+          controls={readingOptions}
           isCapturing={isCapturing}
           shared={shared}
           onDrawDaily={handleDrawDaily}
+          onShareMessage={(draftMessage) => {
+            setSelectedChat({ draftMessage });
+            setPage('chat');
+          }}
           onShareToStory={handleShareToStory}
         />
       )}
+
+      {mode === 'spread' && <Card style={styles.spreadOptions}>{readingOptions}</Card>}
 
       {mode === 'spread' && (
         <SpreadTarotSection

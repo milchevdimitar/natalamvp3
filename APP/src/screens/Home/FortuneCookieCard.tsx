@@ -19,6 +19,7 @@ import {
   CheckCircle,
 } from 'lucide-react-native';
 import { Card, T } from '../../components/UI';
+import { shareActionStyles } from '../../components/shareActionStyles';
 import { DAILY_FORTUNES } from './home.constants';
 import { styles } from './home.styles';
 import { glassPanel } from '../../theme/cosmic';
@@ -96,9 +97,6 @@ const cookieStyles = StyleSheet.create({
     fontWeight: '600',
     lineHeight: 20,
   },
-  actions: { width: '100%', maxWidth: 230, height: 44, marginTop: 8, flexDirection: 'row', gap: 8 },
-  action: { flex: 1, borderRadius: 16, backgroundColor: '#f6c66d', flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6 },
-  actionLabel: { color: '#282034', fontWeight: '800' },
   paperSignature: { color: '#865424', fontSize: 8, fontWeight: '800', letterSpacing: 2.4 },
 });
 
@@ -386,22 +384,22 @@ export function FortuneCookieCard({
           </Animated.View>
         </TouchableOpacity>
 
-        <View style={cookieStyles.actions}>
+        <View style={shareActionStyles.row}>
           {isOpened && shareOptionsOpen ? (
             <>
-              <TouchableOpacity accessibilityRole="button" onPress={() => onShareMessage(currentFortune)} style={cookieStyles.action}>
-                <Text style={cookieStyles.actionLabel}>Message</Text>
+              <TouchableOpacity accessibilityRole="button" onPress={() => onShareMessage(currentFortune)} style={shareActionStyles.button}>
+                <Text style={shareActionStyles.label}>Message</Text>
               </TouchableOpacity>
               <TouchableOpacity
                 accessibilityRole="button"
                 accessibilityLabel={hasPostedToStory ? 'Posted to Story' : 'Story'}
                 onPress={handlePostToStory}
                 disabled={isPostingStory || hasPostedToStory}
-                style={[cookieStyles.action, hasPostedToStory && { opacity: 0.7 }]}
+                style={[shareActionStyles.button, hasPostedToStory && { opacity: 0.7 }]}
               >
                 {isPostingStory ? <ActivityIndicator size="small" color="#282034" /> : <>
                   {hasPostedToStory && <CheckCircle size={14} color="#282034" />}
-                  <Text style={cookieStyles.actionLabel}>Story</Text>
+                  <Text style={shareActionStyles.label}>Story</Text>
                 </>}
               </TouchableOpacity>
             </>
@@ -410,9 +408,9 @@ export function FortuneCookieCard({
               accessibilityRole="button"
               onPress={isOpened ? () => setShareOptionsOpen(true) : handleCrackCookie}
               disabled={isAnimating}
-              style={cookieStyles.action}
+              style={shareActionStyles.button}
             >
-              <Text style={cookieStyles.actionLabel}>{isOpened ? 'Share' : '✦ Reveal my fortune'}</Text>
+              <Text style={shareActionStyles.label}>{isOpened ? 'Share' : '✦ Reveal my fortune'}</Text>
             </TouchableOpacity>
           )}
         </View>

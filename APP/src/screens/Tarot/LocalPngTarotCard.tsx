@@ -9,7 +9,7 @@ const CARD_DIMENSIONS = {
   micro: { width: 64, height: 108 },
   small: { width: 84, height: 142 },
   medium: { width: 110, height: 188 },
-  large: { width: 145, height: 246 },
+  large: { width: '100%', aspectRatio: 145 / 246 },
 };
 
 export function LocalPngTarotCard({
@@ -27,8 +27,8 @@ export function LocalPngTarotCard({
       style={[
         styles.tarotCardFrame,
         {
-          width: size === 'medium' ? '100%' : dims.width,
-          height: dims.height,
+          ...dims,
+          width: size === 'medium' || size === 'large' ? '100%' : dims.width,
           borderColor: colors.purple,
         },
       ]}

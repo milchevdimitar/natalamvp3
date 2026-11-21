@@ -7,20 +7,10 @@ export const styles = StyleSheet.create({
     gap: 6,
     marginBottom: 12,
   },
-  deckCard: {
-    marginBottom: 14,
-    paddingVertical: 12,
-  },
-  deckRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-  },
-  modeSwitchRow: {
-    flexDirection: 'row',
-    gap: 10,
-    marginBottom: 20,
-  },
+  readingOptions: { width: '100%', maxWidth: 336, alignSelf: 'center', gap: 6 },
+  optionTrack: { flexDirection: 'row', gap: 4, padding: 3, borderWidth: 1, borderRadius: 14 },
+  option: { flex: 1, minHeight: 36, paddingHorizontal: 5, paddingVertical: 5, alignItems: 'center', justifyContent: 'center', borderRadius: 10 },
+  spreadOptions: { marginBottom: 12, padding: 10 },
 
   /* LocalPngTarotCard Styles */
   tarotCardFrame: {
@@ -67,39 +57,6 @@ export const styles = StyleSheet.create({
   sectionStack: {
     gap: 18,
     marginBottom: 40,
-  },
-  dailyUndrawnCard: {
-    alignItems: 'center',
-    paddingVertical: 32,
-    gap: 16,
-  },
-  dailyRevealedCard: {
-    alignItems: 'center',
-    paddingVertical: 26,
-    gap: 14,
-  },
-  dailyGuidanceBox: {
-    alignItems: 'center',
-    padding: 16,
-    borderRadius: 16,
-    width: '100%',
-  },
-  dailyHeaderRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-    marginBottom: 8,
-  },
-  dailyMessageText: {
-    textAlign: 'center',
-    maxWidth: 330,
-    lineHeight: 20,
-    marginTop: 8,
-  },
-  actionButtonsRow: {
-    flexDirection: 'row',
-    gap: 10,
-    marginTop: 10,
   },
 
   /* Spread Section Styles */

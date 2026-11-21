@@ -8,7 +8,7 @@ import { TarotCardData, TarotMode } from './tarot.types';
 import { styles } from './tarot.styles';
 
 interface TarotAltarStoryCardProps {
-  storyRef: React.RefObject<View | null>;
+  storyRef: React.RefObject<React.ComponentRef<typeof View> | null>;
   colors: any;
   mode: TarotMode;
   question: string;

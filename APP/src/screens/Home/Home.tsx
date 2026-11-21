@@ -114,7 +114,6 @@ export default function Home() {
     return [...planets, ...points];
   }, [codexOpen, planetaryPositions, user, now]);
   const retrogradeCount = planetaryPositions.filter(({ isRetrograde }) => isRetrograde).length;
-  const profileName = String(user?.name ?? '').trim();
   const close = () => setDetail(null);
   const refresh = useCallback(async () => {
     setRefreshing(true);
@@ -144,7 +143,7 @@ export default function Home() {
         <View style={styles.header}>
           <Text style={styles.brand}>Natala</Text>
           <Pressable accessibilityRole="button" accessibilityLabel="Open profile" onPress={() => setPage('profile')} style={styles.profile}>
-            {profileName ? <Text style={styles.profileText}>{profileName.split(/\s+/).slice(0, 2).map((part) => part[0]).join('').toUpperCase()}</Text> : <UserRound color={cosmic.text} size={18} />}
+            <UserRound color={cosmic.text} size={18} />
           </Pressable>
         </View>
 
@@ -231,7 +230,6 @@ const styles = StyleSheet.create({
   streakHeader: { width: '100%', maxWidth: 480, alignSelf: 'center', paddingHorizontal: 19, marginBottom: 12 },
   brand: { color: cosmic.text, fontFamily: 'DancingScript_700Bold', fontSize: 40, lineHeight: 49 },
   profile: { width: 36, height: 36, borderRadius: 18, backgroundColor: '#263f77', borderColor: cosmic.line, borderWidth: 1, alignItems: 'center', justifyContent: 'center' },
-  profileText: { color: cosmic.text, fontSize: 11, fontWeight: '800' },
   stories: { gap: 16 },
   greeting: { gap: 8 },
   greetingRow: { flexDirection: 'row', alignItems: 'flex-start', justifyContent: 'space-between', gap: 10 },

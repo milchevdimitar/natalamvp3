@@ -1,11 +1,55 @@
-import React, { useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
 import { ChevronLeft, ChevronRight, Flame } from 'lucide-react-native';
 import { LinearGradient } from 'expo-linear-gradient';
+import LottieView from './StreakLottie';
 import { cosmic } from '../../theme/cosmic';
 import { DAY_MS } from './useDiscoveryStreak';
 import { celestialOrbSize } from './CelestialDetails';
 import { calendarDetailStyles as calendar } from './calendarDetailStyles';
+
+const fireAnimation = require('./assets/fire-streak-orange.json');
+const FIRE_PLAY_TIME = 2000;
+
+function StreakFire({ size }: { size: number }) {
+  const player = useRef<LottieView>(null);
+  const pauseTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
+  const [ready, setReady] = useState(false);
+  const [failed, setFailed] = useState(false);
+  const handleLoaded = useCallback(() => setReady(true), []);
+  const handleFailure = useCallback(() => setFailed(true), []);
+
+  const replay = useCallback(() => {
+    const animation = player.current;
+    if (!ready || failed || !animation) return;
+    clearTimeout(pauseTimer.current);
+    animation.pause();
+    animation.reset();
+    animation.play();
+    pauseTimer.current = setTimeout(() => animation.pause(), FIRE_PLAY_TIME);
+  }, [ready, failed]);
+
+  useEffect(() => {
+    const animation = player.current;
+    replay();
+    return () => {
+      clearTimeout(pauseTimer.current);
+      animation?.pause();
+    };
+  }, [replay]);
+
+  const dimensions = { width: size, height: size };
+  return (
+    <Pressable accessibilityRole="button" accessibilityLabel="Replay streak flame" onPress={replay} disabled={!ready || failed} style={dimensions}>
+      <LinearGradient colors={['rgba(246,198,109,0.25)', 'rgba(196,79,42,0.12)']} style={[styles.flameOrb, dimensions, { borderRadius: size / 2 }]}>
+        {failed
+          ? <Flame color="#ffe3a6" fill="#f8a947" size={size * 0.58} strokeWidth={1.15} />
+          : <LottieView ref={player} source={fireAnimation} loop={false} style={dimensions} webStyle={dimensions}
+              onAnimationLoaded={handleLoaded} onAnimationFailure={handleFailure} />}
+      </LinearGradient>
+    </Pressable>
+  );
+}
 
 const weekdays = ['Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa', 'Su'];
 const monthStart = (day: number) => {
@@ -36,9 +80,7 @@ export function StreakCalendar({ today, days, count }: { today: number; days: nu
         <Text style={calendar.meta}>Highlighted days show when you opened Home.</Text>
       </View>
       <View style={[calendar.hero, { minHeight: Math.max(175, size + 22) }]}>
-        <LinearGradient colors={['rgba(246,198,109,0.25)', 'rgba(196,79,42,0.12)']} style={[styles.flameOrb, { width: size, height: size, borderRadius: size / 2 }]}>
-          <Flame color="#ffe3a6" fill="#f8a947" size={size * 0.58} strokeWidth={1.15} />
-        </LinearGradient>
+        <StreakFire size={size} />
       </View>
       <View style={calendar.month}>
         <Pressable accessibilityRole="button" accessibilityLabel="Previous month" disabled={displayMonth <= earliest} onPress={() => move(-1)} style={calendar.arrow}>

@@ -1,4 +1,4 @@
-import { useState, useRef } from 'react';
+import { useState, useRef, type ComponentRef } from 'react';
 import { View, Alert } from 'react-native';
 import { captureRef } from 'react-native-view-shot';
 import { getDeck } from './tarot.data';
@@ -11,7 +11,7 @@ export function useTarotReading(
   const [mode, setMode] = useState<TarotMode>('daily');
   const [useFullDeck, setUseFullDeck] = useState(true);
 
-  const tarotAltarStoryRef = useRef<View>(null);
+  const tarotAltarStoryRef = useRef<ComponentRef<typeof View>>(null);
   const [isCapturing, setIsCapturing] = useState(false);
   const [shared, setShared] = useState(false);
 
@@ -28,10 +28,10 @@ export function useTarotReading(
   const [clarifyingCards, setClarifyingCards] = useState<Record<number, TarotCardData[]>>({});
 
   // Daily card mode
-  const [dailyDrawn, setDailyDrawn] = useState(false);
   const [dailyCard, setDailyCard] = useState<TarotCardData | null>(null);
 
   const handleShareToStory = async () => {
+    if (isCapturing) return;
     try {
       setIsCapturing(true);
 
@@ -44,7 +44,7 @@ export function useTarotReading(
       await addStory(base64Image);
 
       setShared(true);
-      setTimeout(() => setShared(false), 2500);
+      if (mode === 'spread') setTimeout(() => setShared(false), 2500);
     } catch (error) {
       console.error('Грешка при заснемане или качване на снимката:', error);
       Alert.alert(
@@ -119,10 +119,10 @@ export function useTarotReading(
   };
 
   const handleDrawDaily = () => {
-    const currentDeck = getDeck(useFullDeck);
+    const currentDeck = getDeck(useFullDeck).filter((card) => card.id !== dailyCard?.id);
     const randomCard = currentDeck[Math.floor(Math.random() * currentDeck.length)];
     setDailyCard(randomCard);
-    setDailyDrawn(true);
+    setShared(false);
     recordReading(randomCard.name, 'Last daily draw');
   };
 
@@ -149,7 +149,6 @@ export function useTarotReading(
     bottomCard,
     revealedIndices,
     clarifyingCards,
-    dailyDrawn,
     dailyCard,
     rCount,
     cCount,

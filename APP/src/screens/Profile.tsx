@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { ActivityIndicator, Alert, Platform, Pressable, ScrollView, StyleSheet, View } from 'react-native';
+import { ActivityIndicator, Alert, Animated, Platform, Pressable, StyleSheet, View } from 'react-native';
 import { Brain, ChevronRight, Compass, FileDown, Hash, Layers, Leaf, Orbit, QrCode, Settings, Share2, Sparkles, Sun } from 'lucide-react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -26,7 +26,7 @@ const systemIcons: Record<ExploreRoute, typeof Sun> = {
   ayurveda: Leaf, bazi: Compass, 'chinese-zodiac': Orbit,
 };
 
-export default function Profile() {
+export default function Profile({ scrollOffset }: { scrollOffset: Animated.Value }) {
   const { colors, user, setPage } = useApp();
   const insets = useSafeAreaInsets();
   const [settingsOpen, setSettingsOpen] = useState(false);
@@ -195,7 +195,16 @@ export default function Profile() {
 
   return (
     <>
-    <ScrollView onLayout={visibility.onLayout} onScroll={visibility.onScroll} scrollEventThrottle={16} showsVerticalScrollIndicator={false} contentContainerStyle={[styles.content, { paddingTop: Platform.OS === 'web' ? 22 : insets.top + 12, paddingBottom: insets.bottom + 126 }]}>
+    <Animated.ScrollView
+      onLayout={visibility.onLayout}
+      onScroll={Animated.event([{ nativeEvent: { contentOffset: { y: scrollOffset } } }], {
+        useNativeDriver: Platform.OS !== 'web',
+        listener: visibility.onScroll,
+      })}
+      scrollEventThrottle={16}
+      showsVerticalScrollIndicator={false}
+      contentContainerStyle={[styles.content, { paddingTop: Platform.OS === 'web' ? 22 : insets.top + 12, paddingBottom: insets.bottom + 126 }]}
+    >
       <View style={styles.header}>
         <T size={40} style={styles.logo}>Natala</T>
         <Pressable accessibilityRole="button" accessibilityLabel="Open settings" onPress={() => setSettingsOpen(true)} style={[styles.settings, { borderColor: colors.line, backgroundColor: colors.surfaceAlt }]}>
@@ -203,7 +212,7 @@ export default function Profile() {
         </Pressable>
       </View>
       <View style={styles.identity}>
-        <ProfileAvatar name={name} source={photo} />
+        <ProfileAvatar name={name} showInitials={false} />
         <T bold size={36} style={styles.name}>{name || 'Your profile'}</T>
         {(birthLabel || birthCity || user?.email) && <T muted size={12} style={{ textAlign: 'center' }}>{[birthLabel, birthCity].filter(Boolean).join(' · ') || user?.email}</T>}
         <View style={styles.shareActions}>
@@ -302,7 +311,7 @@ export default function Profile() {
           <T size={12} style={styles.reportInk}>Your personalized reading in one PDF</T>
         </View>
       </Pressable>
-    </ScrollView>
+    </Animated.ScrollView>
     {settingsOpen && <ProfileSettings birthLabel={birthLabel} birthCity={birthCity} onClose={() => setSettingsOpen(false)} />}
     {qrOpen && publicId && <ProfileQrCard id={publicId} name={name || 'Natala profile'} photo={photo} onClose={() => setQrOpen(false)} onShare={share} notice={shareNotice} />}
     </>
