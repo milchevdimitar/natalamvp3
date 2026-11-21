@@ -1,68 +1,45 @@
 import { QUESTIONS, TYPE_DESCRIPTIONS } from './mbti.data';
-import { MbtiResultData, MbtiScores } from './mbti.types';
+import { MbtiResultData } from './mbti.types';
 
-function getPct(a: number, b: number) {
-  const total = a + b || 1;
-  return {
-    first: Math.round((a / total) * 100),
-    second: Math.round((b / total) * 100),
-  };
-}
+const dimensions = {
+  EI: { first: 'E', second: 'I', tie: 'E' },
+  SN: { first: 'S', second: 'N', tie: 'N' },
+  TF: { first: 'T', second: 'F', tie: 'F' },
+  JP: { first: 'J', second: 'P', tie: 'P' },
+} as const;
 
 export function calculateMbtiResult(answers: Record<number, number>): MbtiResultData {
-  const scores: MbtiScores = { E: 0, I: 0, S: 0, N: 0, T: 0, F: 0, J: 0, P: 0 };
+  const totals = { EI: 0, SN: 0, TF: 0, JP: 0 };
+  const maxima = { ...totals };
 
-  QUESTIONS.forEach((q) => {
-    const val = answers[q.id] || 4;
-    const scoreWeight = val - 4;
+  for (const question of QUESTIONS) {
+    const value = answers[question.id];
+    const weight = Number.isInteger(value) && value >= 1 && value <= 7 ? value - 4 : 0;
+    totals[question.dimension] += weight * question.direction;
+    maxima[question.dimension] += 3;
+  }
 
-    if (q.dimension === 'EI') {
-      if (q.direction === 1) {
-        scoreWeight > 0 ? (scores.E += scoreWeight) : (scores.I += Math.abs(scoreWeight));
-      } else {
-        scoreWeight > 0 ? (scores.I += scoreWeight) : (scores.E += Math.abs(scoreWeight));
-      }
-    } else if (q.dimension === 'SN') {
-      if (q.direction === 1) {
-        scoreWeight > 0 ? (scores.S += scoreWeight) : (scores.N += Math.abs(scoreWeight));
-      } else {
-        scoreWeight > 0 ? (scores.N += scoreWeight) : (scores.S += Math.abs(scoreWeight));
-      }
-    } else if (q.dimension === 'TF') {
-      if (q.direction === 1) {
-        scoreWeight > 0 ? (scores.T += scoreWeight) : (scores.F += Math.abs(scoreWeight));
-      } else {
-        scoreWeight > 0 ? (scores.F += scoreWeight) : (scores.T += Math.abs(scoreWeight));
-      }
-    } else if (q.dimension === 'JP') {
-      if (q.direction === 1) {
-        scoreWeight > 0 ? (scores.J += scoreWeight) : (scores.P += Math.abs(scoreWeight));
-      } else {
-        scoreWeight > 0 ? (scores.P += scoreWeight) : (scores.J += Math.abs(scoreWeight));
-      }
-    }
-  });
-
-  const type = [
-    scores.E >= scores.I ? 'E' : 'I',
-    scores.N >= scores.S ? 'N' : 'S',
-    scores.F >= scores.T ? 'F' : 'T',
-    scores.P >= scores.J ? 'P' : 'J',
-  ].join('');
-
-  const ratios = {
-    EI: getPct(scores.E, scores.I),
-    SN: getPct(scores.S, scores.N),
-    TF: getPct(scores.T, scores.F),
-    JP: getPct(scores.J, scores.P),
+  const ratio = (dimension: keyof typeof dimensions) => {
+    const first = Math.round(50 + 50 * totals[dimension] / maxima[dimension]);
+    return { first, second: 100 - first };
   };
+  const ratios = { EI: ratio('EI'), SN: ratio('SN'), TF: ratio('TF'), JP: ratio('JP') };
+  const keys = Object.keys(dimensions) as (keyof typeof dimensions)[];
+  const type = keys.map((dimension) => {
+    const { first, second, tie } = dimensions[dimension];
+    const total = totals[dimension];
+    return total === 0 ? tie : total > 0 ? first : second;
+  }).join('');
 
-  return {
-    type,
-    details: TYPE_DESCRIPTIONS[type] || TYPE_DESCRIPTIONS.INFP,
-    ratios,
-    scores,
-  };
+  return { type, details: TYPE_DESCRIPTIONS[type], ratios };
+}
+
+function savedRatio(first: unknown, second: unknown) {
+  const valid = (value: unknown): value is number => typeof value === 'number' && Number.isFinite(value) && value >= 0 && value <= 100;
+  const a = valid(first) ? first : valid(second) ? 100 - second : 50;
+  const b = valid(second) ? second : 100 - a;
+  const normalized = a + b > 0 ? Math.round(a / (a + b) * 100) : 50;
+  return { first: normalized, second: 100 - normalized };
 }
 
 export function resolveCurrentResultData(
@@ -70,22 +47,18 @@ export function resolveCurrentResultData(
   user: any,
   answers: Record<number, number>
 ): MbtiResultData {
-  if (showSavedResult && user?.mbti) {
-    const type = user.mbti.type;
-    const details = TYPE_DESCRIPTIONS[type] || TYPE_DESCRIPTIONS.INFP;
-    const p = user.mbti.percentages || {};
+  if (!showSavedResult || !user?.mbti?.type) return calculateMbtiResult(answers);
+  const type = user.mbti.type;
+  const p = user.mbti.percentages || {};
 
-    return {
-      type,
-      details,
-      ratios: {
-        EI: { first: p.extraversion ?? 50, second: p.introversion ?? 50 },
-        SN: { first: p.observant ?? 50, second: p.intuitive ?? 50 },
-        TF: { first: p.thinking ?? 50, second: p.feeling ?? 50 },
-        JP: { first: p.judging ?? 50, second: p.prospecting ?? 50 },
-      },
-    };
-  }
-
-  return calculateMbtiResult(answers);
+  return {
+    type,
+    details: TYPE_DESCRIPTIONS[type] || TYPE_DESCRIPTIONS.INFP,
+    ratios: {
+      EI: savedRatio(p.extraversion, p.introversion),
+      SN: savedRatio(p.observant, p.intuitive),
+      TF: savedRatio(p.thinking, p.feeling),
+      JP: savedRatio(p.judging, p.prospecting),
+    },
+  };
 }

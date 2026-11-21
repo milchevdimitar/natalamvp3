@@ -11,7 +11,9 @@ import { AnimatedMoonVisualizer } from './AnimatedMoonVisualizer';
 import { CelestialCarousel, DetailScreen, zodiacSlides } from './CelestialDetails';
 import { CosmicBackground, useReducedMotion } from './CosmicBackground';
 import { FortuneCookieCard } from './FortuneCookieCard';
-import { MoonForecastSection } from './MoonForecastSection';
+import { MoonCalendarDetail } from './MoonCalendarDetail';
+import { StreakCalendar } from './StreakCalendar';
+import { planetDeepReadings } from './celestialReadings';
 import { RetrogradeSection } from './RetrogradeSection';
 import { SkyArtwork } from './SkyArtwork';
 import { cosmic, glassPanel } from '../../theme/cosmic';
@@ -21,7 +23,7 @@ import { styles as existing } from './home.styles';
 import { useDiscoveryStreak } from './useDiscoveryStreak';
 import { usePlanetaryData } from './usePlanetaryData';
 
-type Detail = 'sun' | 'moon' | 'codex' | 'retrogrades';
+type Detail = 'sun' | 'moon' | 'codex' | 'retrogrades' | 'streak';
 
 function SkyCard({ title, subtitle, hint, artwork, onPress, disabled }: {
   title: string; subtitle: string; hint?: string; artwork: React.ReactNode; onPress: () => void; disabled?: boolean;
@@ -52,7 +54,7 @@ export default function Home() {
   const [refreshing, setRefreshing] = useState(false);
   const [confetti, setConfetti] = useState<number | null>(null);
   const [now, setNow] = useState(() => new Date());
-  const { loadingNASA, planetaryPositions, moonData, reloadPlanetaryData } = usePlanetaryData();
+  const { loadingNASA, planetaryPositions, reloadPlanetaryData } = usePlanetaryData();
   const moon = useMemo(() => getMoonPhaseData(now), [now]);
   const sun = useMemo(() => getZodiacInfo(SunPosition(now).elon), [now]);
   const retrogradeCount = planetaryPositions.filter(({ isRetrograde }) => isRetrograde).length;
@@ -99,10 +101,10 @@ export default function Home() {
           <Text style={styles.date}>{now.toLocaleDateString(undefined, { weekday: 'long', month: 'long', day: 'numeric' })}</Text>
           <View style={styles.greetingRow}>
             <Text accessibilityRole="header" style={styles.hero}>Your daily <Text style={styles.heroAccent}>cosmic moment.</Text></Text>
-            {streak !== null && <View accessible accessibilityLabel={streak + (streak === 1 ? ' day' : ' days') + ' · Discovery streak'} style={styles.streak}>
+            {streak !== null && <Pressable accessibilityRole="button" accessibilityLabel="Open discovery streak calendar" onPress={() => setDetail('streak')} style={styles.streak}>
               <Flame size={13} color="#ff963f" fill="#ff963f" />
-              <Text style={styles.streakText}>{streak + (streak === 1 ? ' day' : ' days')}</Text>
-            </View>}
+              <Text style={styles.streakText}>{streak.count + (streak.count === 1 ? ' day' : ' days')}</Text>
+            </Pressable>}
           </View>
           <Text style={styles.greetingSub}>Your sky, your stories, a little magic.</Text>
         </View>
@@ -115,7 +117,7 @@ export default function Home() {
 
         <View style={styles.group}>
           <Text accessibilityRole="header" style={styles.section}>Planetary Codex</Text>
-          <SkyCard title="Explore the planets" subtitle={planetaryPositions.length ? 'Sun · Moon · Mars · and more' : loadingNASA ? 'Calculating planetary positions…' : 'Planetary positions unavailable'} hint="Swipe the cards · Read more for meanings" artwork={<SkyArtwork kind="codex" />} onPress={() => setDetail('codex')} disabled={!planetaryPositions.length} />
+          <SkyCard title="Explore the planets" subtitle={planetaryPositions.length ? 'Sun · Moon · Mars · and more' : loadingNASA ? 'Calculating planetary positions…' : 'Planetary positions unavailable'} hint="Swipe the cards to explore their meanings" artwork={<SkyArtwork kind="codex" />} onPress={() => setDetail('codex')} disabled={!planetaryPositions.length} />
         </View>
 
         <View style={styles.group}>
@@ -131,7 +133,8 @@ export default function Home() {
         title="Planetary Codex"
         kind="codex"
         slides={planetaryPositions.map((planet) => ({
-          title: planet.name, symbol: planet.planet, tagline: planet.meta.topic, description: planet.meta.description,
+          title: planet.name, symbol: planet.planet, tagline: planet.meta.topic,
+          description: [planet.meta.description, planetDeepReadings[planet.name]].filter(Boolean).join('\n\n'),
           position: planet.signName + ' ' + planet.degInSign + '°', badge: planet.isRetrograde ? 'Retrograde' : 'Direct',
           retrograde: planet.isRetrograde, note: planet.isLiveNASA ? undefined : 'Position and motion calculated locally.',
         }))}
@@ -139,20 +142,15 @@ export default function Home() {
         onRetrogrades={() => setDetail('retrogrades')}
         reduced={reduced}
       />}
-      {detail === 'moon' && <DetailScreen title="Moon calendar" onClose={close} offset={still} reduced={reduced}>
+      {detail === 'moon' && <DetailScreen title="Moon calendar" onClose={close} offset={still} reduced={reduced} darkBottom>
+        <MoonCalendarDetail reduced={reduced} />
+      </DetailScreen>}
+      {detail === 'streak' && streak && <DetailScreen title="Discovery streak" onClose={close} offset={still} reduced={reduced}>
         <ScrollView contentContainerStyle={styles.detailBody}>
-          <View style={[styles.card, styles.moonHero]}>
-            <AnimatedMoonVisualizer moonPhase={moon} size={100} reduced={reduced} />
-            <View style={{ flex: 1, gap: 4 }}>
-              <Text style={styles.cardTitle}>{moon.phaseName}</Text>
-              <Text style={styles.muted}>{moon.illuminated}% illuminated · {moon.ageInDays} days old</Text>
-              {moonData && <Text style={styles.muted}>Moon in {moonData.signName}</Text>}
-            </View>
-          </View>
-          <MoonForecastSection reduced={reduced} />
+          <StreakCalendar today={streak.day} days={streak.days} count={streak.count} />
         </ScrollView>
       </DetailScreen>}
-      {detail === 'retrogrades' && <DetailScreen title="Retrogrades" onClose={close} offset={still} reduced={reduced}>
+      {detail === 'retrogrades' && <DetailScreen title="Retrogrades" onClose={close} offset={still} reduced={reduced} darkBottom>
         <ScrollView contentContainerStyle={styles.detailBody}>
           {planetaryPositions.some(({ isLiveNASA }) => !isLiveNASA) && <Text style={styles.muted}>Includes locally estimated positions</Text>}
           <RetrogradeSection planetaryPositions={planetaryPositions} />
@@ -190,6 +188,5 @@ const styles = StyleSheet.create({
   cardMeta: { color: '#d1e1ff', fontSize: 12, marginTop: 4 },
   cardHint: { color: '#a9bfea', fontSize: 10.5, lineHeight: 14, marginTop: 6 },
   muted: { color: cosmic.muted, fontSize: 13 },
-  moonHero: { padding: 16 },
   detailBody: { width: '100%', maxWidth: 600, alignSelf: 'center', padding: 20, gap: 16 },
 });

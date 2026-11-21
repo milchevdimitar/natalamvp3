@@ -9,9 +9,10 @@ import {
   Share2,
   Check,
 } from 'lucide-react-native';
-import { Card, T, Section, Pill, Progress } from '../../components/UI';
+import { Card, T, Section, Pill } from '../../components/UI';
 import { MbtiResultData } from './mbti.types';
 import { styles } from './mbti.styles';
+import { CognitiveBalance } from './CognitiveBalance';
 
 interface MbtiResultSectionProps {
   colors: any;
@@ -93,53 +94,7 @@ export function MbtiResultSection({
       {/* Cognitive Balance */}
       <Section>Cognitive Balance</Section>
       <Card style={styles.balanceCard}>
-        <View style={{ gap: 6 }}>
-          <View style={styles.balanceRowHeader}>
-            <T bold size={12}>
-              Extraversion (E) {ratios.EI.first}%
-            </T>
-            <T bold size={12}>
-              {ratios.EI.second}% Introversion (I)
-            </T>
-          </View>
-          <Progress value={ratios.EI.first} color={colors.purple} />
-        </View>
-
-        <View style={{ gap: 6 }}>
-          <View style={styles.balanceRowHeader}>
-            <T bold size={12}>
-              Sensing (S) {ratios.SN.first}%
-            </T>
-            <T bold size={12}>
-              {ratios.SN.second}% Intuition (N)
-            </T>
-          </View>
-          <Progress value={ratios.SN.first} color={colors.gold} />
-        </View>
-
-        <View style={{ gap: 6 }}>
-          <View style={styles.balanceRowHeader}>
-            <T bold size={12}>
-              Thinking (T) {ratios.TF.first}%
-            </T>
-            <T bold size={12}>
-              {ratios.TF.second}% Feeling (F)
-            </T>
-          </View>
-          <Progress value={ratios.TF.first} color={colors.purple} />
-        </View>
-
-        <View style={{ gap: 6 }}>
-          <View style={styles.balanceRowHeader}>
-            <T bold size={12}>
-              Judging (J) {ratios.JP.first}%
-            </T>
-            <T bold size={12}>
-              {ratios.JP.second}% Prospecting (P)
-            </T>
-          </View>
-          <Progress value={ratios.JP.first} color={colors.gold} />
-        </View>
+        <CognitiveBalance ratios={ratios} />
       </Card>
 
       {/* Core Traits */}

@@ -336,7 +336,7 @@ export default function Astrology() {
                   alignItems: 'center',
                   justifyContent: 'center',
                   gap: 3,
-                  backgroundColor: active ? colors.purple : 'transparent',
+                  backgroundColor: active ? colors.action : 'transparent',
                 }}
               >
                 <Icon size={14} color={active ? '#FFFFFF' : colors.muted} />
@@ -376,7 +376,7 @@ export default function Astrology() {
                       activeOpacity={0.8}
                       style={[
                         styles.switchBtn,
-                        viewMode === mode && { backgroundColor: colors.purple },
+                        viewMode === mode && { backgroundColor: colors.action },
                       ]}
                     >
                       <T

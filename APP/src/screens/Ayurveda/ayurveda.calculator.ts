@@ -189,6 +189,7 @@ export function calculateAyurvedaProfile(options: {
   birthDay?: number;
   quizAnswers?: Record<string, DoshaName>;
   currentStressLevel?: 'low' | 'moderate' | 'high';
+  useBirthBaseline?: boolean;
   date?: Date;
 }): AyurvedaProfile {
   const {
@@ -198,6 +199,7 @@ export function calculateAyurvedaProfile(options: {
     birthDay = 15,
     quizAnswers = {},
     currentStressLevel = 'moderate',
+    useBirthBaseline = true,
     date = new Date(),
   } = options;
 
@@ -207,13 +209,14 @@ export function calculateAyurvedaProfile(options: {
   let kRaw = 30;
 
   // Birth date elemental baseline
-  if ([10, 11, 12, 1].includes(birthMonth)) vRaw += 10;
-  if ([5, 6, 7, 8, 9].includes(birthMonth)) pRaw += 10;
-  if ([2, 3, 4].includes(birthMonth)) kRaw += 10;
-
-  vRaw += (birthDay % 5) * 2;
-  pRaw += ((birthDay + birthMonth) % 5) * 2;
-  kRaw += ((birthYear + birthDay) % 5) * 2;
+  if (useBirthBaseline) {
+    if ([10, 11, 12, 1].includes(birthMonth)) vRaw += 10;
+    if ([5, 6, 7, 8, 9].includes(birthMonth)) pRaw += 10;
+    if ([2, 3, 4].includes(birthMonth)) kRaw += 10;
+    vRaw += (birthDay % 5) * 2;
+    pRaw += ((birthDay + birthMonth) % 5) * 2;
+    kRaw += ((birthYear + birthDay) % 5) * 2;
+  }
 
   // Incorporate user quiz answers with strong weight
   Object.values(quizAnswers).forEach((dosha) => {

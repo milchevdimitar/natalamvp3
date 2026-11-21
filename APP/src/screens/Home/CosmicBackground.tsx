@@ -16,12 +16,13 @@ export function useReducedMotion() {
   return reduced;
 }
 
-export function CosmicBackground({ offset, horizontal, reduced, travel = 1800, light = false }: {
+export function CosmicBackground({ offset, horizontal, reduced, travel = 1800, light = false, darkBottom = false }: {
   offset: Animated.Value;
   horizontal?: boolean;
   reduced: boolean;
   travel?: number;
   light?: boolean;
+  darkBottom?: boolean;
 }) {
   const shimmer = useRef(new Animated.Value(0)).current;
   useEffect(() => {
@@ -56,6 +57,11 @@ export function CosmicBackground({ offset, horizontal, reduced, travel = 1800, l
         <Rect width="100%" height="100%" fill="url(#violet)" />
         <Rect width="100%" height="100%" fill="url(#lower-glow)" />
       </Svg>
+      {darkBottom && <LinearGradient
+        colors={['rgba(1,4,14,0)', 'rgba(1,3,12,0.48)', '#010208']}
+        locations={[0.24, 0.65, 1]}
+        style={StyleSheet.absoluteFill}
+      />}
       {[0, 1, 2].map((layer) => {
         const drift = reduced ? 0 : offset.interpolate({
           inputRange: [-1, 0, Math.max(1, travel)],

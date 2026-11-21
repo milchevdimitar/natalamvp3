@@ -21,6 +21,8 @@ import {
 } from 'lucide-react-native';
 import { Hero, Card, T, Section } from '../../components/UI';
 import { useApp } from '../../context/AppContext';
+import { saveSystemActivity } from '../../services/systemActivity';
+import { getBirthParts } from '../../services/profileDashboard';
 import {
   BaZiTabId,
   BaZiViewComplexity,
@@ -110,7 +112,7 @@ export default function BaZi() {
   const [showOverviewModal, setShowOverviewModal] = useState(false);
 
   const [profileName, setProfileName] = useState(initial.name);
-  const [dateInput, setDateInput] = useState(initial.dateStr);
+  const [dateInput, setDateInput] = useState(() => getBirthParts(user) ? initial.dateStr : '');
   const [timeInput, setTimeInput] = useState(initial.timeStr);
   const [unknownTime, setUnknownTime] = useState(initial.unknownTime);
   const [selectedCity, setSelectedCity] = useState<CityPreset>(initial.city);
@@ -199,7 +201,7 @@ export default function BaZi() {
                   paddingHorizontal: 10,
                   paddingVertical: 5,
                   borderRadius: 7,
-                  backgroundColor: active ? colors.purple : 'transparent',
+                  backgroundColor: active ? colors.action : 'transparent',
                 }}
               >
                 <T
@@ -256,7 +258,7 @@ export default function BaZi() {
                 alignItems: 'center',
                 justifyContent: 'center',
                 gap: 3,
-                backgroundColor: active ? colors.purple : 'transparent',
+                backgroundColor: active ? colors.action : 'transparent',
               }}
             >
               <Icon size={14} color={active ? '#FFFFFF' : colors.muted} />
@@ -430,7 +432,7 @@ export default function BaZi() {
                 paddingVertical: 9,
                 borderRadius: 10,
                 alignItems: 'center',
-                backgroundColor: gender === g ? colors.purple : colors.surfaceAlt,
+                backgroundColor: gender === g ? colors.action : colors.surfaceAlt,
               }}
             >
               <T bold size={12} style={{ color: gender === g ? '#FFFFFF' : colors.muted }}>
@@ -484,7 +486,7 @@ export default function BaZi() {
               width: 18,
               height: 18,
               borderRadius: 5,
-              backgroundColor: unknownTime ? colors.purple : colors.surfaceAlt,
+              backgroundColor: unknownTime ? colors.action : colors.surfaceAlt,
               alignItems: 'center',
               justifyContent: 'center',
             }}
@@ -513,7 +515,7 @@ export default function BaZi() {
                       paddingHorizontal: 10,
                       paddingVertical: 6,
                       borderRadius: 8,
-                      backgroundColor: active ? colors.purple : colors.surfaceAlt,
+                      backgroundColor: active ? colors.action : colors.surfaceAlt,
                     }}
                   >
                     <T
@@ -531,9 +533,14 @@ export default function BaZi() {
         </View>
 
         <TouchableOpacity
-          onPress={() => setShowInputModal(false)}
+          onPress={() => {
+            if (user?.email && getBirthParts({ birthdate: dateInput })) {
+              void saveSystemActivity(user.email, 'bazi', { dayMaster: chart.dayMaster.title, zodiacAnimal: chart.zodiacAnimal }).catch(console.warn);
+            }
+            setShowInputModal(false);
+          }}
           style={{
-            backgroundColor: colors.purple,
+            backgroundColor: colors.action,
             paddingVertical: 11,
             borderRadius: 12,
             alignItems: 'center',

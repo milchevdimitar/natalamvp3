@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { Animated, Modal, Platform, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Animated, Easing, Modal, Platform, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { ChevronLeft, ChevronRight, X } from 'lucide-react-native';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -8,6 +8,7 @@ import { SearchSunLongitude } from 'astronomy-engine';
 import { CosmicBackground } from './CosmicBackground';
 import { cosmic, glassPanel } from '../../theme/cosmic';
 import { ZODIAC_SIGNS_DATA } from './home.constants';
+import { seasonReadings } from './celestialReadings';
 
 type CelestialSlide = {
   title: string;
@@ -57,21 +58,21 @@ export function zodiacSlides(currentSign: string, now: Date): CelestialSlide[] {
       current: offset === 0,
       position: offset === 0 ? 'Current season' : 'Season preview',
       badge: next ? format(cursor) + ' – ' + format(next) : 'Seasonal dates unavailable',
-      description: 'In astrology, ' + name + ' season is often associated with ' + tagline.toLowerCase() + '. These are symbolic themes.',
+      description: seasonReadings[name] ?? summary,
     };
     if (next) cursor = next;
   }
   return slides;
 }
 
-export function DetailScreen({ title, onClose, children, offset, reduced, travel, header }: {
+export function DetailScreen({ title, onClose, children, offset, reduced, travel, header, darkBottom }: {
   title: string; onClose: () => void; children: React.ReactNode;
-  offset: Animated.Value; reduced: boolean; travel?: number; header?: React.ReactNode;
+  offset: Animated.Value; reduced: boolean; travel?: number; header?: React.ReactNode; darkBottom?: boolean;
 }) {
   return (
     <Modal visible animationType={reduced ? 'none' : 'fade'} onRequestClose={onClose}>
       <SafeAreaView style={styles.detail}>
-        <CosmicBackground offset={offset} horizontal reduced={reduced} travel={travel} />
+        <CosmicBackground offset={offset} horizontal reduced={reduced} travel={travel} darkBottom={darkBottom} />
         {header ?? <View style={styles.header}>
           <Text accessibilityRole="header" style={styles.heading}>{title}</Text>
           <Pressable accessibilityRole="button" accessibilityLabel="Close" onPress={onClose} style={styles.icon}>
@@ -143,6 +144,7 @@ const planetSummaries: Record<string, string> = {
 };
 
 const formatIndex = (index: number) => String(index + 1).padStart(2, '0');
+export const celestialOrbSize = (width: number) => Math.min(width * 0.54, 208);
 
 export function CelestialCarousel({ title, kind, slides, onClose, reduced, onRetrogrades }: {
   title: string; kind: 'zodiac' | 'codex'; slides: CelestialSlide[]; onClose: () => void; reduced: boolean;
@@ -155,8 +157,19 @@ export function CelestialCarousel({ title, kind, slides, onClose, reduced, onRet
   const offset = useRef(new Animated.Value(0)).current;
   const scroller = useRef<React.ComponentRef<typeof ScrollView>>(null);
   const activeIndex = useRef(index);
-  const [expanded, setExpanded] = useState<string | null>(null);
+  const float = useRef(new Animated.Value(0)).current;
   const travel = width * (slides.length - 1);
+
+  useEffect(() => {
+    float.setValue(0);
+    if (reduced) return;
+    const leg = (toValue: number, duration: number) => Animated.timing(float, {
+      toValue, duration, easing: Easing.inOut(Easing.sin), useNativeDriver: Platform.OS !== 'web', isInteraction: false,
+    });
+    const animation = Animated.loop(Animated.sequence([leg(-5, 1500), leg(5, 3000), leg(0, 1500)]));
+    animation.start();
+    return () => animation.stop();
+  }, [float, reduced]);
 
   useEffect(() => {
     if (!width) return;
@@ -170,10 +183,10 @@ export function CelestialCarousel({ title, kind, slides, onClose, reduced, onRet
     scroller.current?.scrollTo({ x: next * width, animated: !reduced });
   };
 
-  const orbSize = Math.min(width * 0.54, 208);
+  const orbSize = celestialOrbSize(width);
 
   return (
-    <DetailScreen title={title} onClose={onClose} offset={offset} reduced={reduced} travel={travel} header={
+    <DetailScreen title={title} onClose={onClose} offset={offset} reduced={reduced} travel={travel} darkBottom header={
       <View style={[styles.header, styles.carouselHeader]}>
         <Pressable accessibilityRole="button" accessibilityLabel="Back to Home" onPress={onClose} style={styles.icon}>
           <ChevronLeft color={cosmic.text} size={23} />
@@ -215,7 +228,9 @@ export function CelestialCarousel({ title, kind, slides, onClose, reduced, onRet
                 <Text style={styles.subtitle}>{slide.tagline}</Text>
               </View>
               <View style={[styles.hero, { minHeight: Math.max(175, orbSize + 22) }]}>
-                <CelestialOrb slide={slide} zodiac={zodiac} size={orbSize} />
+                <Animated.View pointerEvents="none" style={{ transform: [{ translateY: float }] }}>
+                  <CelestialOrb slide={slide} zodiac={zodiac} size={orbSize} />
+                </Animated.View>
                 <View style={styles.position}>
                   <Text style={styles.positionSymbol}>{slide.symbol}</Text>
                   <Text style={styles.positionText}>{slide.position}</Text>
@@ -228,10 +243,8 @@ export function CelestialCarousel({ title, kind, slides, onClose, reduced, onRet
                   <Text style={[styles.badge, slide.retrograde && styles.retroBadge]}>{slide.retrograde ? '↺ ' : ''}{slide.badge}</Text>
                 </View>
                 <Text style={styles.copy}>{slide.summary ?? planetSummaries[slide.title] ?? slide.tagline}</Text>
-                <Pressable accessibilityRole="button" accessibilityState={{ expanded: expanded === slide.title }} onPress={() => setExpanded(expanded === slide.title ? null : slide.title)} style={styles.readButton}>
-                  <Text style={styles.link}>{expanded === slide.title ? 'Read less ⌃' : 'Read more ⌄'}</Text>
-                </Pressable>
-                {expanded === slide.title && <Text style={styles.more}>{slide.description}</Text>}
+                <View style={styles.divider} />
+                <Text style={styles.more}>{slide.description}</Text>
               </View>
               {slide.note && <Text style={styles.note}>{slide.note}</Text>}
             </ScrollView>
@@ -283,7 +296,8 @@ const styles = StyleSheet.create({
   badge: { color: '#d9e6ff', fontSize: 10, fontWeight: '800', paddingHorizontal: 9, paddingVertical: 7, backgroundColor: 'rgba(71,108,195,0.14)', borderColor: cosmic.line, borderWidth: 1, borderRadius: 20 },
   retroBadge: { color: '#ffb5c1', backgroundColor: 'rgba(221,73,107,0.14)', borderColor: 'rgba(255,145,169,0.36)' },
   copy: { color: '#e2eaff', fontSize: 13, lineHeight: 21, marginTop: 11 },
-  more: { color: '#c4d1ed', fontSize: 13, lineHeight: 21, borderTopWidth: 1, borderColor: glassPanel.border, paddingTop: 10 },
+  divider: { height: StyleSheet.hairlineWidth, backgroundColor: glassPanel.border, marginVertical: 13 },
+  more: { color: '#c4d1ed', fontSize: 13, lineHeight: 21 },
   note: { color: cosmic.muted, textAlign: 'center', fontSize: 10, paddingVertical: 2 },
   controls: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', width: '100%', maxWidth: 560, alignSelf: 'center', gap: 8, paddingHorizontal: 17, paddingBottom: 9, paddingTop: 3 },
   disabled: { opacity: 0.35 },
@@ -291,6 +305,5 @@ const styles = StyleSheet.create({
   dotTarget: { height: 40, justifyContent: 'center', paddingHorizontal: 3 },
   dot: { width: 7, height: 7, borderRadius: 6, backgroundColor: '#576d9e' },
   activeDot: { width: 18, backgroundColor: '#baaaff' },
-  readButton: { minHeight: 44, alignSelf: 'flex-start', justifyContent: 'center' },
   link: { color: '#d7c6ff', fontSize: 12, fontWeight: '800' },
 });

@@ -12,6 +12,7 @@ import {
   User,
 } from 'lucide-react-native';
 import { useApp } from '../context/AppContext';
+import { getBirthParts } from '../services/profileDashboard';
 import { Card, T, Section, Pill, Hero } from '../components/UI';
 import { CARDOLOGY_TABLE } from '../data/cardologyData';
 import { saveUserProfile } from '../services/api';
@@ -89,6 +90,11 @@ const CARD_META: Record<string, { nameBg: string; symbol: string }> = {
 // Extract day and month from user profile (ISODate, string or Date)
 const getUserDayAndMonth = (user: any): { day: number; month: number; formattedDate: string } | null => {
   if (!user) return null;
+  const birth = getBirthParts(user);
+  if (birth) {
+    const { day, month } = birth;
+    return { day, month, formattedDate: [day, month].map((part) => String(part).padStart(2, '0')).join('.') };
+  }
 
   const rawDate =
     user.birthdate ||

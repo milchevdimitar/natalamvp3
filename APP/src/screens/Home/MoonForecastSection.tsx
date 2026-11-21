@@ -1,9 +1,9 @@
 import React, { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { Animated, Easing, PanResponder, Platform, Pressable, StyleSheet, Text, View, type ViewStyle } from 'react-native';
 import { ChevronLeft, ChevronRight } from 'lucide-react-native';
-import { EclipticGeoMoon } from 'astronomy-engine';
-import { getMoonPhaseData, getZodiacInfo } from './home.calculations';
+import { getMoonPhaseData } from './home.calculations';
 import { cosmic } from '../../theme/cosmic';
+import { localDay } from './useDiscoveryStreak';
 
 const weekdays = ['Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa', 'Su'];
 const webSwipeStyle: ViewStyle & { touchAction: 'pan-y' } = { touchAction: 'pan-y' };
@@ -21,10 +21,9 @@ function getMonthPage(current: Date, delta: number) {
   return { month, days };
 }
 
-export function MoonForecastSection({ reduced }: { reduced: boolean }) {
+export function MoonForecastSection({ reduced, selected, onSelect }: { reduced: boolean; selected: Date; onSelect: (date: Date) => void }) {
   const [today] = useState(() => new Date());
-  const [selected, setSelected] = useState<number | null>(null);
-  const [month, setMonth] = useState(() => new Date(today.getFullYear(), today.getMonth(), 1));
+  const [month, setMonth] = useState(() => new Date(selected.getFullYear(), selected.getMonth(), 1));
   const [width, setWidth] = useState(0);
   const offset = useRef(new Animated.Value(0)).current;
   const moving = useRef(false);
@@ -43,7 +42,6 @@ export function MoonForecastSection({ reduced }: { reduced: boolean }) {
     moving.current = true;
     const finish = () => {
       if (delta) {
-        setSelected(null);
         setMonth((current) => new Date(current.getFullYear(), current.getMonth() + delta, 1));
       } else {
         offset.setValue(0);
@@ -77,9 +75,6 @@ export function MoonForecastSection({ reduced }: { reduced: boolean }) {
     onPanResponderTerminate: () => settle(0),
   }), [offset, reduced, settle, width]);
 
-  const selectedDay = pages[1].days.find((day) => !!day && day.date.getDate() === selected);
-  const selectedSign = selectedDay && getZodiacInfo(EclipticGeoMoon(selectedDay.date).lon);
-
   return (
     <View style={styles.calendar}>
       <View style={styles.monthRow}>
@@ -105,7 +100,7 @@ export function MoonForecastSection({ reduced }: { reduced: boolean }) {
                 {page.days.map((day, i) => {
                   if (!day) return <View key={i} style={styles.column} />;
                   const isToday = day.date.toDateString() === today.toDateString();
-                  const isSelected = active && day.date.getDate() === selected;
+                  const isSelected = active && localDay(day.date) === localDay(selected);
                   return (
                     <View key={i} style={styles.column}>
                       <Pressable
@@ -113,7 +108,7 @@ export function MoonForecastSection({ reduced }: { reduced: boolean }) {
                         accessibilityLabel={dateLabel(day.date) + ', ' + day.phase.phaseName}
                         accessibilityState={{ selected: isSelected }}
                         disabled={!active}
-                        onPress={() => setSelected(day.date.getDate())}
+                        onPress={() => onSelect(day.date)}
                         style={[styles.cell, isToday && styles.today, isSelected && styles.selected]}
                       >
                         <Text style={[styles.day, isSelected && styles.selectedText]}>{day.date.getDate()}</Text>
@@ -127,9 +122,6 @@ export function MoonForecastSection({ reduced }: { reduced: boolean }) {
           })}
         </Animated.View>}
       </View>
-      {selectedDay && <Text accessibilityLiveRegion="polite" style={styles.selection}>
-        {dateLabel(selectedDay.date)} · {selectedDay.phase.phaseName} · {selectedDay.phase.illuminated}% illuminated · {selectedSign?.sign}
-      </Text>}
     </View>
   );
 }
@@ -151,5 +143,4 @@ const styles = StyleSheet.create({
   day: { color: cosmic.text, fontSize: 12, fontWeight: '700' },
   selectedText: { color: cosmic.bg },
   phase: { fontSize: 12 },
-  selection: { color: cosmic.muted, fontSize: 12, lineHeight: 18, textAlign: 'center' },
 });

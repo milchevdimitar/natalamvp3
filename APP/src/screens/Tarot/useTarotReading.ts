@@ -4,7 +4,10 @@ import { captureRef } from 'react-native-view-shot';
 import { getDeck } from './tarot.data';
 import { TarotCardData, TarotMode } from './tarot.types';
 
-export function useTarotReading(addStory: (base64Image: string) => Promise<void>) {
+export function useTarotReading(
+  addStory: (base64Image: string) => Promise<void>,
+  recordReading: (value: string, detail: string) => void,
+) {
   const [mode, setMode] = useState<TarotMode>('daily');
   const [useFullDeck, setUseFullDeck] = useState(true);
 
@@ -98,9 +101,11 @@ export function useTarotReading(addStory: (base64Image: string) => Promise<void>
     }));
 
     setRevealedIndices((prev) => ({ ...prev, [cardIdx]: true }));
+    recordReading('Tarot spread', 'Clarifying card drawn');
   };
 
   const toggleRevealCard = (idx: number) => {
+    if (!revealedIndices[idx]) recordReading('Tarot spread', 'Card revealed');
     setRevealedIndices((prev) => ({ ...prev, [idx]: !prev[idx] }));
   };
 
@@ -110,6 +115,7 @@ export function useTarotReading(addStory: (base64Image: string) => Promise<void>
       allRevealed[i] = true;
     });
     setRevealedIndices(allRevealed);
+    if (drawnCards.length) recordReading('Tarot spread', drawnCards.length + ' cards revealed');
   };
 
   const handleDrawDaily = () => {
@@ -117,6 +123,7 @@ export function useTarotReading(addStory: (base64Image: string) => Promise<void>
     const randomCard = currentDeck[Math.floor(Math.random() * currentDeck.length)];
     setDailyCard(randomCard);
     setDailyDrawn(true);
+    recordReading(randomCard.name, 'Last daily draw');
   };
 
   const rCount = parseInt(rowsInput, 10) || 1;

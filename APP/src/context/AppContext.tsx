@@ -1,9 +1,10 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { UserProfile } from '../models/User';
-import { cosmicTabColors, isCosmicTab } from '../theme/cosmic';
+import { cosmicTabColors, isCosmicPage } from '../theme/cosmic';
 
 const SESSION_KEY = '@natala_active_user_session';
+const THEME_KEY = '@natala_theme';
 import { API_BASE_URL as API_URL } from '../services/api';
 
 const API_BASE_URL = API_URL.replace(/\/api$/, '');
@@ -59,12 +60,27 @@ const AppContext = createContext<AppContextType | undefined>(undefined);
 export function AppProvider({ children }: { children: React.ReactNode }) {
   const [page, setPage] = useState('home');
   const [theme, setTheme] = useState<'dark' | 'light'>('dark');
+  const [themeLoaded, setThemeLoaded] = useState(false);
   const [user, setUserState] = useState<UserProfile | null>(null);
   const [stories, setStories] = useState<AppStory[]>([]);
   const [hideBottomNav, setHideBottomNav] = useState(false);
   const [selectedChat, setSelectedChat] = useState<SelectedChatData | null>(null);
 
-  const colors = isCosmicTab(page) ? cosmicTabColors[theme] : {
+  useEffect(() => {
+    let active = true;
+    void AsyncStorage.getItem(THEME_KEY).then((saved) => {
+      if (active && (saved === 'light' || saved === 'dark')) setTheme(saved);
+    }).catch(() => undefined).finally(() => {
+      if (active) setThemeLoaded(true);
+    });
+    return () => { active = false; };
+  }, []);
+
+  useEffect(() => {
+    if (themeLoaded) void AsyncStorage.setItem(THEME_KEY, theme).catch(() => undefined);
+  }, [theme, themeLoaded]);
+
+  const colors = isCosmicPage(page) ? cosmicTabColors[theme] : {
     bg: theme === 'dark' ? '#0F0D15' : '#F7F6FB',
     surface: theme === 'dark' ? '#1A1726' : '#FFFFFF',
     surfaceAlt: theme === 'dark' ? '#252136' : '#F0EEF8',

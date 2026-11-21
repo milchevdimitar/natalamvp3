@@ -1,211 +1,46 @@
-import React, { useEffect, useRef, useState, useMemo } from 'react';
-import {
-  View,
-  Pressable,
-  Animated,
-  ActivityIndicator,
-  Alert,
-  Platform,
-} from 'react-native';
-import Svg, { Circle } from 'react-native-svg';
-import {
-  Sun,
-  Moon,
-  Brain,
-  Layers3,
-  Target,
-  LogOut,
-  FileDown,
-} from 'lucide-react-native';
+import React, { useState } from 'react';
+import { ActivityIndicator, Alert, Platform, Pressable, ScrollView, StyleSheet, View } from 'react-native';
+import { Brain, ChevronRight, Compass, FileDown, Hash, Layers, Leaf, Orbit, Settings, Sparkles, Sun } from 'lucide-react-native';
+import { LinearGradient } from 'expo-linear-gradient';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import * as FileSystem from 'expo-file-system/legacy';
 import * as IntentLauncher from 'expo-intent-launcher';
 import * as Sharing from 'expo-sharing';
-import { Brand, Card, T, Section, Progress } from '../components/UI';
+import { Card, Section, T } from '../components/UI';
+import { CountUp, DashboardRing, DoshaTriangle, ElementColumns, useDashboardVisibility } from '../components/DashboardCharts';
+import { ProfileSettings } from './ProfileSettings';
+import type { ExploreRoute } from '../data/exploreRoutes';
 import { useApp } from '../context/AppContext';
-import { getUserProfile } from '../services/api';
+import { API_BASE_URL } from '../services/api';
+import { getBirthParts, getDashboardBalances, getDashboardSystems } from '../services/profileDashboard';
+import { useSystemActivity } from '../services/systemActivity';
 
-const API_URL = process.env.EXPO_PUBLIC_API_URL || 'http://10.159.206.3:5000';
-
-// ---------------------------------------------------------------------------
-// ✦ АЛГОРИТЪМ ЗА ИЗЧИСЛЯВАНЕ НА ЕЛЕМЕНТНИЯ БАЛАНС ОТ РОЖДЕНАТА ДАТА
-// ---------------------------------------------------------------------------
-function calculateElementsFromBirthDate(rawDate?: any) {
-  if (!rawDate) {
-    return [
-      { name: 'Fire', symbol: '🜂', value: 28, color: '#FF6B6B' },
-      { name: 'Earth', symbol: '🜃', value: 24, color: '#4ECDC4' },
-      { name: 'Air', symbol: '🜁', value: 26, color: '#FFE66D' },
-      { name: 'Water', symbol: '🜄', value: 22, color: '#4A90E2' },
-    ];
-  }
-
-  const d = new Date(rawDate);
-  if (isNaN(d.getTime())) {
-    return [
-      { name: 'Fire', symbol: '🜂', value: 25, color: '#FF6B6B' },
-      { name: 'Earth', symbol: '🜃', value: 25, color: '#4ECDC4' },
-      { name: 'Air', symbol: '🜁', value: 25, color: '#FFE66D' },
-      { name: 'Water', symbol: '🜄', value: 25, color: '#4A90E2' },
-    ];
-  }
-
-  const day = d.getUTCDate();
-  const month = d.getUTCMonth() + 1;
-  const year = d.getUTCFullYear();
-
-  const zodiacCutoffs = [20, 19, 21, 20, 21, 22, 23, 23, 23, 23, 22, 22];
-  const zodiacElements = [1, 2, 3, 0, 1, 2, 3, 0, 1, 2, 3, 0]; // 0: Fire, 1: Earth, 2: Air, 3: Water
-
-  let signIdx = month - 1;
-  if (day < zodiacCutoffs[signIdx]) {
-    signIdx = (signIdx + 11) % 12;
-  }
-  const mainElementIdx = zodiacElements[signIdx];
-
-  let fireScore = 15;
-  let earthScore = 15;
-  let airScore = 15;
-  let waterScore = 15;
-
-  if (mainElementIdx === 0) fireScore += 30;
-  if (mainElementIdx === 1) earthScore += 30;
-  if (mainElementIdx === 2) airScore += 30;
-  if (mainElementIdx === 3) waterScore += 30;
-
-  fireScore += day % 4 === 1 ? 15 : 5;
-  earthScore += day % 4 === 2 ? 15 : 5;
-  airScore += day % 4 === 3 ? 15 : 5;
-  waterScore += day % 4 === 0 ? 15 : 5;
-
-  fireScore += month % 4 === 1 ? 12 : 4;
-  earthScore += month % 4 === 2 ? 12 : 4;
-  airScore += month % 4 === 3 ? 12 : 4;
-  waterScore += month % 4 === 0 ? 12 : 4;
-
-  const yearSum = String(year)
-    .split('')
-    .reduce((acc, curr) => acc + (parseInt(curr, 10) || 0), 0);
-
-  fireScore += yearSum % 4 === 1 ? 13 : 4;
-  earthScore += yearSum % 4 === 2 ? 13 : 4;
-  airScore += yearSum % 4 === 3 ? 13 : 4;
-  waterScore += yearSum % 4 === 0 ? 13 : 4;
-
-  const total = fireScore + earthScore + airScore + waterScore;
-  const firePct = Math.round((fireScore / total) * 100);
-  const earthPct = Math.round((earthScore / total) * 100);
-  const airPct = Math.round((airScore / total) * 100);
-  const waterPct = 100 - (firePct + earthPct + airPct);
-
-  return [
-    { name: 'Fire', symbol: '🜂', value: firePct, color: '#FF6B6B' },
-    { name: 'Earth', symbol: '🜃', value: earthPct, color: '#4ECDC4' },
-    { name: 'Air', symbol: '🜁', value: airPct, color: '#FFE66D' },
-    { name: 'Water', symbol: '🜄', value: waterPct, color: '#4A90E2' },
-  ];
-}
-
-function Ring({
-  value,
-  color,
-  symbol,
-  name,
-}: {
-  value: number;
-  color: string;
-  symbol: string;
-  name: string;
-}) {
-  const { colors } = useApp();
-  const r = 34;
-  const c = 2 * Math.PI * r;
-
-  return (
-    <View style={{ alignItems: 'center', gap: 4, width: '24%' }}>
-      <View
-        style={{
-          width: 85,
-          height: 85,
-          alignItems: 'center',
-          justifyContent: 'center',
-        }}
-      >
-        <Svg width="85" height="85" viewBox="0 0 85 85">
-          <Circle
-            cx="42.5"
-            cy="42.5"
-            r={r}
-            fill="none"
-            stroke={colors.surfaceAlt}
-            strokeWidth="7"
-          />
-          <Circle
-            cx="42.5"
-            cy="42.5"
-            r={r}
-            fill="none"
-            stroke={color}
-            strokeWidth="7"
-            strokeLinecap="round"
-            strokeDasharray={`${(c * value) / 100} ${c}`}
-            transform="rotate(-90 42.5 42.5)"
-          />
-        </Svg>
-        <T size={27} style={{ position: 'absolute', color }}>
-          {symbol}
-        </T>
-      </View>
-      <T bold size={12}>
-        {name}
-      </T>
-      <T muted size={11}>
-        {value}%
-      </T>
-    </View>
-  );
-}
+const elements = [['Fire', '#f29986'], ['Earth', '#edc58a'], ['Air', '#b9b0ff'], ['Water', '#7ac9f5']] as const;
+const doshas = [['Vata', '#b9b0ff'], ['Pitta', '#f1ad80'], ['Kapha', '#7cd8bd']] as const;
+const systemIcons: Record<ExploreRoute, typeof Sun> = {
+  astrology: Sun, numerology: Hash, mbti: Brain, cardology: Layers, tarot: Sparkles,
+  ayurveda: Leaf, bazi: Compass, 'chinese-zodiac': Orbit,
+};
 
 export default function Profile() {
-  const { colors, theme, toggleTheme, user, setUser, setPage } = useApp();
-  const progress = useRef(new Animated.Value(0)).current;
-  const [number, setNumber] = useState(0);
-  const [loading, setLoading] = useState(false);
+  const { colors, user, setPage } = useApp();
+  const insets = useSafeAreaInsets();
+  const [settingsOpen, setSettingsOpen] = useState(false);
   const [generatingPdf, setGeneratingPdf] = useState(false);
-
-  useEffect(() => {
-    if (user?.email) {
-      setLoading(true);
-      getUserProfile(user.email)
-        .then((res) => {
-          if (res.success && res.user) {
-            setUser(res.user);
-          }
-        })
-        .catch((err) => console.warn('Грешка при опресняване:', err))
-        .finally(() => setLoading(false));
-    }
-
-    progress.setValue(0);
-    Animated.timing(progress, {
-      toValue: 1,
-      duration: 800,
-      useNativeDriver: true,
-    }).start();
-
-    let i = 0;
-    const timer = setInterval(() => {
-      i += 4;
-      setNumber(Math.min(i, 100));
-      if (i >= 100) clearInterval(timer);
-    }, 24);
-
-    return () => clearInterval(timer);
-  }, []);
-
-  const handleLogout = () => {
-    setUser(null);
-    setPage('login');
-  };
+  const activity = useSystemActivity(user?.email);
+  const systems = getDashboardSystems(user, activity);
+  const ready = systems.filter((system) => system.value);
+  const pending = systems.filter((system) => !system.value);
+  const balances = getDashboardBalances(user, activity);
+  const numerology = ready.find(({ route }) => route === 'numerology');
+  const ayurveda = ready.find(({ route }) => route === 'ayurveda');
+  const chinese = ready.find(({ route }) => route === 'chinese-zodiac');
+  const insights = ready.filter((system) => system !== numerology && system !== ayurveda && system !== chinese);
+  const visibility = useDashboardVisibility();
+  const birth = getBirthParts(user);
+  const name = String(user?.name || '').trim();
+  const birthLabel = birth && new Date(birth.year, birth.month - 1, birth.day).toLocaleDateString(undefined, { dateStyle: 'long' });
+  const birthCity = typeof user?.birthCity === 'string' ? user.birthCity : user?.birthCity?.name;
 
   const handleGeneratePdf = async () => {
     const userId = user?._id || user?.id;
@@ -216,7 +51,7 @@ export default function Profile() {
 
     setGeneratingPdf(true);
     try {
-      const response = await fetch(`${API_URL}/api/users/${userId}/report/pdf`, {
+      const response = await fetch(`${API_BASE_URL}/users/${userId}/report/pdf`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -334,282 +169,130 @@ export default function Profile() {
     }
   };
 
-  const initials = user?.name
-    ? user.name
-        .split(' ')
-        .map((n: string) => n[0])
-        .join('')
-        .toUpperCase()
-        .slice(0, 2)
-    : '??';
-
-  const mbtiText = user?.mbti?.type
-    ? `✦ ${user.mbti.type}`
-    : '✦ MBTI Неизчислен';
-  const sunSign = user?.natalChart?.sunSign || 'Неизчислен';
-  const lifePath = user?.numerology?.lifePathNumber
-    ? `${user.numerology.lifePathNumber}${
-        user.numerology.isMasterNumber ? ' (Майсторско)' : ''
-      }`
-    : 'Неизчислено';
-  const birthCard = user?.cardology?.birthCard || 'Няма карта';
-  const dosha = user?.ayurveda?.dominantDosha
-    ? user.ayurveda.dominantDosha.toUpperCase()
-    : 'Неизчислена';
-
-  const birthDateValue =
-    user?.birthdate ||
-    user?.birthDate ||
-    user?.dateOfBirth ||
-    user?.dob ||
-    user?.birth_date ||
-    user?.profile?.birthDate;
-
-  const dynamicElements = useMemo(() => {
-    return calculateElementsFromBirthDate(birthDateValue);
-  }, [birthDateValue]);
-
-  const stats = [
-    {
-      name: 'Self Awareness',
-      value: 84,
-      icon: Brain,
-      display: `${Math.round(number * 0.84)}%`,
-    },
-    {
-      name: 'Systems Explored',
-      value: 80,
-      icon: Layers3,
-      display: `${Math.round(number * 0.08)}/10`,
-    },
-    {
-      name: 'Alignment',
-      value: 82,
-      icon: Target,
-      display: `${(number * 0.823).toFixed(1)}%`,
-    },
-  ];
-
   return (
     <>
-      <View
-        style={{
-          flexDirection: 'row',
-          alignItems: 'center',
-          justifyContent: 'space-between',
-          marginBottom: 18,
-        }}
-      >
-        <Brand size={34} />
-        <View style={{ flexDirection: 'row', gap: 9 }}>
-          <Pressable
-            accessibilityLabel="Cycle theme"
-            onPress={toggleTheme}
-            style={{
-              padding: 12,
-              borderRadius: 99,
-              backgroundColor: colors.surface,
-            }}
-          >
-            {theme === 'dark' ? (
-              <Moon size={19} color={colors.purple} />
-            ) : (
-              <Sun size={19} color={colors.purple} />
-            )}
-          </Pressable>
-          <Pressable
-            accessibilityLabel="Logout"
-            onPress={handleLogout}
-            style={{
-              padding: 12,
-              borderRadius: 99,
-              backgroundColor: colors.surface,
-            }}
-          >
-            <LogOut size={19} color={colors.purple} />
-          </Pressable>
-        </View>
-      </View>
-
-      <Card style={{ alignItems: 'center', gap: 8, paddingVertical: 23, marginBottom: 12 }}>
-        <View
-          style={{
-            width: 96,
-            height: 96,
-            borderRadius: 48,
-            backgroundColor: colors.purpleSoft,
-            borderWidth: 1,
-            borderColor: colors.line,
-            alignItems: 'center',
-            justifyContent: 'center',
-          }}
-        >
-          {loading ? (
-            <ActivityIndicator color={colors.purple} />
-          ) : (
-            <T size={38} bold style={{ color: colors.purple }}>
-              {initials}
-            </T>
-          )}
-        </View>
-        <T bold size={29} style={{ letterSpacing: -1.25, textAlign: 'center' }}>
-          {user?.name || 'Потребител'}
-        </T>
-        <T muted size={12}>
-          {user?.email || 'Няма въведен имейл'}
-        </T>
-        <T bold size={12} style={{ color: colors.purple, marginBottom: 10 }}>
-          {mbtiText}
-        </T>
-      </Card>
-
-      <View style={{ flexDirection: 'row', gap: 8, marginBottom: 20 }}>
-        {stats.map((s) => (
-          <Card
-            key={s.name}
-            style={{ flex: 1, padding: 10, alignItems: 'center', gap: 7 }}
-          >
-            <s.icon size={27} color={colors.purple} />
-            <Animated.View style={{ opacity: progress }}>
-              <T bold size={21} style={{ textAlign: 'center' }}>
-                {s.display}
-              </T>
-            </Animated.View>
-            <T muted size={10} style={{ textAlign: 'center' }}>
-              {s.name}
-            </T>
-          </Card>
-        ))}
-      </View>
-
-      <Section>Your profile</Section>
-      <Card style={{ gap: 15, marginBottom: 20 }}>
-        {[
-          ['Personality (MBTI)', user?.mbti?.type || 'Неизчислен'],
-          ['Zodiac', sunSign],
-          ['Life path', lifePath],
-          ['Cardology Birth Card', birthCard],
-          ['Ayurveda Dosha', dosha],
-        ].map(([k, v]) => (
-          <View
-            key={k}
-            style={{ flexDirection: 'row', justifyContent: 'space-between' }}
-          >
-            <T muted size={13}>
-              {k}
-            </T>
-            <T bold size={13}>
-              {v}
-            </T>
-          </View>
-        ))}
-      </Card>
-
-      <Section>Personal lenses</Section>
-      <View
-        style={{
-          flexDirection: 'row',
-          flexWrap: 'wrap',
-          gap: 10,
-          marginBottom: 20,
-        }}
-      >
-        {[
-          ['☉', `Sun: ${sunSign}`],
-          ['♠', `Card: ${birthCard}`],
-          ['☯', `Dosha: ${dosha}`],
-          ['🜁', `Life Path: ${user?.numerology?.lifePathNumber || '-'}`],
-        ].map(([icon, name]) => (
-          <Card
-            key={name}
-            style={{ width: '48%', alignItems: 'center', gap: 8 }}
-          >
-            <T size={34} style={{ color: colors.purple }}>
-              {icon}
-            </T>
-            <T bold size={14}>
-              {name}
-            </T>
-          </Card>
-        ))}
-      </View>
-
-      <Section>Elemental balance</Section>
-      <Card style={{ marginBottom: 20 }}>
-        <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
-          {dynamicElements.map((e) => (
-            <Ring key={e.name} {...e} />
-          ))}
-        </View>
-      </Card>
-
-      <Section>Self-awareness</Section>
-      <Card style={{ gap: 17, marginBottom: 20 }}>
-        {[
-          ['Self reflection', 84],
-          ['Communication', 72],
-          ['Emotional balance', 78],
-          ['Personal growth', 91],
-        ].map(([label, value]) => (
-          <View key={label as string} style={{ gap: 7 }}>
-            <View
-              style={{ flexDirection: 'row', justifyContent: 'space-between' }}
-            >
-              <T size={13}>{label}</T>
-              <T muted size={12}>
-                {value}%
-              </T>
-            </View>
-            <Progress value={value as number} />
-          </View>
-        ))}
-      </Card>
-
-      <Section>What your map says</Section>
-      <Card style={{ gap: 14, marginBottom: 40 }}>
-        <T bold size={17}>
-          Deep inner processing
-        </T>
-        <T muted size={13}>
-          Здравейте, {user?.name || 'пътешествениче'}! Вашите изчисления (MBTI:{' '}
-          {user?.mbti?.type || 'N/A'}, Life Path:{' '}
-          {user?.numerology?.lifePathNumber || 'N/A'}) са синхронизирани от
-          базата данни.
-        </T>
-
-        <Pressable
-          onPress={handleGeneratePdf}
-          disabled={generatingPdf}
-          style={({ pressed }) => ({
-            marginTop: 4,
-            flexDirection: 'row',
-            alignItems: 'center',
-            justifyContent: 'center',
-            gap: 8,
-            backgroundColor: colors.action,
-            paddingVertical: 13,
-            paddingHorizontal: 16,
-            borderRadius: 12,
-            opacity: generatingPdf || pressed ? 0.75 : 1,
-          })}
-        >
-          {generatingPdf ? (
-            <>
-              <ActivityIndicator size="small" color="#FFFFFF" />
-              <T bold size={14} style={{ color: '#FFFFFF' }}>
-                Генериране с Gemini AI...
-              </T>
-            </>
-          ) : (
-            <>
-              <FileDown size={18} color="#FFFFFF" />
-              <T bold size={14} style={{ color: '#FFFFFF' }}>
-                Изтегли пълен AI PDF доклад
-              </T>
-            </>
-          )}
+    <ScrollView onLayout={visibility.onLayout} onScroll={visibility.onScroll} scrollEventThrottle={16} showsVerticalScrollIndicator={false} contentContainerStyle={[styles.content, { paddingTop: Platform.OS === 'web' ? 22 : insets.top + 12, paddingBottom: insets.bottom + 126 }]}>
+      <View style={styles.header}>
+        <T size={40} style={styles.logo}>Natala</T>
+        <Pressable accessibilityRole="button" accessibilityLabel="Open settings" onPress={() => setSettingsOpen(true)} style={[styles.settings, { borderColor: colors.line, backgroundColor: colors.surfaceAlt }]}>
+          <Settings size={18} color={colors.text} />
         </Pressable>
-      </Card>
+      </View>
+      <View style={styles.identity}>
+        <T bold size={36} style={styles.name}>{name || 'Your profile'}</T>
+        {(birthLabel || birthCity || user?.email) && <T muted size={12} style={{ textAlign: 'center' }}>{[birthLabel, birthCity].filter(Boolean).join(' · ') || user?.email}</T>}
+      </View>
+
+      <View onLayout={visibility.section('metrics')} style={styles.metrics}>
+        <Card style={styles.metric}>
+          <DashboardRing value={Math.round(ready.length * 100 / systems.length)} active={!!visibility.visible.metrics} accent={colors.purple} />
+          <T bold size={11} style={styles.center}>Discovery</T>
+          <View style={styles.metricCaption}>
+            <CountUp value={ready.length} active={!!visibility.visible.metrics} size={10} color={colors.muted} />
+            <T muted size={10}>of {systems.length} ready</T>
+          </View>
+        </Card>
+        <Card onPress={() => setPage('numerology')} style={[styles.metric, { backgroundColor: 'rgba(119,74,141,0.28)' }]}>
+          <Hash size={22} color={colors.gold} />
+          {numerology?.value ? <CountUp value={Number(numerology.value)} active={!!visibility.visible.metrics} color={colors.text} /> : <T bold size={26}>—</T>}
+          <T bold size={11} style={styles.center}>Life path</T>
+        </Card>
+        <Card onPress={() => setPage('chinese-zodiac')} style={styles.metric}>
+          <Orbit size={22} color={colors.purple} />
+          <T bold size={15} style={styles.center}>{chinese?.value || '—'}</T>
+          <T muted size={10} style={styles.center}>Chinese Zodiac</T>
+        </Card>
+      </View>
+
+      <View onLayout={visibility.section('elements')}>
+        <Section>Element balance</Section>
+        <Card style={styles.chart}>
+          <T muted size={12}>{balances.elements ? 'From your natal chart' : 'Element proportions appear when a natal chart has saved element data.'}</T>
+          <ElementColumns categories={elements} values={balances.elements} active={!!visibility.visible.elements} />
+        </Card>
+      </View>
+
+      <View onLayout={visibility.section('ayurveda')}>
+        <Section>Ayurveda balance</Section>
+        <Card style={styles.chart}>
+          <View style={styles.chartHeading}>
+            <Leaf size={17} color={colors.gold} />
+            <T bold size={15}>{ayurveda?.value || 'Dosha constitution'}</T>
+          </View>
+          <DoshaTriangle categories={doshas} values={balances.doshas} active={!!visibility.visible.ayurveda} />
+          {!balances.doshas && <Pressable accessibilityRole="button" style={styles.chartLink} onPress={() => setPage('ayurveda')}>
+            <T size={12} style={{ color: colors.purple }}>Open the Ayurveda assessment</T><ChevronRight size={15} color={colors.purple} />
+          </Pressable>}
+        </Card>
+      </View>
+
+      {insights.length > 0 && <View>
+        <Section>Your insights</Section>
+        <View style={styles.insights}>
+          {insights.map((system) => {
+            const Icon = systemIcons[system.route];
+            return <Card key={system.route} onPress={() => setPage(system.route)} style={styles.insight}>
+              <View style={styles.chartHeading}><Icon size={17} color={colors.purple} /><T muted bold size={10}>{system.name}</T></View>
+              <T bold size={17}>{system.value}</T>
+              <T muted size={11}>{system.detail}</T>
+            </Card>;
+          })}
+        </View>
+      </View>}
+
+      {pending.length > 0 && <View>
+        <Section>Still to explore</Section>
+        <Card style={styles.pending}>
+          {pending.map((system, index) => (
+            <Pressable accessibilityRole="button" key={system.route} onPress={() => setPage(system.route)} style={[styles.next, index > 0 && { borderTopWidth: 1, borderColor: colors.line }]}>
+              <View style={styles.copy}>
+                <T bold size={14}>{system.name}</T>
+                <T muted size={12}>{system.detail}</T>
+              </View>
+              <ChevronRight color={colors.muted} size={17} />
+            </Pressable>
+          ))}
+        </Card>
+      </View>}
+
+      <Pressable accessibilityRole="button" onPress={handleGeneratePdf} disabled={generatingPdf} style={({ pressed }) => [styles.report, pressed && { opacity: 0.86 }]}>
+        <LinearGradient colors={['#ffe0a5', '#eebd66', '#d49342']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={StyleSheet.absoluteFill} pointerEvents="none" />
+        <View style={styles.premium}><T bold size={10} style={styles.reportInk}>Premium</T></View>
+        <View style={styles.reportIcon}>
+          {generatingPdf ? <ActivityIndicator size="small" color="#442914" /> : <FileDown size={23} color="#442914" />}
+        </View>
+        <View style={styles.copy}>
+          <T bold size={16} style={styles.reportInk}>{generatingPdf ? 'Generating report…' : 'Download profile report'}</T>
+          <T size={12} style={styles.reportInk}>Your personalized reading in one PDF</T>
+        </View>
+      </Pressable>
+    </ScrollView>
+    {settingsOpen && <ProfileSettings birthLabel={birthLabel} birthCity={birthCity} onClose={() => setSettingsOpen(false)} />}
     </>
   );
 }
+
+const styles = StyleSheet.create({
+  content: { paddingHorizontal: 19, gap: 13 },
+  header: { width: '100%', maxWidth: 442, alignSelf: 'center', flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
+  logo: { fontFamily: 'DancingScript_700Bold', lineHeight: 49 },
+  settings: { width: 36, height: 36, borderRadius: 18, alignItems: 'center', justifyContent: 'center', borderWidth: 1 },
+  identity: { alignItems: 'center', paddingTop: 7, paddingBottom: 16, gap: 6 },
+  name: { textAlign: 'center', lineHeight: 41, letterSpacing: -1.2 },
+  metrics: { flexDirection: 'row', gap: 8 },
+  metric: { flex: 1, minWidth: 0, minHeight: 122, paddingHorizontal: 4, paddingVertical: 10, gap: 3, alignItems: 'center', justifyContent: 'center', borderRadius: 21 },
+  center: { textAlign: 'center' },
+  metricCaption: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 3 },
+  chart: { gap: 14, padding: 15 },
+  chartHeading: { flexDirection: 'row', alignItems: 'center', gap: 6 },
+  chartLink: { minHeight: 40, flexDirection: 'row', alignItems: 'center', gap: 5 },
+  insights: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
+  insight: { width: '47%', flexGrow: 1, minHeight: 90, padding: 13, gap: 5, borderRadius: 20 },
+  pending: { paddingHorizontal: 15, paddingVertical: 4 },
+  copy: { flex: 1, minWidth: 0, gap: 2 },
+  next: { minHeight: 57, flexDirection: 'row', alignItems: 'center', gap: 10, paddingVertical: 8 },
+  report: { position: 'relative', flexDirection: 'row', alignItems: 'center', minHeight: 90, padding: 13, paddingTop: 22, gap: 10, borderRadius: 20, overflow: 'hidden', borderWidth: 1, borderColor: '#ffe3a5' },
+  reportInk: { color: '#442914' },
+  reportIcon: { width: 42, height: 42, borderRadius: 21, alignItems: 'center', justifyContent: 'center', backgroundColor: 'rgba(98,53,19,0.14)' },
+  premium: { position: 'absolute', right: 9, top: 7, borderRadius: 14, paddingHorizontal: 8, paddingVertical: 2, backgroundColor: 'rgba(255,246,214,0.55)' },
+});

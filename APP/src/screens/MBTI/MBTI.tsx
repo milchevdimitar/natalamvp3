@@ -50,7 +50,7 @@ export default function MBTI() {
       </TouchableOpacity>
 
       <Hero
-        eyebrow="YOUR PERSONALITY ATLAS · MBTI"
+        eyebrow="16 ARCHETYPES"
         first="Discover your"
         accent="inner type."
         description="40 questions with a 7-point scale to assess your cognitive preferences."

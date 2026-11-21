@@ -18,7 +18,7 @@ import { AppProvider, useApp } from './src/context/AppContext';
 import BottomNav from './src/components/BottomNav';
 import Home from './src/screens/Home';
 import { CosmicBackground, useReducedMotion } from './src/screens/Home/CosmicBackground';
-import { isCosmicTab } from './src/theme/cosmic';
+import { isCosmicPage } from './src/theme/cosmic';
 import Explore from './src/screens/Explore';
 import Chat from './src/screens/Chat';
 import People from './src/screens/People';
@@ -31,6 +31,7 @@ import Numerology from './src/screens/Numerology';
 import Cardology from './src/screens/Cardology';
 import Ayurveda from './src/screens/Ayurveda';
 import BaZi from './src/screens/BaZi';
+import ChineseZodiac from './src/screens/ChineseZodiac';
 import Login from './src/screens/Login';
 import { checkHealth } from './src/services/api';
 import { registerForPushNotificationsAsync } from './src/services/notifications';
@@ -41,7 +42,7 @@ function Shell() {
   const fade = useRef(new Animated.Value(1)).current;
   const navBlurTarget = useRef<React.ComponentRef<typeof BlurTargetView>>(null);
   const cosmicHome = !!user && page === 'home';
-  const cosmicTab = !!user && isCosmicTab(page);
+  const cosmicTab = !!user && isCosmicPage(page);
   const reducedMotion = useReducedMotion();
   const tabScroll = useRef(new Animated.Value(0)).current;
 
@@ -83,6 +84,7 @@ function Shell() {
     cardology: <Cardology />,
     ayurveda: <Ayurveda />,
     bazi: <BaZi />,
+    'chinese-zodiac': <ChineseZodiac />,
     chat: <Chat />,
     people: <People />,
     feed: <Feed />,
@@ -94,7 +96,7 @@ function Shell() {
 
   // Страниците Login, Home, Chat и Feed управляват сами своя скрол и клавиатура
   const isFullHeightPage =
-    !user || page === 'login' || page === 'home' || page === 'chat' || page === 'feed';
+    !user || page === 'login' || page === 'home' || page === 'chat' || page === 'feed' || page === 'profile';
 
   return (
     <View style={{ flex: 1, backgroundColor: colors.bg }}>
@@ -107,10 +109,10 @@ function Shell() {
         style={{
           flex: 1,
           paddingTop:
-            cosmicHome ? 0 : Platform.OS === 'web'
+            cosmicHome || page === 'profile' ? 0 : Platform.OS === 'web'
               ? 30
               : Math.max((StatusBar.currentHeight || 0) + 16, 28),
-          paddingHorizontal: cosmicHome || page === 'feed' ? 0 : 18,
+          paddingHorizontal: cosmicHome || page === 'feed' || page === 'profile' ? 0 : 18,
           width: '100%',
           maxWidth: cosmicHome || page === 'feed' ? '100%' : cosmicTab ? 620 : 720,
           alignSelf: 'center',
@@ -152,24 +154,15 @@ function Shell() {
             opacity: fade,
           }}
         >
+          <CosmicBackground offset={tabScroll} reduced />
           <Text
             style={{
               fontFamily: 'DancingScript_700Bold',
               fontSize: 68,
-              color: colors.purple,
+              color: '#f8faff',
             }}
           >
             Natala
-          </Text>
-          <Text
-            style={{
-              color: colors.gold,
-              fontSize: 12,
-              letterSpacing: 3,
-              marginTop: 10,
-            }}
-          >
-            A MOMENT OF DISCOVERY
           </Text>
         </Animated.View>
       )}

@@ -1,3 +1,5 @@
+import { isExploreRoute } from '../data/exploreRoutes';
+
 export const cosmic = {
   bg: '#03091e',
   surface: '#142450',
@@ -41,6 +43,6 @@ export const cosmicTabColors = {
   },
 };
 
-export function isCosmicTab(page: string) {
-  return page === 'explore' || page === 'chat' || page === 'people' || page === 'profile';
+export function isCosmicPage(page: string) {
+  return page === 'explore' || page === 'chat' || page === 'people' || page === 'profile' || isExploreRoute(page);
 }

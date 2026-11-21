@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import {
   View,
   Pressable,
@@ -18,6 +18,8 @@ import {
 } from 'lucide-react-native';
 import { Hero, Card, T, Section } from '../../components/UI';
 import { useApp } from '../../context/AppContext';
+import { saveSystemActivity, useSystemActivity } from '../../services/systemActivity';
+import { getBirthParts } from '../../services/profileDashboard';
 import {
   AyurvedaTabId,
   AyurvedaViewComplexity,
@@ -32,57 +34,39 @@ import { AyurvedaTabDiagnostics } from './AyurvedaTabDiagnostics';
 import { AyurvedaTabNutrition } from './AyurvedaTabNutrition';
 import { AyurvedaTabMatch } from './AyurvedaTabMatch';
 
-function extractBirthFromUser(user: any) {
-  let day = 15;
-  let month = 6;
-  let year = 1995;
-
-  if (user?.birthdate) {
-    const d = new Date(user.birthdate);
-    if (!Number.isNaN(d.getTime())) {
-      day = d.getUTCDate();
-      month = d.getUTCMonth() + 1;
-      year = d.getUTCFullYear();
-    }
-  } else if (user?.birthDate?.day && user?.birthDate?.month && user?.birthDate?.year) {
-    day = Number(user.birthDate.day);
-    month = Number(user.birthDate.month);
-    year = Number(user.birthDate.year);
-  }
-
-  return {
-    name: user?.name || 'Your Ayurvedic Blueprint',
-    day,
-    month,
-    year,
-  };
-}
-
 export default function Ayurveda() {
   const { colors, user, setPage } = useApp();
 
-  const initial = useMemo(() => extractBirthFromUser(user), [user]);
+  const initial = useMemo(() => getBirthParts(user), [user]);
 
   const [activeTab, setActiveTab] = useState<AyurvedaTabId>('prakriti');
   const [viewComplexity, setViewComplexity] = useState<AyurvedaViewComplexity>('simple');
   const [showQuizModal, setShowQuizModal] = useState(false);
   const [showOverviewModal, setShowOverviewModal] = useState(false);
 
-  const [personName, setPersonName] = useState(initial.name);
+  const [personName, setPersonName] = useState(user?.name || 'Your Ayurvedic Blueprint');
   const [quizAnswers, setQuizAnswers] = useState<Record<string, DoshaName>>({});
   const [stressLevel, setStressLevel] = useState<'low' | 'moderate' | 'high'>('moderate');
+  const savedAssessment = useSystemActivity(user?.email)?.ayurveda;
+
+  useEffect(() => {
+    if (!savedAssessment) return;
+    setQuizAnswers(savedAssessment.answers);
+    setStressLevel(savedAssessment.stress);
+  }, [savedAssessment]);
 
   const profile = useMemo(
     () =>
       calculateAyurvedaProfile({
         personName,
-        birthYear: initial.year,
-        birthMonth: initial.month,
-        birthDay: initial.day,
+        birthYear: initial?.year,
+        birthMonth: initial?.month,
+        birthDay: initial?.day,
+        useBirthBaseline: Boolean(initial),
         quizAnswers,
         currentStressLevel: stressLevel,
       }),
-    [personName, initial.year, initial.month, initial.day, quizAnswers, stressLevel]
+    [personName, initial, quizAnswers, stressLevel]
   );
 
   const answeredCount = Object.keys(quizAnswers).length;
@@ -121,7 +105,7 @@ export default function Ayurveda() {
                   paddingHorizontal: 10,
                   paddingVertical: 5,
                   borderRadius: 7,
-                  backgroundColor: active ? colors.purple : 'transparent',
+                  backgroundColor: active ? colors.action : 'transparent',
                 }}
               >
                 <T
@@ -178,7 +162,7 @@ export default function Ayurveda() {
                 alignItems: 'center',
                 justifyContent: 'center',
                 gap: 3,
-                backgroundColor: active ? colors.purple : 'transparent',
+                backgroundColor: active ? colors.action : 'transparent',
               }}
             >
               <Icon size={14} color={active ? '#FFFFFF' : colors.muted} />
@@ -361,7 +345,7 @@ export default function Ayurveda() {
                     paddingVertical: 8,
                     borderRadius: 9,
                     alignItems: 'center',
-                    backgroundColor: active ? colors.purple : colors.surfaceAlt,
+                    backgroundColor: active ? colors.action : colors.surfaceAlt,
                   }}
                 >
                   <T
@@ -427,9 +411,23 @@ export default function Ayurveda() {
         ))}
 
         <TouchableOpacity
-          onPress={() => setShowQuizModal(false)}
+          disabled={answeredCount < PRAKRITI_QUIZ_QUESTIONS.length}
+          onPress={async () => {
+            if (user?.email) {
+              try {
+                await saveSystemActivity(user.email, 'ayurveda', {
+                  answers: quizAnswers, stress: stressLevel, constitution: profile.constitutionType, scores: profile.prakriti,
+                });
+              } catch (error) {
+                console.warn('Could not save Ayurveda assessment:', error);
+                return;
+              }
+            }
+            setShowQuizModal(false);
+          }}
           style={{
-            backgroundColor: colors.purple,
+            backgroundColor: colors.action,
+            opacity: answeredCount < PRAKRITI_QUIZ_QUESTIONS.length ? 0.5 : 1,
             paddingVertical: 11,
             borderRadius: 12,
             alignItems: 'center',

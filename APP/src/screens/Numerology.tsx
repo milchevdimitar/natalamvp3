@@ -15,6 +15,7 @@ import {
   CloudUpload,
 } from 'lucide-react-native';
 import { useApp } from '../context/AppContext';
+import { getBirthParts } from '../services/profileDashboard';
 import { Card, T, Section, Pill, Hero } from '../components/UI';
 import { saveUserProfile } from '../services/api';
 import { UserProfile } from '../models/User';
@@ -130,6 +131,8 @@ const reduceNumber = (num: number): number => {
 // Safe date parsing and formatting function from `user`
 const getFormattedUserDate = (user: any): string | null => {
   if (!user) return null;
+  const birth = getBirthParts(user);
+  if (birth) return [birth.day, birth.month, birth.year].map((part) => String(part).padStart(2, '0')).join('.');
 
   const rawDate =
     user.birthdate ||

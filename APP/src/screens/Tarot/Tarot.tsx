@@ -2,6 +2,7 @@ import React from 'react';
 import { View, TouchableOpacity } from 'react-native';
 import { ArrowLeft } from 'lucide-react-native';
 import { useApp } from '../../context/AppContext';
+import { saveSystemActivity } from '../../services/systemActivity';
 import { Card, T, Pill, Hero } from '../../components/UI';
 import { useTarotReading } from './useTarotReading';
 import { DailyTarotSection } from './DailyTarotSection';
@@ -10,7 +11,7 @@ import { TarotAltarStoryCard } from './TarotAltarStoryCard';
 import { styles } from './tarot.styles';
 
 export default function Tarot() {
-  const { colors, setPage, addStory } = useApp();
+  const { colors, setPage, addStory, user } = useApp();
 
   const {
     mode,
@@ -42,7 +43,9 @@ export default function Tarot() {
     toggleRevealCard,
     handleRevealAll,
     handleDrawDaily,
-  } = useTarotReading(addStory);
+  } = useTarotReading(addStory, (value, detail) => {
+    if (user?.email) void saveSystemActivity(user.email, 'tarot', { value, detail }).catch(console.warn);
+  });
 
   return (
     <>

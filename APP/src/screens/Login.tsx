@@ -225,7 +225,7 @@ export default function Login() {
         eyebrow="WELCOME TO NATALA"
         first="Unlock your"
         accent="inner world."
-        description="Sign in or register to access your Natal Charts, Ayurveda, and MBTI profile."
+        description="Sign in or register to access your Natal Charts, Ayurveda, and 16 Archetypes profile."
       />
 
       {/* Mode Switcher (Sign In / Register) */}
