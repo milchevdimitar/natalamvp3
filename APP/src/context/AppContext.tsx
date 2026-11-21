@@ -29,6 +29,7 @@ export interface SelectedChatData {
   targetUser?: string;
   targetUserId?: string;
   sharedStory?: SharedStoryData;
+  draftMessage?: string;
 }
 
 interface AppContextType {

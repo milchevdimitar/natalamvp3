@@ -43,7 +43,7 @@ function SkyCard({ title, subtitle, hint, artwork, onPress, disabled }: {
 }
 
 export default function Home() {
-  const { colors, user, setPage, fetchActiveStories, addStory } = useApp();
+  const { colors, user, setPage, fetchActiveStories, addStory, setSelectedChat } = useApp();
   const palette = { ...colors, ...cosmic, purpleSoft: '#30457a', goldSoft: '#362845' };
   const insets = useSafeAreaInsets();
   const streak = useDiscoveryStreak(user?.email);
@@ -125,7 +125,15 @@ export default function Home() {
           <SkyCard title={planetaryPositions.length ? (retrogradeCount ? retrogradeCount + ' active' : 'No active retrogrades') : loadingNASA ? 'Checking planetary motion…' : 'Planetary motion unavailable'} subtitle="Planetary motion at a glance" artwork={<SkyArtwork kind="retro" />} onPress={() => setDetail('retrogrades')} disabled={!planetaryPositions.length} />
         </View>
 
-        <FortuneCookieCard colors={palette} email={user?.email} addStory={addStory} onOpenConfetti={() => { if (!reduced) setConfetti(Date.now()); }} />
+        <FortuneCookieCard
+          colors={palette}
+          addStory={addStory}
+          onShareMessage={(draftMessage) => {
+            setSelectedChat({ draftMessage });
+            setPage('chat');
+          }}
+          onOpenConfetti={() => { if (!reduced) setConfetti(Date.now()); }}
+        />
       </Animated.ScrollView>
 
       {detail === 'sun' && <CelestialCarousel kind="zodiac" title="Zodiac seasons" slides={zodiacSlides(sun.sign, now)} onClose={close} reduced={reduced} />}

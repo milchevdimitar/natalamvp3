@@ -7,13 +7,14 @@ import {
   fetchChatMessages,
 } from '../../services/api';
 import { showMessageNotification } from '../../services/notifications';
+import type { SelectedChatData } from '../../context/AppContext';
 import { Conversation, Message, PendingStory } from './chat.types';
 import { getCurrentTimeFormatted } from './chat.utils';
 
 interface UseChatParams {
   currentUserEmail: string;
-  selectedChat: any;
-  setSelectedChat?: (val: any) => void;
+  selectedChat: SelectedChatData | null;
+  setSelectedChat?: (val: SelectedChatData | null) => void;
   setHideBottomNav?: (hide: boolean) => void;
 }
 
@@ -41,6 +42,13 @@ export function useChat({
   // Обработка на споделено стори или директно избран потребител от друг екран
   useEffect(() => {
     if (!selectedChat || !currentUserEmail || isLoading) return;
+
+    if (selectedChat.draftMessage) {
+      setMessageInput(selectedChat.draftMessage);
+      setActiveChatId(null);
+      setSelectedChat?.(null);
+      return;
+    }
 
     if (selectedChat.sharedStory) {
       setPendingStory({

@@ -10,24 +10,23 @@ import {
   ActivityIndicator,
   StyleSheet,
   Platform,
-  Share,
 } from 'react-native';
-import AsyncStorage from '@react-native-async-storage/async-storage';
+import Svg, { Line } from 'react-native-svg';
 import { captureRef } from 'react-native-view-shot';
 import { LinearGradient } from 'expo-linear-gradient';
 import {
   Sparkles,
-  PlusCircle,
   CheckCircle,
 } from 'lucide-react-native';
 import { Card, T } from '../../components/UI';
 import { DAILY_FORTUNES } from './home.constants';
 import { styles } from './home.styles';
 import { glassPanel } from '../../theme/cosmic';
+import { useReducedMotion } from './CosmicBackground';
 
 interface FortuneCookieCardProps {
   colors: any;
-  email?: string;
+  onShareMessage: (message: string) => void;
   addStory: (base64Image: string) => Promise<void>;
   onOpenConfetti: () => void;
 }
@@ -43,21 +42,10 @@ const cookieStyles = StyleSheet.create({
     justifyContent: 'center',
     overflow: 'visible',
   },
-  halo: {
+  rays: {
     position: 'absolute',
-    width: 188,
-    height: 188,
-    borderRadius: 94,
-    backgroundColor: '#9C5DE0',
-    opacity: 0.12,
-  },
-  haloInner: {
-    position: 'absolute',
-    width: 148,
-    height: 148,
-    borderRadius: 74,
-    borderWidth: 1,
-    borderColor: 'rgba(233,189,112,0.24)',
+    width: '100%',
+    maxWidth: 278,
   },
   cookieWrapper: {
     width: 230,
@@ -65,173 +53,71 @@ const cookieStyles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  cookieShadow: {
+  cookieArt: {
     position: 'absolute',
-    bottom: 15,
-    width: 148,
-    height: 18,
-    borderRadius: 100,
-    backgroundColor: '#000',
-    opacity: 0.22,
-    transform: [{ scaleX: 1.15 }],
+    width: 162,
+    height: 146,
+    top: 2,
   },
-  shell: {
-    position: 'absolute',
-    width: 105,
-    height: 92,
-    borderRadius: 55,
-    overflow: 'hidden',
-    borderWidth: 1.5,
-    borderColor: '#F7C879',
-    shadowColor: '#000',
-    shadowOpacity: 0.32,
-    shadowRadius: 12,
-    shadowOffset: { width: 0, height: 7 },
-    elevation: 7,
-  },
-  shellGradient: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  toastedEdge: {
-    position: 'absolute',
-    width: 82,
-    height: 70,
-    borderRadius: 45,
-    borderWidth: 6,
-    borderColor: 'rgba(118,54,17,0.45)',
-    top: 12,
-  },
-  highlight: {
-    position: 'absolute',
-    width: 44,
-    height: 15,
-    borderRadius: 30,
-    backgroundColor: 'rgba(255,242,192,0.52)',
-    top: 13,
-    left: 20,
-    transform: [{ rotate: '-18deg' }],
-  },
-  fold: {
-    position: 'absolute',
-    width: 78,
-    height: 48,
-    borderRadius: 35,
-    backgroundColor: '#713A1B',
-    borderWidth: 5,
-    borderColor: '#D68A40',
-    top: 47,
-    alignItems: 'center',
-    justifyContent: 'center',
-    transform: [{ scaleX: 0.82 }],
-  },
-  foldInside: {
-    width: 54,
-    height: 27,
-    borderRadius: 20,
-    backgroundColor: '#351A13',
-    borderTopWidth: 3,
-    borderTopColor: '#8D4B25',
-  },
-  seam: {
-    position: 'absolute',
-    width: 8,
-    height: 48,
-    borderRadius: 8,
-    backgroundColor: '#8E4B21',
-    top: 50,
+  openedCookieArt: {
+    width: 204,
+    top: 19,
   },
   paper: {
     position: 'absolute',
-    width: 202,
-    minHeight: 112,
-    borderRadius: 13,
+    width: 210,
+    borderRadius: 15,
     overflow: 'hidden',
     borderWidth: 1,
     borderColor: GOLD,
     zIndex: 20,
     elevation: 12,
     shadowColor: GOLD,
-    shadowOpacity: 0.35,
-    shadowRadius: 15,
+    shadowOpacity: 0.25,
+    shadowRadius: 12,
   },
   paperInner: {
-    margin: 5,
-    paddingHorizontal: 13,
-    paddingVertical: 12,
+    margin: 6,
+    minHeight: 108,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
     borderWidth: 1,
-    borderStyle: 'dashed',
-    borderColor: 'rgba(173,115,48,0.42)',
-    borderRadius: 8,
+    borderColor: 'rgba(173,115,48,0.35)',
+    borderRadius: 9,
     alignItems: 'center',
+    justifyContent: 'center',
+    gap: 5,
   },
   paperQuote: {
     color: '#38233F',
     textAlign: 'center',
-    fontSize: 12,
-    fontWeight: '700',
-    lineHeight: 18,
+    fontSize: 15,
+    fontFamily: Platform.OS === 'android' ? 'serif' : 'Georgia',
+    fontWeight: '600',
+    lineHeight: 20,
   },
-  sparkle: {
-    position: 'absolute',
-    color: GOLD,
-    fontSize: 16,
-  },
+  actions: { width: '100%', maxWidth: 230, height: 44, marginTop: 8, flexDirection: 'row', gap: 8 },
+  action: { flex: 1, borderRadius: 16, backgroundColor: '#f6c66d', flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6 },
+  actionLabel: { color: '#282034', fontWeight: '800' },
+  paperSignature: { color: '#865424', fontSize: 8, fontWeight: '800', letterSpacing: 2.4 },
 });
 
-function CookieShell({
-  side,
-}: {
-  side: 'left' | 'right';
-}) {
-  const left = side === 'left';
+const COOKIE_RAYS = [
+  [44, 48, 25, 32],
+  [35, 76, 12, 69],
+  [36, 106, 12, 113],
+  [214, 44, 231, 27],
+  [225, 69, 248, 61],
+  [226, 96, 250, 99],
+  [217, 120, 235, 134],
+] as const;
 
-  return (
-    <View
-      style={[
-        cookieStyles.shell,
-        {
-          left: left ? 18 : undefined,
-          right: left ? undefined : 18,
-          transform: [
-            { rotate: left ? '-25deg' : '25deg' },
-            { scaleX: left ? 1 : -1 },
-          ],
-        },
-      ]}
-    >
-      <LinearGradient
-        colors={[
-          '#FFE3A0',
-          '#EFB96B',
-          '#CE8136',
-          '#9C5425',
-          '#6D341A',
-        ]}
-        start={{ x: 0.05, y: 0 }}
-        end={{ x: 0.95, y: 1 }}
-        style={cookieStyles.shellGradient}
-      >
-        <View style={cookieStyles.toastedEdge} />
-        <View style={cookieStyles.highlight} />
-        <View style={cookieStyles.fold}>
-          <View style={cookieStyles.foldInside} />
-        </View>
-        <View
-          style={[
-            cookieStyles.seam,
-            { right: left ? 4 : undefined },
-          ]}
-        />
-      </LinearGradient>
-    </View>
-  );
-}
+const CLOSED_COOKIE = require('./assets/fortune-cookie-closed.png');
+const OPEN_COOKIE = require('./assets/fortune-cookie-open.png');
 
 export function FortuneCookieCard({
   colors,
-  email,
+  onShareMessage,
   addStory,
   onOpenConfetti,
 }: FortuneCookieCardProps) {
@@ -240,62 +126,35 @@ export function FortuneCookieCard({
   const [isPostingStory, setIsPostingStory] = useState(false);
   const [hasPostedToStory, setHasPostedToStory] = useState(false);
   const [fortuneIndex, setFortuneIndex] = useState(0);
-  const [savedKey, setSavedKey] = useState<string | null>(null);
-  const [notice, setNotice] = useState('');
+  const [shareOptionsOpen, setShareOptionsOpen] = useState(false);
 
   const storyRef = useRef<React.ComponentRef<typeof View>>(null);
 
   const shake = useRef(new Animated.Value(0)).current;
   const split = useRef(new Animated.Value(0)).current;
   const paper = useRef(new Animated.Value(0)).current;
-  const glow = useRef(new Animated.Value(0)).current;
-
-  const currentFortune = DAILY_FORTUNES[fortuneIndex];
-  const saveKey = email ? 'natala:fortune:' + email.trim().toLowerCase() + ':' + fortuneIndex : null;
+  const rayPulse = useRef(new Animated.Value(0)).current;
+  const reducedMotion = useReducedMotion();
 
   useEffect(() => {
-    if (!saveKey || !isOpened) return;
-    let mounted = true;
-    void AsyncStorage.getItem(saveKey).then((value) => {
-      if (mounted && value) setSavedKey(saveKey);
-    }).catch(() => undefined);
-    return () => { mounted = false; };
-  }, [saveKey, isOpened]);
+    rayPulse.setValue(0);
+    if (reducedMotion) return;
+    const animation = Animated.loop(Animated.sequence([
+      Animated.timing(rayPulse, { toValue: 1, duration: 1300, easing: Easing.inOut(Easing.sin), useNativeDriver: true, isInteraction: false }),
+      Animated.timing(rayPulse, { toValue: 0, duration: 1550, easing: Easing.inOut(Easing.sin), useNativeDriver: true, isInteraction: false }),
+      Animated.delay(850),
+    ]));
+    animation.start();
+    return () => animation.stop();
+  }, [rayPulse, reducedMotion]);
 
-  const saveFortune = async () => {
-    if (!saveKey) return;
-    try {
-      await AsyncStorage.setItem(saveKey, currentFortune);
-      setSavedKey(saveKey);
-      setNotice('');
-    } catch {
-      setNotice('Could not save this fortune.');
-    }
-  };
-
-  const shareFortune = async () => {
-    try {
-      if (Platform.OS === 'web') {
-        if (typeof navigator.share === 'function') {
-          await navigator.share({ text: currentFortune });
-        } else {
-          await navigator.clipboard.writeText(currentFortune);
-          setNotice('Fortune copied.');
-        }
-      } else {
-        await Share.share({ message: currentFortune });
-      }
-    } catch (error) {
-      if (!(error instanceof Error && error.name === 'AbortError')) setNotice('Could not share this fortune.');
-    }
-  };
-
+  const currentFortune = DAILY_FORTUNES[fortuneIndex];
   const handleCrackCookie = () => {
-    if (isAnimating) return;
+    if (isAnimating || isPostingStory) return;
 
     setIsAnimating(true);
     setHasPostedToStory(false);
-    setNotice('');
+    setShareOptionsOpen(false);
 
     if (isOpened) {
       Animated.parallel([
@@ -307,11 +166,6 @@ export function FortuneCookieCard({
         Animated.timing(paper, {
           toValue: 0,
           duration: 250,
-          useNativeDriver: true,
-        }),
-        Animated.timing(glow, {
-          toValue: 0,
-          duration: 300,
           useNativeDriver: true,
         }),
       ]).start(({ finished }) => {
@@ -326,28 +180,32 @@ export function FortuneCookieCard({
     }
 
     Animated.sequence([
-      Animated.sequence([
-        Animated.timing(shake, {
-          toValue: 1,
-          duration: 65,
-          useNativeDriver: true,
-        }),
-        Animated.timing(shake, {
-          toValue: -1,
-          duration: 65,
-          useNativeDriver: true,
-        }),
-        Animated.timing(shake, {
-          toValue: 1,
-          duration: 65,
-          useNativeDriver: true,
-        }),
-        Animated.timing(shake, {
-          toValue: 0,
-          duration: 65,
-          useNativeDriver: true,
-        }),
-      ]),
+      Animated.timing(shake, {
+        toValue: 1,
+        duration: 65,
+        useNativeDriver: true,
+      }),
+      Animated.timing(shake, {
+        toValue: -1,
+        duration: 65,
+        useNativeDriver: true,
+      }),
+      Animated.timing(shake, {
+        toValue: 1,
+        duration: 65,
+        useNativeDriver: true,
+      }),
+      Animated.timing(shake, {
+        toValue: 0,
+        duration: 65,
+        useNativeDriver: true,
+      }),
+    ]).start(({ finished }) => {
+      if (!finished) {
+        setIsAnimating(false);
+        return;
+      }
+      onOpenConfetti();
       Animated.parallel([
         Animated.spring(split, {
           toValue: 1,
@@ -357,22 +215,14 @@ export function FortuneCookieCard({
         }),
         Animated.timing(paper, {
           toValue: 1,
-          duration: 600,
-          delay: 120,
-          easing: Easing.out(Easing.back(1.1)),
+          duration: 380,
+          easing: Easing.out(Easing.cubic),
           useNativeDriver: true,
         }),
-        Animated.timing(glow, {
-          toValue: 1,
-          duration: 500,
-          useNativeDriver: true,
-        }),
-      ]),
-    ]).start(({ finished }) => {
-      setIsAnimating(false);
-      if (!finished) return;
-      setIsOpened(true);
-      onOpenConfetti();
+      ]).start(({ finished: revealed }) => {
+        setIsAnimating(false);
+        if (revealed) setIsOpened(true);
+      });
     });
   };
 
@@ -410,29 +260,24 @@ export function FortuneCookieCard({
     outputRange: ['-12deg', '0deg', '12deg'],
   });
 
-  const leftX = split.interpolate({
-    inputRange: [0, 1],
-    outputRange: [0, -60],
+  const closedOpacity = split.interpolate({
+    inputRange: [0, 0.45],
+    outputRange: [1, 0],
+    extrapolate: 'clamp',
   });
-
-  const rightX = split.interpolate({
-    inputRange: [0, 1],
-    outputRange: [0, 60],
+  const openedOpacity = split.interpolate({
+    inputRange: [0.12, 0.65],
+    outputRange: [0, 1],
+    extrapolate: 'clamp',
   });
-
-  const leftRotate = split.interpolate({
+  const openedScale = split.interpolate({
     inputRange: [0, 1],
-    outputRange: ['0deg', '-35deg'],
-  });
-
-  const rightRotate = split.interpolate({
-    inputRange: [0, 1],
-    outputRange: ['0deg', '35deg'],
+    outputRange: [0.86, 1],
   });
 
   const paperY = paper.interpolate({
     inputRange: [0, 1],
-    outputRange: [30, -68],
+    outputRange: [22, -18],
   });
 
   const paperScale = paper.interpolate({
@@ -440,10 +285,8 @@ export function FortuneCookieCard({
     outputRange: [0.25, 1],
   });
 
-  const haloScale = glow.interpolate({
-    inputRange: [0, 1],
-    outputRange: [0.8, 1.25],
-  });
+  const rayOpacity = rayPulse.interpolate({ inputRange: [0, 1], outputRange: [0.46, 0.88] });
+  const rayScale = rayPulse.interpolate({ inputRange: [0, 1], outputRange: [0.96, 1.04] });
 
   return (
     <>
@@ -474,84 +317,41 @@ export function FortuneCookieCard({
         </View>
 
         <TouchableOpacity
+          accessibilityRole="button"
+          accessibilityLabel={isOpened ? 'Close fortune cookie' : 'Open fortune cookie'}
           activeOpacity={0.9}
-          disabled={isAnimating}
+          disabled={isAnimating || isPostingStory}
           onPress={handleCrackCookie}
           style={cookieStyles.stage}
         >
           <Animated.View
-            style={[
-              cookieStyles.halo,
-              {
-                transform: [{ scale: haloScale }],
-              },
-            ]}
-          />
-          <View style={cookieStyles.haloInner} />
-
-          <Text
-            style={[
-              cookieStyles.sparkle,
-              { top: 24, left: '18%' },
-            ]}
+            pointerEvents="none"
+            style={[cookieStyles.rays, { opacity: rayOpacity, transform: [{ scale: rayScale }] }]}
           >
-            ✦
-          </Text>
-          <Text
-            style={[
-              cookieStyles.sparkle,
-              { top: 44, right: '17%', fontSize: 12 },
-            ]}
-          >
-            ✧
-          </Text>
-          <Text
-            style={[
-              cookieStyles.sparkle,
-              { bottom: 30, right: '25%', fontSize: 10 },
-            ]}
-          >
-            ✦
-          </Text>
-
+            <Svg width="100%" height={166} viewBox="0 0 262 156" accessible={false}>
+              {COOKIE_RAYS.map(([x1, y1, x2, y2]) => (
+                <Line key={x1 + ':' + y1} x1={x1} y1={y1} x2={x2} y2={y2} stroke={GOLD} strokeWidth={4} strokeLinecap="round" />
+              ))}
+            </Svg>
+          </Animated.View>
           <Animated.View
             style={[
               cookieStyles.cookieWrapper,
               { transform: [{ rotate }] },
             ]}
           >
-            <View style={cookieStyles.cookieShadow} />
-
-            <Animated.View
-              style={{
-                position: 'absolute',
-                width: 150,
-                height: 110,
-                zIndex: 1,
-                transform: [
-                  { translateX: leftX },
-                  { rotate: leftRotate },
-                ],
-              }}
-            >
-              <CookieShell side="left" />
-            </Animated.View>
-
-            <Animated.View
-              style={{
-                position: 'absolute',
-                width: 150,
-                height: 110,
-                zIndex: 2,
-                transform: [
-                  { translateX: rightX },
-                  { rotate: rightRotate },
-                ],
-              }}
-            >
-              <CookieShell side="right" />
-            </Animated.View>
-
+            <Animated.Image
+              source={CLOSED_COOKIE}
+              resizeMode="contain"
+              accessible={false}
+              style={[cookieStyles.cookieArt, { opacity: closedOpacity }]}
+            />
+            <Animated.Image
+              source={OPEN_COOKIE}
+              resizeMode="contain"
+              accessible={false}
+              style={[cookieStyles.cookieArt, cookieStyles.openedCookieArt, { opacity: openedOpacity, transform: [{ scale: openedScale }] }]}
+            />
             <Animated.View
               pointerEvents="none"
               style={[
@@ -571,109 +371,48 @@ export function FortuneCookieCard({
                   '#FFF3D9',
                   '#F7E4BD',
                 ]}
-                style={{ padding: 2 }}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 1 }}
               >
                 <View style={cookieStyles.paperInner}>
-                  <Sparkles
-                    size={15}
-                    color="#B88436"
-                    style={{ marginBottom: 6 }}
-                  />
+                  <Sparkles size={14} color="#A96C30" />
                   <Text style={cookieStyles.paperQuote}>
                     “{currentFortune}”
                   </Text>
-                  <Text
-                    style={{
-                      color: '#99662E',
-                      fontSize: 9,
-                      marginTop: 8,
-                      letterSpacing: 1.2,
-                    }}
-                  >
-                    ✦ NATALA ✦
-                  </Text>
+                  <Text style={cookieStyles.paperSignature}>NATALA</Text>
                 </View>
               </LinearGradient>
             </Animated.View>
           </Animated.View>
         </TouchableOpacity>
 
-        <View
-          style={{
-            width: '100%',
-            alignItems: 'center',
-            gap: 10,
-            marginTop: 8,
-          }}
-        >
-          <TouchableOpacity
-            accessibilityRole="button"
-            style={{ ...styles.storyActionButton, backgroundColor: '#f6c66d', minHeight: 44 }}
-            disabled={isAnimating}
-            onPress={handleCrackCookie}
-          >
-            <Text style={{ color: '#282034', fontWeight: '800' }}>
-              {isOpened ? 'Another fortune' : '✦ Reveal my fortune'}
-            </Text>
-          </TouchableOpacity>
-
-          {isOpened && (
-            <View style={{ flexDirection: 'row', gap: 8 }}>
-              {saveKey && <TouchableOpacity accessibilityRole="button" onPress={saveFortune} disabled={savedKey === saveKey} style={styles.storyActionButton}>
-                <Text style={{ color: colors.gold }}>{savedKey === saveKey ? 'Saved' : 'Save'}</Text>
-              </TouchableOpacity>}
-              <TouchableOpacity accessibilityRole="button" onPress={shareFortune} style={styles.storyActionButton}>
-                <Text style={{ color: colors.gold }}>Share</Text>
+        <View style={cookieStyles.actions}>
+          {isOpened && shareOptionsOpen ? (
+            <>
+              <TouchableOpacity accessibilityRole="button" onPress={() => onShareMessage(currentFortune)} style={cookieStyles.action}>
+                <Text style={cookieStyles.actionLabel}>Message</Text>
               </TouchableOpacity>
-            </View>
-          )}
-          {!!notice && <Text accessibilityLiveRegion="polite" style={{ color: colors.text }}>{notice}</Text>}
-
-          {isOpened && (
+              <TouchableOpacity
+                accessibilityRole="button"
+                accessibilityLabel={hasPostedToStory ? 'Posted to Story' : 'Story'}
+                onPress={handlePostToStory}
+                disabled={isPostingStory || hasPostedToStory}
+                style={[cookieStyles.action, hasPostedToStory && { opacity: 0.7 }]}
+              >
+                {isPostingStory ? <ActivityIndicator size="small" color="#282034" /> : <>
+                  {hasPostedToStory && <CheckCircle size={14} color="#282034" />}
+                  <Text style={cookieStyles.actionLabel}>Story</Text>
+                </>}
+              </TouchableOpacity>
+            </>
+          ) : (
             <TouchableOpacity
-              onPress={handlePostToStory}
-              disabled={
-                isPostingStory || hasPostedToStory
-              }
-              style={[
-                styles.storyActionButton,
-                hasPostedToStory && { opacity: 0.75 },
-              ]}
+              accessibilityRole="button"
+              onPress={isOpened ? () => setShareOptionsOpen(true) : handleCrackCookie}
+              disabled={isAnimating}
+              style={cookieStyles.action}
             >
-              {isPostingStory ? (
-                <ActivityIndicator
-                  size="small"
-                  color={colors.gold}
-                />
-              ) : hasPostedToStory ? (
-                <>
-                  <CheckCircle
-                    size={15}
-                    color={colors.gold}
-                  />
-                  <T
-                    bold
-                    size={12}
-                    style={{ color: colors.gold }}
-                  >
-                    Posted to Story ✓
-                  </T>
-                </>
-              ) : (
-                <>
-                  <PlusCircle
-                    size={15}
-                    color={colors.gold}
-                  />
-                  <T
-                    bold
-                    size={12}
-                    style={{ color: colors.gold }}
-                  >
-                    ✦ Add to Story
-                  </T>
-                </>
-              )}
+              <Text style={cookieStyles.actionLabel}>{isOpened ? 'Share' : '✦ Reveal my fortune'}</Text>
             </TouchableOpacity>
           )}
         </View>
