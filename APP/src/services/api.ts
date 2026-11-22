@@ -3,25 +3,29 @@ import Constants from 'expo-constants';
 import { UserProfile } from '../models/User';
 
 const getBaseUrl = (): string => {
+  const configured = process.env.EXPO_PUBLIC_API_URL?.trim();
+  if (configured) return configured.replace(/\/$/, '');
+  const port = process.env.EXPO_PUBLIC_API_PORT || '5000';
   const hostUri = Constants.expoConfig?.hostUri;
   const hostIp = hostUri ? hostUri.split(':')[0] : null;
 
   if (hostIp) {
-    return `http://${hostIp}:5000/api`;
+    return `http://${hostIp}:${port}/api`;
   }
 
   const FALLBACK_IP = '10.159.206.3';
 
   return (
     Platform.select({
-      android: `http://${FALLBACK_IP}:5000/api`,
-      ios: `http://${FALLBACK_IP}:5000/api`,
-      default: 'http://localhost:5000/api',
-    }) || `http://localhost:5000/api`
+      android: `http://${FALLBACK_IP}:${port}/api`,
+      ios: `http://${FALLBACK_IP}:${port}/api`,
+      default: `http://localhost:${port}/api`,
+    }) || `http://localhost:${port}/api`
   );
 };
 
-const API_BASE_URL = getBaseUrl();
+export const API_BASE_URL = getBaseUrl();
+export const API_URL = API_BASE_URL;
 
 /**
  * Проверка на връзката между мобилното приложение, Express бекенда и MongoDB Atlas
@@ -79,7 +83,7 @@ export async function loginUser(
  * Изпраща пълния изчислен профил (MBTI, Аюрведа, Нумерология, Cardology) за синхронизация в MongoDB Atlas
  */
 export async function saveUserProfile(
-  userData: UserProfile
+  userData: Partial<UserProfile> & { email: string }
 ): Promise<{ success: boolean; user: UserProfile }> {
   try {
     const response = await fetch(`${API_BASE_URL}/users/profile`, {
@@ -215,12 +219,15 @@ export async function createOrGetConversation(
 }
 
 /**
- * Изпраща ново съобщение в конкретен чат
+ * Изпраща ново съобщение в конкретен чат (с поддръжка за тип съобщение и прикачено стори)
  */
 export async function sendMessageApi(
   chatId: string,
   senderEmail: string,
-  text: string
+  text: string,
+  type: string = 'text',
+  storyData?: { storyId?: string; imageUrl?: string; authorName?: string },
+  replyTo?: { messageId: string; text: string; senderEmail: string }
 ): Promise<any> {
   try {
     const response = await fetch(`${API_BASE_URL}/chats/${chatId}/messages`, {
@@ -231,6 +238,9 @@ export async function sendMessageApi(
       body: JSON.stringify({
         senderEmail: senderEmail.toLowerCase().trim(),
         text: text.trim(),
+        type,
+        storyData,
+        replyTo,
       }),
     });
 

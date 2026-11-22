@@ -13,6 +13,11 @@ const storySchema = new mongoose.Schema({
     type: String, 
     required: true // Пълен URL адрес до качения PNG файл
   },
+  likes: [
+    {
+      type: String // Списък от userId/email на потребителите, които са харесали сторито
+    }
+  ],
   createdAt: { 
     type: Date, 
     default: Date.now 

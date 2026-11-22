@@ -1,17 +1,18 @@
+import { useCalc } from '../services/calcApi';
 import React, { useState, useEffect } from 'react';
 import {
   View,
   TouchableOpacity,
-  ActivityIndicator,
 } from 'react-native';
 import {
   ArrowLeft,
   Calendar,
   BookOpen,
-  CloudUpload,
   User,
 } from 'lucide-react-native';
 import { useApp } from '../context/AppContext';
+import { BirthDateTag } from '../components/BirthDateTag';
+import { getBirthParts } from '../services/profileDashboard';
 import { Card, T, Section, Pill, Hero } from '../components/UI';
 import { CARDOLOGY_TABLE } from '../data/cardologyData';
 import { saveUserProfile } from '../services/api';
@@ -89,6 +90,11 @@ const CARD_META: Record<string, { nameBg: string; symbol: string }> = {
 // Extract day and month from user profile (ISODate, string or Date)
 const getUserDayAndMonth = (user: any): { day: number; month: number; formattedDate: string } | null => {
   if (!user) return null;
+  const birth = getBirthParts(user);
+  if (birth) {
+    const { day, month } = birth;
+    return { day, month, formattedDate: [day, month, birth.year].map((part) => String(part).padStart(2, '0')).join('.') };
+  }
 
   const rawDate =
     user.birthdate ||
@@ -156,8 +162,8 @@ export default function Cardology() {
   const { colors, setPage, user, setUser } = useApp();
   const [selectedCard, setSelectedCard] = useState<CardItem | null>(null);
   const [userDateStr, setUserDateStr] = useState<string | null>(null);
-  const [isSyncing, setIsSyncing] = useState(false);
-  const [syncStatus, setSyncStatus] = useState<string | null>(null);
+  const dateStr = getUserDayAndMonth(user)?.formattedDate;
+  const remote = useCalc<{ card: CardItem | null; dateStr: string | null }>('cardology/birth-card', dateStr ? { user: { birthdate: dateStr } } : null);
 
   useEffect(() => {
     // 1. Load cards from table
@@ -208,17 +214,15 @@ export default function Cardology() {
     setUserDateStr(userDate.formattedDate);
 
     // 3. Find birth card
-    const foundCard = loadedDeck.find((card) =>
+    const foundCard = remote.data?.card ?? loadedDeck.find((card) =>
       card.dates.some((d) => d.day === userDate.day && d.month === userDate.month)
     );
 
     setSelectedCard(foundCard || null);
 
     // 4. Automatic synchronization with MongoDB Atlas
-    if (foundCard && user && user.email) {
+    if (!remote.loading && foundCard && user?.email && user.cardology?.birthCard !== foundCard.code) {
       const syncCard = async () => {
-        setIsSyncing(true);
-        setSyncStatus('Syncing with MongoDB Atlas...');
 
         const updatedUser: UserProfile = {
           ...user,
@@ -230,23 +234,14 @@ export default function Cardology() {
         try {
           await setUser(updatedUser);
           await saveUserProfile(updatedUser);
-          setSyncStatus('Birth card saved to database!');
         } catch (error) {
           console.warn('Offline mode: Card saved locally on device.', error);
-          setSyncStatus('Saved locally on device.');
-        } finally {
-          setIsSyncing(false);
         }
       };
 
       syncCard();
     }
-  }, [
-    user?.birthdate,
-    (user as any)?.birthDate,
-    (user as any)?.dateOfBirth,
-    (user as any)?.dob,
-  ]);
+  }, [remote.data, remote.loading, user, setUser]);
 
   return (
     <>
@@ -267,48 +262,14 @@ export default function Cardology() {
         description="Discover the meaning of your solar birth card."
       />
 
-      {syncStatus && (
-        <View
-          style={{
-            flexDirection: 'row',
-            alignItems: 'center',
-            justifyContent: 'center',
-            gap: 8,
-            padding: 10,
-            backgroundColor: colors.purpleSoft,
-            borderRadius: 12,
-            marginBottom: 20,
-          }}
-        >
-          {isSyncing ? (
-            <ActivityIndicator size="small" color={colors.purple} />
-          ) : (
-            <CloudUpload size={16} color={colors.purple} />
-          )}
-          <T size={12} style={{ color: colors.purple }}>
-            {syncStatus}
-          </T>
-        </View>
-      )}
-
       {selectedCard ? (
         <View style={{ gap: 18, marginBottom: 40 }}>
-          {/* Profile birth date info bar */}
-          <Card style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingVertical: 12 }}>
-            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-              <Calendar size={16} color={colors.purple} />
-              <T muted size={12}>Birth date from profile:</T>
-            </View>
-            <T bold size={13} style={{ color: colors.purple }}>
-              {userDateStr}
-            </T>
-          </Card>
-
           {/* Birth card display */}
           <Card style={{ alignItems: 'center', paddingVertical: 26, gap: 12 }}>
             <T muted size={11} style={{ letterSpacing: 1.5 }}>
               YOUR BIRTH CARD ({user?.name || 'User'})
             </T>
+            {userDateStr && <BirthDateTag date={userDateStr} />}
 
             <View
               style={{
