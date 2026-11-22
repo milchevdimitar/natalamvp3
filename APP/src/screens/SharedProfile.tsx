@@ -55,7 +55,7 @@ export default function SharedProfile({ id }: { id: string }) {
       {!!notice && <Card style={{ marginBottom: 12, gap: 8 }}><T muted size={13}>{notice}</T>{!profile && <Pill onPress={() => load({ cancelled: false })}>Try again</Pill>}</Card>}
       {profile && <>
         <Card style={styles.identity}>
-          <ProfileAvatar name={profile.name} />
+          <ProfileAvatar name={profile.name} source={profile.avatarUrl} />
           <T bold size={27} style={{ textAlign: 'center' }}>{profile.name}</T>
           {!!profile.bio && <T muted size={13} style={{ textAlign: 'center' }}>{profile.bio}</T>}
           {!!profile.interests?.length && <T muted size={12} style={{ textAlign: 'center' }}>{profile.interests.join(' · ')}</T>}

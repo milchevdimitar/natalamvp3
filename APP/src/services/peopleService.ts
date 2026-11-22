@@ -4,6 +4,7 @@ import { PersonProfile } from '../screens/People/people.types';
 const BASE_URL = API_BASE_URL;
 
 export type SharedProfile = {
+  avatarUrl?: string;
   id: string;
   name: string;
   bio?: string;

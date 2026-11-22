@@ -7,6 +7,7 @@ const express = require('express');
 const mongoose = require('mongoose');
 const cors = require('cors');
 const fs = require('fs');
+const { randomUUID } = require('node:crypto');
 
 const User = require('./models/User');
 const storiesRoutes = require('./routes/stories');
@@ -67,6 +68,7 @@ app.use('/api/calc', calcRoutes);
 
 // Запис и синхронизация на изчисления профил
 app.post('/api/users/profile', async (req, res) => {
+  let newPhoto;
   try {
     const userData = req.body || {};
     if (!userData.email) {
@@ -74,19 +76,48 @@ app.post('/api/users/profile', async (req, res) => {
     }
 
     const normalizedEmail = userData.email.toLowerCase().trim();
+    const photoPattern = /^data:image\/(jpeg|png);base64,([A-Za-z0-9+/]+={0,2})$/;
+    const storedPhotoPattern = /^\/uploads\/profilepic\/[a-f\d-]{36}\.(?:jpg|png)$/;
+    const avatar = userData.avatarUrl;
+    const image = typeof avatar === 'string' && avatar.length <= 640000 ? avatar.match(photoPattern) : null;
+    const validImage = image && (image[1] === 'jpeg' ? image[2].startsWith('/9j/') : image[2].startsWith('iVBORw0KGgo'));
+    const echoedPath = typeof avatar === 'string' && storedPhotoPattern.test(avatar);
+    if (avatar !== undefined && avatar !== '' && !echoedPath && !validImage) {
+      return res.status(400).json({ success: false, error: 'Expected a JPEG or PNG profile photo under 480 KB.' });
+    }
 
     // Премахваме системните/непроменяеми полета на MongoDB преди $set
     const { _id, id, __v, createdAt, updatedAt, ...safeUpdateFields } = userData;
+    // Full profile saves can echo the current avatar path. Only a fresh upload or deletion can replace it.
+    if (echoedPath) delete safeUpdateFields.avatarUrl;
+    let previousPhoto;
+    if (validImage || avatar === '') {
+      const previous = await User.findOne({ email: normalizedEmail }).select('avatarUrl').lean();
+      previousPhoto = previous?.avatarUrl;
+    }
+    if (validImage) {
+      const directory = path.join(uploadsDir, 'profilepic');
+      await fs.promises.mkdir(directory, { recursive: true });
+      const filename = randomUUID() + (image[1] === 'png' ? '.png' : '.jpg');
+      newPhoto = path.join(directory, filename);
+      await fs.promises.writeFile(newPhoto, Buffer.from(image[2], 'base64'), { flag: 'wx' });
+      safeUpdateFields.avatarUrl = '/uploads/profilepic/' + filename;
+    }
 
     const updatedUser = await User.findOneAndUpdate(
       { email: normalizedEmail },
       { $set: { ...safeUpdateFields, email: normalizedEmail, lastActiveAt: new Date() } },
       { new: true, upsert: true, runValidators: true }
     );
+    newPhoto = undefined;
+    if (previousPhoto && storedPhotoPattern.test(previousPhoto)) {
+      await fs.promises.unlink(path.join(uploadsDir, 'profilepic', path.basename(previousPhoto))).catch(() => {});
+    }
 
     console.log(`📥 [MongoDB API] Обновен профил за: ${updatedUser.email}`);
     res.status(200).json({ success: true, user: updatedUser });
   } catch (error) {
+    if (newPhoto) await fs.promises.unlink(newPhoto).catch(() => {});
     console.error('❌ [MongoDB API Грешка]:', error.message);
     res.status(500).json({ success: false, error: error.message });
   }

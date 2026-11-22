@@ -1,6 +1,7 @@
+import { ProfileAvatar } from '../../components/ProfileAvatar';
 import React from 'react';
 import { View, Pressable } from 'react-native';
-import { Card, T, Section, Avatar, Pill } from '../../components/UI';
+import { Card, T, Section, Pill } from '../../components/UI';
 import {
   calculateCompatibility,
   resolveMbtiType,
@@ -61,7 +62,7 @@ export function DiscoverGridSection({
                   onPress={() => onInspectPerson(person)}
                   style={{ alignItems: 'center', gap: 5 }}
                 >
-                  <Avatar initial={(person.name || 'U')[0].toUpperCase()} size={58} />
+                  <ProfileAvatar name={person.name} source={person.avatarUrl} size={58} />
                   <T bold size={13} style={{ textAlign: 'center' }}>
                     {person.name}
                   </T>

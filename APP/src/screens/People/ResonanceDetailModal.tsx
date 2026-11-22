@@ -1,7 +1,8 @@
+import { ProfileAvatar } from '../../components/ProfileAvatar';
 import React from 'react';
 import { View, Modal, Pressable, ScrollView } from 'react-native';
 import { X, Sparkles, Heart } from 'lucide-react-native';
-import { T, Avatar, Pill } from '../../components/UI';
+import { T, Pill } from '../../components/UI';
 import {
   calculateCompatibility,
   getAgeFromBirthdate,
@@ -138,7 +139,7 @@ export function ResonanceDetailModal({
             contentContainerStyle={{ gap: 14 }}
           >
             <View style={{ alignItems: 'center', gap: 6 }}>
-              <Avatar initial={(person.name || 'U')[0].toUpperCase()} size={80} />
+              <ProfileAvatar name={person.name} source={person.avatarUrl} size={80} />
               <T bold size={22}>
                 {person.name}
                 {age ? `, ${age}` : ''}

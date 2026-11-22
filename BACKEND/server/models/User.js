@@ -349,7 +349,11 @@ const UserSchema = new mongoose.Schema(
       birthCard: { type: String },
       planetaryCard: { type: String },
     },
+    avatarUrl: { type: String, maxlength: 640000 },
     ayurveda: {
+      constitution: { type: String },
+      answers: { type: Map, of: { type: String, enum: ['Vata', 'Pitta', 'Kapha'] } },
+      stress: { type: String, enum: ['low', 'moderate', 'high'] },
       dominantDosha: {
         type: String,
         enum: ['vata', 'pitta', 'kapha'],

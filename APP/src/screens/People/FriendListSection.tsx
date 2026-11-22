@@ -1,7 +1,8 @@
+import { ProfileAvatar } from '../../components/ProfileAvatar';
 import React from 'react';
 import { View, Pressable } from 'react-native';
 import { MessageCircle, Check, X, Sparkles } from 'lucide-react-native';
-import { Card, T, Section, Avatar } from '../../components/UI';
+import { Card, T, Section } from '../../components/UI';
 import {
   calculateCompatibility,
   resolveMbtiType,
@@ -51,7 +52,7 @@ export function FriendListSection({
                 <Card key={req.id}>
                   <View style={styles.friendRow}>
                     <Pressable onPress={() => onInspectPerson(req)}>
-                      <Avatar initial={(req.name || 'U')[0].toUpperCase()} />
+                      <ProfileAvatar name={req.name} source={req.avatarUrl} size={50} />
                     </Pressable>
                     <Pressable
                       onPress={() => onInspectPerson(req)}
@@ -129,7 +130,7 @@ export function FriendListSection({
                     onPress={() => onInspectPerson(friend)}
                     style={styles.avatarWrap}
                   >
-                    <Avatar initial={(friend.name || 'U')[0].toUpperCase()} />
+                    <ProfileAvatar name={friend.name} source={friend.avatarUrl} size={50} />
                     {friend.isOnline && (
                       <View
                         style={[

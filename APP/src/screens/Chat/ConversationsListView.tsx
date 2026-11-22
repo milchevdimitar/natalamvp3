@@ -1,3 +1,4 @@
+import { ProfileAvatar } from '../../components/ProfileAvatar';
 import React from 'react';
 import {
   View,
@@ -100,16 +101,7 @@ export function ConversationsListView({
                 style={styles.conversationRow}
               >
                 <View style={styles.conversationLeft}>
-                  <View
-                    style={[
-                      styles.avatarCircle,
-                      { backgroundColor: colors.goldSoft },
-                    ]}
-                  >
-                    <T bold size={16} style={{ color: colors.gold }}>
-                      {conv.partnerName.charAt(0)}
-                    </T>
-                  </View>
+                  <ProfileAvatar name={conv.partnerName} source={conv.partnerAvatar} size={40} />
                   <View style={{ flex: 1 }}>
                     <T bold size={14}>
                       {conv.partnerName}

@@ -14,6 +14,7 @@ export interface MbtiPercentages {
 }
 
 export interface PersonProfile {
+  avatarUrl?: string;
   compatibility?: CompatibilityBreakdown;
   _id?: string;
   id: string;

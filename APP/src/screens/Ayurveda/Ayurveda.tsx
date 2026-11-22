@@ -19,6 +19,7 @@ import {
 import { Hero, Card, T, Section } from '../../components/UI';
 import { useApp } from '../../context/AppContext';
 import { saveSystemActivity, useSystemActivity } from '../../services/systemActivity';
+import { saveUserProfile } from '../../services/api';
 import { getBirthParts } from '../../services/profileDashboard';
 import {
   AyurvedaTabId,
@@ -36,7 +37,7 @@ import { AyurvedaTabNutrition } from './AyurvedaTabNutrition';
 import { AyurvedaTabMatch } from './AyurvedaTabMatch';
 
 export default function Ayurveda() {
-  const { colors, user, setPage } = useApp();
+  const { colors, user, setPage, updateCurrentUserProfile } = useApp();
 
   const initial = useMemo(() => getBirthParts(user), [user]);
 
@@ -51,10 +52,10 @@ export default function Ayurveda() {
   const savedAssessment = useSystemActivity(user?.email)?.ayurveda;
 
   useEffect(() => {
-    if (!savedAssessment) return;
-    setQuizAnswers(savedAssessment.answers);
-    setStressLevel(savedAssessment.stress);
-  }, [savedAssessment]);
+    const saved = user?.ayurveda?.answers ? user.ayurveda : savedAssessment;
+    if (saved?.answers) setQuizAnswers(saved.answers);
+    if (saved?.stress) setStressLevel(saved.stress);
+  }, [savedAssessment, user?.ayurveda]);
 
   const options = useMemo(
     () => ({
@@ -76,7 +77,9 @@ export default function Ayurveda() {
     ? { ...remote.data, personName }
     : calculateAyurvedaProfile(options), [options, personName, remote.data]);
 
-  const answeredCount = Object.keys(quizAnswers).length;
+  const answeredCount = PRAKRITI_QUIZ_QUESTIONS.filter(({ id, options }) =>
+    options.some(({ dosha }) => dosha === quizAnswers[id])
+  ).length;
 
   return (
     <>
@@ -422,9 +425,17 @@ export default function Ayurveda() {
           onPress={async () => {
             if (user?.email) {
               try {
+                const { prakriti, primaryDosha, constitutionType } = calculateAyurvedaProfile(options);
                 await saveSystemActivity(user.email, 'ayurveda', {
-                  answers: quizAnswers, stress: stressLevel, constitution: profile.constitutionType, scores: profile.prakriti,
+                  answers: quizAnswers, stress: stressLevel, constitution: constitutionType, scores: prakriti,
                 });
+                const ayurveda = {
+                  answers: quizAnswers, stress: stressLevel, constitution: constitutionType,
+                  dominantDosha: primaryDosha.toLowerCase() as 'vata' | 'pitta' | 'kapha',
+                  scores: { vata: prakriti.Vata, pitta: prakriti.Pitta, kapha: prakriti.Kapha },
+                };
+                await updateCurrentUserProfile({ ayurveda });
+                void saveUserProfile({ email: user.email, ayurveda }).catch(() => undefined);
               } catch (error) {
                 console.warn('Could not save Ayurveda assessment:', error);
                 return;

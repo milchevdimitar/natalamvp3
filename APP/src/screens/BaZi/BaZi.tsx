@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import {
   View,
   Pressable,
@@ -22,6 +22,7 @@ import {
 import { Hero, Card, T, Section } from '../../components/UI';
 import { useApp } from '../../context/AppContext';
 import { saveSystemActivity } from '../../services/systemActivity';
+import { saveUserProfile } from '../../services/api';
 import { getBirthParts } from '../../services/profileDashboard';
 import {
   BaZiTabId,
@@ -65,22 +66,7 @@ function parseTimeString(raw: any): { hour: number; minute: number } | null {
 }
 
 function extractInitialProfile(user: any) {
-  let day = 15;
-  let month = 6;
-  let year = 1995;
-
-  if (user?.birthdate) {
-    const d = new Date(user.birthdate);
-    if (!Number.isNaN(d.getTime())) {
-      day = d.getUTCDate();
-      month = d.getUTCMonth() + 1;
-      year = d.getUTCFullYear();
-    }
-  } else if (user?.birthDate?.day && user?.birthDate?.month && user?.birthDate?.year) {
-    day = Number(user.birthDate.day);
-    month = Number(user.birthDate.month);
-    year = Number(user.birthDate.year);
-  }
+  const { day, month, year } = getBirthParts(user) ?? { day: 15, month: 6, year: 1995 };
 
   const parsedTime =
     parseTimeString(user?.birthTime) || parseTimeString(user?.birthDate?.time);
@@ -103,7 +89,7 @@ function extractInitialProfile(user: any) {
 }
 
 export default function BaZi() {
-  const { colors, user, setPage } = useApp();
+  const { colors, user, setPage, updateCurrentUserProfile } = useApp();
 
   const initial = useMemo(() => extractInitialProfile(user), [user]);
 
@@ -171,6 +157,23 @@ export default function BaZi() {
     }
     return calculateBaZiChart(parsedInput.y, parsedInput.m, parsedInput.d, null, gender);
   }, [parsedInput, gender, remote]);
+
+  const submitted = useRef('');
+  useEffect(() => {
+    if (!user?.email || !getBirthParts(user) || dateInput !== initial.dateStr ||
+      timeInput !== initial.timeStr || unknownTime !== initial.unknownTime ||
+      selectedCity !== initial.city || gender !== initial.gender) return;
+
+    const bazi = { dayMaster: chart.dayMaster.title, zodiacAnimal: chart.zodiacAnimal };
+    if (user.bazi?.dayMaster === bazi.dayMaster && user.bazi?.zodiacAnimal === bazi.zodiacAnimal) return;
+    const key = JSON.stringify([user.email, initial.dateStr, initial.timeStr, initial.city.name, bazi]);
+    if (submitted.current === key) return;
+    submitted.current = key;
+    void saveSystemActivity(user.email, 'bazi', bazi).catch(console.warn);
+    void saveUserProfile({ email: user.email, bazi: { ...user.bazi, ...bazi } })
+      .then(({ user: updated }) => updateCurrentUserProfile({ bazi: updated.bazi }))
+      .catch(() => undefined);
+  }, [chart, dateInput, gender, initial, selectedCity, timeInput, unknownTime, updateCurrentUserProfile, user]);
 
   const formattedDate = `${String(parsedInput.d).padStart(2, '0')}.${String(
     parsedInput.m
@@ -542,12 +545,7 @@ export default function BaZi() {
         </View>
 
         <TouchableOpacity
-          onPress={() => {
-            if (user?.email && getBirthParts({ birthdate: dateInput })) {
-              void saveSystemActivity(user.email, 'bazi', { dayMaster: chart.dayMaster.title, zodiacAnimal: chart.zodiacAnimal }).catch(console.warn);
-            }
-            setShowInputModal(false);
-          }}
+          onPress={() => setShowInputModal(false)}
           style={{
             backgroundColor: colors.action,
             paddingVertical: 11,

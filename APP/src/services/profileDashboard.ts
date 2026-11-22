@@ -108,7 +108,7 @@ export function getDashboardSystems(user: DashboardProfile | null, activity?: Sy
   const card = birth && findBirthCard(birth);
   const type = user?.mbti?.type;
   const dosha = user?.ayurveda?.dominantDosha;
-  const bazi = activity?.bazi ?? user?.bazi;
+  const bazi = user?.bazi?.dayMaster || user?.bazi?.zodiacAnimal ? user.bazi : activity?.bazi;
   const chinese = birth && chineseZodiacForYear(birth.year);
   const entries: Record<ExploreRoute, Pick<DashboardSystem, 'value' | 'detail'>> = {
     astrology: { value: sun, detail: sun ? ['Sun sign', natal?.moonSign && 'Moon in ' + natal.moonSign, natal?.ascendant && natal.ascendant + ' rising'].filter(Boolean).join(' · ') : 'Add a birth date to discover your Sun sign.' },

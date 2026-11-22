@@ -3,6 +3,11 @@ import { Image, StyleSheet, View } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { UserRound } from 'lucide-react-native';
 import { T } from './UI';
+import { API_BASE_URL } from '../services/api';
+
+export function resolveProfilePhoto(source?: string) {
+  return source?.startsWith('/uploads/') ? API_BASE_URL.replace(/\/api\/?$/, '') + source : source;
+}
 
 export function ProfileAvatar({ name, size = 90, source, showInitials = true }: { name: string; size?: number; source?: string; showInitials?: boolean }) {
   const initials = name.trim().split(/\s+/).filter(Boolean).slice(0, 2).map((word) => Array.from(word)[0]).join('').toUpperCase();
@@ -10,7 +15,7 @@ export function ProfileAvatar({ name, size = 90, source, showInitials = true }: 
     <View style={[styles.avatar, { width: size, height: size, borderRadius: size / 2 }, !showInitials && styles.iconAvatar]}>
       {showInitials && <LinearGradient colors={['#435eab', '#332563', '#171944']} style={StyleSheet.absoluteFill} />}
       {showInitials && initials ? <T bold size={size * 0.31} style={{ color: '#f1eaff' }}>{initials}</T> : <UserRound color="#f1eaff" size={size * (showInitials ? 0.34 : 0.5)} />}
-      {!!source && <Image source={{ uri: source }} style={StyleSheet.absoluteFill} />}
+      {!!source && <Image source={{ uri: resolveProfilePhoto(source) }} style={StyleSheet.absoluteFill} />}
     </View>
   );
 }

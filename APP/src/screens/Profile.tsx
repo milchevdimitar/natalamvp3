@@ -10,7 +10,7 @@ import { Card, Section, T } from '../components/UI';
 import { CountUp, DashboardProgressBar, DoshaTriangle, ElementSymbols, useDashboardVisibility } from '../components/DashboardCharts';
 import { DOSHA_META } from './Ayurveda/ayurveda.data';
 import { ProfileSettings } from './ProfileSettings';
-import { ProfileAvatar } from '../components/ProfileAvatar';
+import { ProfilePhoto } from '../components/ProfilePhoto';
 import { ProfileQrCard } from '../components/ProfileQrCard';
 import { profileId, shareProfile } from '../services/profileLinks';
 import type { ExploreRoute } from '../data/exploreRoutes';
@@ -87,6 +87,9 @@ export default function Profile({ scrollOffset }: { scrollOffset: Animated.Value
       }
 
       const blob = await response.blob();
+      if (!blob.size || !response.headers.get('content-type')?.includes('application/pdf')) {
+        throw new Error('The server did not return a PDF.');
+      }
       const fileName = `Natala_Report_${Date.now()}.pdf`;
 
       // 1. Web: директно изтегляне в папка Downloads на компютъра
@@ -98,7 +101,7 @@ export default function Profile({ scrollOffset }: { scrollOffset: Animated.Value
         document.body.appendChild(link);
         link.click();
         link.remove();
-        window.URL.revokeObjectURL(url);
+        setTimeout(() => window.URL.revokeObjectURL(url), 1000);
         setGeneratingPdf(false);
         return;
       }
@@ -212,7 +215,7 @@ export default function Profile({ scrollOffset }: { scrollOffset: Animated.Value
         </Pressable>
       </View>
       <View style={styles.identity}>
-        <ProfileAvatar name={name} showInitials={false} />
+        <ProfilePhoto name={name} source={photo} />
         <T bold size={36} style={styles.name}>{name || 'Your profile'}</T>
         {(birthLabel || birthCity || user?.email) && <T muted size={12} style={{ textAlign: 'center' }}>{[birthLabel, birthCity].filter(Boolean).join(' · ') || user?.email}</T>}
         <View style={styles.shareActions}>

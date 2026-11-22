@@ -75,9 +75,10 @@ export function DetailScreen({ title, onClose, children, offset, reduced, travel
   offset: Animated.Value; reduced: boolean; travel?: number; header?: React.ReactNode; darkBottom?: boolean;
 }) {
   return (
-    <Modal visible animationType={reduced ? 'none' : 'fade'} onRequestClose={onClose}>
-      <SafeAreaView style={styles.detail}>
+    <Modal visible statusBarTranslucent navigationBarTranslucent animationType={reduced ? 'none' : 'fade'} onRequestClose={onClose}>
+      <View style={styles.detail}>
         <CosmicBackground offset={offset} horizontal reduced={reduced} travel={travel} darkBottom={darkBottom} />
+        <SafeAreaView style={styles.safeContent}>
         {header ?? <View style={styles.header}>
           <Text accessibilityRole="header" style={styles.heading}>{title}</Text>
           <Pressable accessibilityRole="button" accessibilityLabel="Close" onPress={onClose} style={styles.icon}>
@@ -85,7 +86,8 @@ export function DetailScreen({ title, onClose, children, offset, reduced, travel
           </Pressable>
         </View>}
         {children}
-      </SafeAreaView>
+        </SafeAreaView>
+      </View>
     </Modal>
   );
 }
@@ -383,6 +385,7 @@ export function CelestialCarousel({ title, kind, slides, onClose, reduced, onRet
 
 const styles = StyleSheet.create({
   detail: { flex: 1, backgroundColor: cosmic.bg },
+  safeContent: { flex: 1 },
   header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', width: '100%', maxWidth: 720, alignSelf: 'center', paddingHorizontal: 20, paddingVertical: 12 },
   carouselHeader: { position: 'relative', maxWidth: 560, paddingVertical: 7 },
   heading: { color: cosmic.text, fontSize: 18, fontWeight: '700' },

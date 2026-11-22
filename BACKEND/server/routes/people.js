@@ -15,7 +15,7 @@ router.get('/shared/:profileId', async (req, res) => {
     const viewer = await resolveCurrentUser(req.query.userId, req.query.email);
     if (!viewer) return res.status(401).json({ success: false, message: 'Sign in to view this profile.' });
     const target = await User.findById(profileId)
-      .select('name email bio interests isActive isDiscoverable blockedUsers')
+      .select('name email bio interests isActive isDiscoverable blockedUsers avatarUrl')
       .lean();
     const same = String(viewer._id) === profileId.toLowerCase();
     const contains = (values, id) => (values || []).some((value) => String(value) === String(id));
@@ -33,7 +33,7 @@ router.get('/shared/:profileId', async (req, res) => {
     return res.json({
       success: true,
       profile: {
-        id: String(target._id), name: target.name, bio: target.bio, interests: target.interests,
+        id: String(target._id), name: target.name, bio: target.bio, interests: target.interests, avatarUrl: target.avatarUrl,
         relationship: same ? 'self' : isFriend ? 'friend' : contains(viewer.sentRequests, target._id) ? 'pending' : 'available',
         ...(isFriend ? { chatEmail: target.email } : {}),
         stories: stories.map((story) => ({ id: String(story._id), imageUrl: story.imageUrl, createdAt: story.createdAt })),
@@ -69,6 +69,7 @@ function serializePerson(doc, extra = {}) {
     id: idStr,
     cosmicId: `NTL-${idStr.slice(-6).toUpperCase()}`,
     name: doc.name,
+    avatarUrl: doc.avatarUrl,
     email: doc.email,
     birthdate: doc.birthdate,
     birthCity: doc.birthCity || { name: 'Unknown', country: '' },

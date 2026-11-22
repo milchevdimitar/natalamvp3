@@ -18,6 +18,7 @@ import {
 } from './ayurveda.types';
 import {
   DOSHA_META,
+  PRAKRITI_QUIZ_QUESTIONS,
   HERBS_BY_DOSHA,
   PRACTICES_BY_DOSHA,
   SUBDOSHAS_BY_DOSHA,
@@ -27,7 +28,7 @@ function normalizeDoshas(v: number, p: number, k: number): DoshaScores {
   const total = v + p + k || 1;
   const vPct = Math.round((v / total) * 100);
   const pPct = Math.round((p / total) * 100);
-  const kPct = Math.max(5, 100 - vPct - pPct);
+  const kPct = 100 - vPct - pPct;
   return { Vata: vPct, Pitta: pPct, Kapha: kPct };
 }
 
@@ -189,15 +190,15 @@ export function calculateAyurvedaProfile(options: {
   birthDay?: number;
   quizAnswers?: Record<string, DoshaName>;
   currentStressLevel?: 'low' | 'moderate' | 'high';
+  useBirthBaseline?: boolean;
   date?: Date;
 }): AyurvedaProfile {
   const {
     personName = 'Your Ayurvedic Blueprint',
-    birthYear = 1995,
     birthMonth = 6,
-    birthDay = 15,
     quizAnswers = {},
     currentStressLevel = 'moderate',
+    useBirthBaseline = true,
     date = new Date(),
   } = options;
 
@@ -206,17 +207,19 @@ export function calculateAyurvedaProfile(options: {
   let pRaw = 30;
   let kRaw = 30;
 
-  // Birth date elemental baseline
-  if ([10, 11, 12, 1].includes(birthMonth)) vRaw += 10;
-  if ([5, 6, 7, 8, 9].includes(birthMonth)) pRaw += 10;
-  if ([2, 3, 4].includes(birthMonth)) kRaw += 10;
+  const validAnswers = PRAKRITI_QUIZ_QUESTIONS.flatMap(({ id, options }) =>
+    options.some(({ dosha }) => dosha === quizAnswers[id]) ? [quizAnswers[id]] : []
+  );
 
-  vRaw += (birthDay % 5) * 2;
-  pRaw += ((birthDay + birthMonth) % 5) * 2;
-  kRaw += ((birthYear + birthDay) % 5) * 2;
+  // The birth season is a preview until the user starts the assessment.
+  if (useBirthBaseline && validAnswers.length === 0) {
+    if ([10, 11, 12, 1].includes(birthMonth)) vRaw += 10;
+    if ([5, 6, 7, 8, 9].includes(birthMonth)) pRaw += 10;
+    if ([2, 3, 4].includes(birthMonth)) kRaw += 10;
+  }
 
   // Incorporate user quiz answers with strong weight
-  Object.values(quizAnswers).forEach((dosha) => {
+  validAnswers.forEach((dosha) => {
     if (dosha === 'Vata') vRaw += 16;
     if (dosha === 'Pitta') pRaw += 16;
     if (dosha === 'Kapha') kRaw += 16;

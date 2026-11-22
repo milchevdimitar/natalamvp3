@@ -1,7 +1,8 @@
+import { ProfileAvatar } from '../../components/ProfileAvatar';
 import React from 'react';
 import { View, Pressable } from 'react-native';
 import { Heart, X, Sparkles, RotateCcw, MapPin } from 'lucide-react-native';
-import { Card, T, Avatar, Pill } from '../../components/UI';
+import { Card, T, Pill } from '../../components/UI';
 import {
   getAgeFromBirthdate,
   resolveLifePath,
@@ -49,7 +50,6 @@ export function PotentialMatchCard({
   const sunSign = resolveSunSign(person);
   const mbtiType = resolveMbtiType(person);
   const lifePath = resolveLifePath(person);
-  const initial = (person.name || 'U')[0].toUpperCase();
 
   return (
     <Card style={styles.matchCard}>
@@ -71,7 +71,7 @@ export function PotentialMatchCard({
       </View>
 
       <Pressable onPress={() => onInspect(person)} style={{ alignItems: 'center', gap: 6 }}>
-        <Avatar initial={initial} size={92} />
+        <ProfileAvatar name={person.name} source={person.avatarUrl} size={92} />
         <T bold size={23}>
           {person.name}
           {age ? `, ${age}` : ''}

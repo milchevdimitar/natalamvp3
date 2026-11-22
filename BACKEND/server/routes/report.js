@@ -6,15 +6,10 @@ const { GoogleGenAI, Type } = require('@google/genai');
 const puppeteer = require('puppeteer');
 const User = require('../models/User');
 
-const ai = new GoogleGenAI({
-  apiKey: process.env.GEMINI_API_KEY,
-  apiVersion: 'v1beta',
-});
-
 const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
 // Извиква Gemini с автоматичен retry и превключване към резервен модел при 503 / 429
-async function generateAnalysisWithFallback(prompt, config) {
+async function generateAnalysisWithFallback(ai, prompt, config) {
   const models = ['gemini-2.5-flash', 'gemini-2.5-flash-lite', 'gemini-2.0-flash'];
   let lastError;
 
@@ -55,6 +50,9 @@ function resolveBrowserPath() {
     return process.env.CHROME_PATH;
   }
   const candidates = [
+    ...[process.env.ProgramFiles, process.env['ProgramFiles(x86)'], process.env.LOCALAPPDATA]
+      .filter(Boolean)
+      .flatMap((root) => [path.join(root, 'Google/Chrome/Application/chrome.exe'), path.join(root, 'Microsoft/Edge/Application/msedge.exe')]),
     '/usr/bin/chromium',
     '/usr/bin/chromium-browser',
     '/usr/bin/google-chrome-stable',
@@ -63,13 +61,19 @@ function resolveBrowserPath() {
   return candidates.find((p) => fs.existsSync(p));
 }
 
+function escapeHtml(value) {
+  return String(value ?? '').replace(/[&<>"']/g, (character) => ({
+    '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;',
+  })[character]);
+}
+
 function buildReportHtml(user, aiAnalysis) {
   const birthDateFormatted = user.birthdate
     ? new Date(user.birthdate).toLocaleDateString('bg-BG')
     : 'Непосочена';
 
-  const tipsHtml = (aiAnalysis.actionableTips || [])
-    .map((tip) => `<li>${tip}</li>`)
+  const tipsHtml = (aiAnalysis?.actionableTips || [])
+    .map((tip) => `<li>${escapeHtml(tip)}</li>`)
     .join('');
 
   return `
@@ -78,7 +82,6 @@ function buildReportHtml(user, aiAnalysis) {
     <head>
       <meta charset="UTF-8" />
       <style>
-        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap');
         body {
           font-family: 'Inter', Arial, sans-serif;
           color: #1e1b4b;
@@ -174,42 +177,43 @@ function buildReportHtml(user, aiAnalysis) {
     <body>
       <div class="header">
         <h1>Персонален Холистичен Профил</h1>
-        <p>${user.name || 'Потребител'} • Роден/а на ${birthDateFormatted} (${user.birthTime || 'няма час'}) • ${user.birthCity?.name || 'Непосочен град'}</p>
+        <p>${escapeHtml(user.name || 'Потребител')} • Роден/а на ${escapeHtml(birthDateFormatted)} (${escapeHtml(user.birthTime || 'няма час')}) • ${escapeHtml(user.birthCity?.name || 'Непосочен град')}</p>
       </div>
 
       <div class="grid">
         <div class="badge">
           <div class="badge-label">Астрология</div>
-          <div class="badge-val">☉ ${user.natalChart?.sunSign || '-'} / ☽ ${user.natalChart?.moonSign || '-'} / ASC ${user.natalChart?.ascendant || '-'}</div>
+          <div class="badge-val">☉ ${escapeHtml(user.natalChart?.sunSign || '-')} / ☽ ${escapeHtml(user.natalChart?.moonSign || '-')} / ASC ${escapeHtml(user.natalChart?.ascendant || '-')}</div>
         </div>
         <div class="badge">
           <div class="badge-label">MBTI & Нумерология</div>
-          <div class="badge-val">${user.mbti?.type || '-'} • Житейски път ${user.numerology?.lifePathNumber || '-'}</div>
+          <div class="badge-val">${escapeHtml(user.mbti?.type || '-')} • Житейски път ${escapeHtml(user.numerology?.lifePathNumber || '-')}</div>
         </div>
         <div class="badge">
           <div class="badge-label">BaZi & Аюрведа</div>
-          <div class="badge-val">${user.bazi?.dayMaster || '-'} • Доша: ${(user.ayurveda?.dominantDosha || '-').toUpperCase()}</div>
+          <div class="badge-val">${escapeHtml(user.bazi?.dayMaster || '-')} • Доша: ${escapeHtml((user.ayurveda?.dominantDosha || '-').toUpperCase())}</div>
         </div>
       </div>
 
+      ${aiAnalysis ? `
       <div class="section">
         <h2>1. Общ психологически и енергиен портрет</h2>
-        <p>${aiAnalysis.executiveSummary}</p>
+        <p>${escapeHtml(aiAnalysis.executiveSummary)}</p>
       </div>
 
       <div class="section">
         <h2>2. Натална карта и MBTI динамика</h2>
-        <p>${aiAnalysis.astrologyAndMbti}</p>
+        <p>${escapeHtml(aiAnalysis.astrologyAndMbti)}</p>
       </div>
 
       <div class="section">
         <h2>3. Китайска метафизика (BaZi) и Аюрведа баланс</h2>
-        <p>${aiAnalysis.baziAndAyurveda}</p>
+        <p>${escapeHtml(aiAnalysis.baziAndAyurveda)}</p>
       </div>
 
       <div class="section">
-        <h2>4. Нумерология и Кардология (${user.cardology?.birthCard || '-'})</h2>
-        <p>${aiAnalysis.numerologyAndCardology}</p>
+        <h2>4. Нумерология и Кардология (${escapeHtml(user.cardology?.birthCard || '-')})</h2>
+        <p>${escapeHtml(aiAnalysis.numerologyAndCardology)}</p>
       </div>
 
       <div class="recommendations">
@@ -217,15 +221,17 @@ function buildReportHtml(user, aiAnalysis) {
         <ul>${tipsHtml}</ul>
       </div>
 
+      ` : `<div class="section"><h2>Profile summary</h2><p>Birth card: ${escapeHtml(user.cardology?.birthCard || "-")}</p><p>AI analysis is currently unavailable.</p></div>`}
+
       <div class="footer">
-        Генерирано с AI анализ за ${user.name || 'Потребител'} • Natala App
+        ${aiAnalysis ? 'Personal AI analysis' : 'Profile summary'} | Natala App
       </div>
     </body>
     </html>
   `;
 }
 
-router.all('/api/users/:id/report/pdf', async (req, res) => {
+router.post('/api/users/:id/report/pdf', async (req, res) => {
   let browser;
   try {
     const user = await User.findById(req.params.id).lean();
@@ -253,31 +259,39 @@ router.all('/api/users/:id/report/pdf', async (req, res) => {
       - Био: ${user.bio || ''}
     `;
 
-    const response = await generateAnalysisWithFallback(prompt, {
-      responseMimeType: 'application/json',
-      responseSchema: {
-        type: Type.OBJECT,
-        properties: {
-          executiveSummary: { type: Type.STRING },
-          astrologyAndMbti: { type: Type.STRING },
-          baziAndAyurveda: { type: Type.STRING },
-          numerologyAndCardology: { type: Type.STRING },
-          actionableTips: {
-            type: Type.ARRAY,
-            items: { type: Type.STRING },
+    const apiKey = process.env.GEMINI_API_KEY?.trim() || process.env.GOOGLE_API_KEY?.trim();
+    let aiAnalysis;
+    if (apiKey) {
+      try {
+        const ai = new GoogleGenAI({ apiKey, vertexai: false, apiVersion: 'v1beta' });
+        const response = await generateAnalysisWithFallback(ai, prompt, {
+          responseMimeType: 'application/json',
+          responseSchema: {
+            type: Type.OBJECT,
+            properties: {
+              executiveSummary: { type: Type.STRING },
+              astrologyAndMbti: { type: Type.STRING },
+              baziAndAyurveda: { type: Type.STRING },
+              numerologyAndCardology: { type: Type.STRING },
+              actionableTips: {
+                type: Type.ARRAY,
+                items: { type: Type.STRING },
+              },
+            },
+            required: [
+              'executiveSummary',
+              'astrologyAndMbti',
+              'baziAndAyurveda',
+              'numerologyAndCardology',
+              'actionableTips',
+            ],
           },
-        },
-        required: [
-          'executiveSummary',
-          'astrologyAndMbti',
-          'baziAndAyurveda',
-          'numerologyAndCardology',
-          'actionableTips',
-        ],
-      },
-    });
-
-    const aiAnalysis = JSON.parse(response.text);
+        });
+        aiAnalysis = JSON.parse(response.text);
+      } catch (error) {
+        console.warn('Gemini report analysis unavailable; generating the profile summary.', error?.status || error?.code || '');
+      }
+    }
     const html = buildReportHtml(user, aiAnalysis);
 
     const executablePath = resolveBrowserPath();
@@ -288,25 +302,19 @@ router.all('/api/users/:id/report/pdf', async (req, res) => {
     });
 
     const page = await browser.newPage();
-    await page.setContent(html, { waitUntil: 'networkidle0' });
+    await page.setJavaScriptEnabled(false);
+    await page.setContent(html, { waitUntil: 'load' });
 
-    const pdfBuffer = await page.pdf({
+    const pdfBuffer = Buffer.from(await page.pdf({
       format: 'A4',
       printBackground: true,
       margin: { top: '14mm', right: '14mm', bottom: '14mm', left: '14mm' },
-    });
-
-    // Локален запис на PDF файла в BACKEND/server/uploads
-    const uploadsDir = path.join(__dirname, '..', 'uploads');
-    fs.mkdirSync(uploadsDir, { recursive: true });
-    const savedFileName = `Natala-Report-${user._id}-${Date.now()}.pdf`;
-    const savedFilePath = path.join(uploadsDir, savedFileName);
-    await fs.promises.writeFile(savedFilePath, pdfBuffer);
-    console.log(`✅ PDF докладът е запазен локално в: ${savedFilePath}`);
+    }));
+    const savedFileName = 'Natala-Profile-Report.pdf';
 
     res.set({
       'Content-Type': 'application/pdf',
-      'Content-Disposition': `inline; filename="${savedFileName}"`,
+      'Content-Disposition': `attachment; filename="${savedFileName}"`,
       'Content-Length': pdfBuffer.length,
     });
 
@@ -321,7 +329,7 @@ router.all('/api/users/:id/report/pdf', async (req, res) => {
           : 'Неуспешно генериране на PDF доклад.',
     });
   } finally {
-    if (browser) await browser.close();
+    if (browser) await browser.close().catch(() => {});
   }
 });
 

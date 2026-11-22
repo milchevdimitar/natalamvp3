@@ -38,6 +38,8 @@ const ZODIAC_SIGNS = [
 
 // Кеш в паметта (ключ: "Sun_2026-11-18")
 const ephemerisCache = new Map();
+const inFlight = new Map();
+let nasaQueue = Promise.resolve();
 
 // Circuit Breaker: при 503/timeout от NASA превключва директно на локален режим за 10 мин.
 let nasaCooldownUntil = 0;
@@ -180,7 +182,19 @@ function buildLocalPayload(planet, targetDate) {
 }
 
 // Връща геоцентричната дължина на планета за дата: NASA JPL Horizons с кеш и локален резерв
-async function getPlanetPosition(planet, targetDate) {
+function getPlanetPosition(planet, targetDate) {
+  const key = `${planet}_${targetDate.toISOString().slice(0, 10)}`;
+  if (ephemerisCache.has(key)) return Promise.resolve(ephemerisCache.get(key));
+  if (Date.now() < nasaCooldownUntil || inFlight.size >= 24) return Promise.resolve(buildLocalPayload(planet, targetDate));
+  const existing = inFlight.get(key);
+  if (existing) return existing;
+  const request = nasaQueue.then(() => fetchPlanetPosition(planet, targetDate)).finally(() => inFlight.delete(key));
+  inFlight.set(key, request);
+  nasaQueue = request.catch(() => {});
+  return request;
+}
+
+async function fetchPlanetPosition(planet, targetDate) {
   const command = PLANET_COMMANDS[planet];
   const startDateStr = targetDate.toISOString().split('T')[0];
   const cacheKey = `${planet}_${startDateStr}`;
@@ -191,9 +205,7 @@ async function getPlanetPosition(planet, targetDate) {
 
   // Ако NASA наскоро е върнала 503 или timeout, изчисляваме мигновено локално
   if (Date.now() < nasaCooldownUntil) {
-    const localPayload = buildLocalPayload(planet, targetDate);
-    ephemerisCache.set(cacheKey, localPayload);
-    return localPayload;
+    return buildLocalPayload(planet, targetDate);
   }
 
   try {
@@ -241,6 +253,7 @@ async function getPlanetPosition(planet, targetDate) {
           degree: zodiac.degree,
           isLiveNASA: true,
         };
+        if (ephemerisCache.size >= 512) ephemerisCache.delete(ephemerisCache.keys().next().value);
         ephemerisCache.set(cacheKey, payload);
         return payload;
       }
@@ -255,9 +268,7 @@ async function getPlanetPosition(planet, targetDate) {
       );
     }
 
-    const localPayload = buildLocalPayload(planet, targetDate);
-    ephemerisCache.set(cacheKey, localPayload);
-    return localPayload;
+    return buildLocalPayload(planet, targetDate);
   }
 }
 
