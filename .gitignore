@@ -1,0 +1,12 @@
+/APP/.env*
+/BACKEND/server/.env*
+!/APP/.env.example
+!/BACKEND/server/.env.example
+/APP/android/
+/BACKEND/server/uploads/
+/assets/natala-react-native-reformat/
+/.natala-android-tools/
+/.natala-feed-preview/
+node_modules/
+.expo/
+.DS_Store

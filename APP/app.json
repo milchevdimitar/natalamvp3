@@ -9,10 +9,19 @@
     "newArchEnabled": true,
     "ios": {
       "supportsTablet": true,
+      "associatedDomains": ["applinks:natala.app"],
       "bundleIdentifier": "app.natala.prototype"
     },
     "android": {
       "package": "app.natala.prototype",
+      "intentFilters": [
+        {
+          "action": "VIEW",
+          "autoVerify": true,
+          "data": [{ "scheme": "https", "host": "natala.app", "path": "/" }],
+          "category": ["BROWSABLE", "DEFAULT"]
+        }
+      ],
       "edgeToEdgeEnabled": true
     },
     "web": {
@@ -23,7 +32,12 @@
       "expo-font",
       "expo-splash-screen",
       "expo-asset",
-      "expo-status-bar"
+      "expo-status-bar",
+      "expo-sharing",
+      ["expo-camera", {
+        "cameraPermission": "Allow Natala to scan profile QR codes.",
+        "recordAudioAndroid": false
+      }]
     ],
     "extra": {
       "eas": {

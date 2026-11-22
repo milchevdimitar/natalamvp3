@@ -1,39 +1,80 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import {
   View,
-  ScrollView,
   Text,
   Animated,
   Platform,
   StatusBar,
   ActivityIndicator,
+  Linking,
 } from 'react-native';
 import { StatusBar as ExpoStatusBar } from 'expo-status-bar';
+import { BlurTargetView } from 'expo-blur';
+import { SafeAreaProvider } from 'react-native-safe-area-context';
 import {
   useFonts,
   DancingScript_700Bold,
 } from '@expo-google-fonts/dancing-script';
 import { AppProvider, useApp } from './src/context/AppContext';
 import BottomNav from './src/components/BottomNav';
+import { ShootingStar } from './src/components/ShootingStar';
 import Home from './src/screens/Home';
+import { CosmicBackground, useReducedMotion } from './src/screens/Home/CosmicBackground';
+import { isCosmicPage } from './src/theme/cosmic';
 import Explore from './src/screens/Explore';
 import Chat from './src/screens/Chat';
 import People from './src/screens/People';
+import Feed from './src/screens/Feed';
 import Profile from './src/screens/Profile';
+import SharedProfile from './src/screens/SharedProfile';
+import { profileFromLink } from './src/services/profileLinks';
 import Astrology from './src/screens/Astrology';
 import MBTI from './src/screens/MBTI';
 import Tarot from './src/screens/Tarot';
 import Numerology from './src/screens/Numerology';
 import Cardology from './src/screens/Cardology';
 import Ayurveda from './src/screens/Ayurveda';
+import BaZi from './src/screens/BaZi';
+import ChineseZodiac from './src/screens/ChineseZodiac';
 import Login from './src/screens/Login';
 import { checkHealth } from './src/services/api';
 import { registerForPushNotificationsAsync } from './src/services/notifications';
 
 function Shell() {
-  const { page, colors, theme, user } = useApp();
+  const { page, setPage, colors, theme, user, hideBottomNav } = useApp();
+  const [pendingProfile, setPendingProfile] = useState<string | null>(null);
+  const [sharedProfile, setSharedProfile] = useState<string | null>(null);
   const [showSplash, setShowSplash] = useState(true);
   const fade = useRef(new Animated.Value(1)).current;
+  const navBlurTarget = useRef<React.ComponentRef<typeof BlurTargetView>>(null);
+  const cosmicHome = !!user && page === 'home';
+  const cosmicTab = !!user && isCosmicPage(page);
+  const reducedMotion = useReducedMotion();
+  const tabScroll = useRef(new Animated.Value(0)).current;
+  const openSharedProfile = useCallback((id: string) => setPendingProfile(id), []);
+
+  useEffect(() => {
+    let mounted = true;
+    const handle = (url: string | null | undefined) => {
+      if (!url || !mounted) return;
+      const id = profileFromLink(url, Platform.OS === 'web' ? window.location.origin : undefined);
+      if (id) openSharedProfile(id);
+    };
+    void Linking.getInitialURL().then(handle).catch(() => undefined);
+    const subscription = Linking.addEventListener('url', ({ url }) => handle(url));
+    return () => { mounted = false; subscription.remove(); };
+  }, [openSharedProfile]);
+
+  useEffect(() => {
+    if (!user || !pendingProfile) return;
+    setSharedProfile(pendingProfile);
+    setPage('shared-profile');
+    setPendingProfile(null);
+  }, [pendingProfile, setPage, user]);
+
+  useEffect(() => {
+    tabScroll.setValue(0);
+  }, [page, tabScroll]);
 
   useEffect(() => {
     // Регистрация на права за нотификации в Android/iOS
@@ -68,52 +109,62 @@ function Shell() {
     numerology: <Numerology />,
     cardology: <Cardology />,
     ayurveda: <Ayurveda />,
-    chat: <Chat />,
-    people: <People />,
-    profile: <Profile />,
+    bazi: <BaZi />,
+    'chinese-zodiac': <ChineseZodiac />,
+    chat: <Chat onOpenProfile={openSharedProfile} />,
+    people: <People onOpenProfile={openSharedProfile} />,
+    feed: <Feed />,
+    profile: <Profile scrollOffset={tabScroll} />,
+    'shared-profile': sharedProfile ? <SharedProfile key={sharedProfile} id={sharedProfile} /> : <People onOpenProfile={openSharedProfile} />,
     login: <Login />,
   };
 
   const activePageNode = !user ? <Login /> : pages[page] || <Home />;
-  const isHomePage = user && page === 'home';
+
+  // Страниците Login, Home, Chat и Feed управляват сами своя скрол и клавиатура
+  const isFullHeightPage =
+    !user || page === 'login' || page === 'home' || page === 'chat' || page === 'feed' || page === 'profile';
+  const topInset = Platform.OS === 'web' ? 30 : Math.max((StatusBar.currentHeight || 0) + 16, 28);
 
   return (
-    <View style={{ flex: 1, backgroundColor: colors.bg }}>
-      <ExpoStatusBar style={theme === 'dark' ? 'light' : 'dark'} />
+    <View style={{ flex: 1, backgroundColor: page === 'feed' ? '#000000' : colors.bg }}>
+      <ExpoStatusBar style={cosmicHome || theme === 'dark' ? 'light' : 'dark'} />
 
+      <BlurTargetView ref={navBlurTarget} style={{ flex: 1 }}>
+      {cosmicTab && <CosmicBackground offset={tabScroll} reduced={reducedMotion} light={theme === 'light'} />}
+      {!cosmicTab && !cosmicHome && <ShootingStar reduced={reducedMotion} light={page !== 'feed' && theme === 'light'} />}
       <View
         key={user ? page : 'login'}
         style={{
           flex: 1,
-          paddingTop:
-            Platform.OS === 'web'
-              ? 30
-              : Math.max((StatusBar.currentHeight || 0) + 16, 28),
-          paddingHorizontal: 18,
+          paddingTop: cosmicHome || page === 'profile' || page === 'explore' ? 0 : topInset,
+          paddingHorizontal: cosmicHome || page === 'feed' || page === 'profile' ? 0 : 18,
           width: '100%',
-          maxWidth: 720,
+          maxWidth: cosmicHome || page === 'feed' ? '100%' : cosmicTab ? 620 : 720,
           alignSelf: 'center',
         }}
       >
-        {isHomePage ? (
-          // Home управлява собствен ScrollView с Pull-to-Refresh
+        {isFullHeightPage ? (
           activePageNode
         ) : (
-          // Всички останали страници се обвиват в ScrollView, за да могат да се скролват
-          <ScrollView
+          <Animated.ScrollView
             showsVerticalScrollIndicator={false}
             keyboardShouldPersistTaps="handled"
+            scrollEventThrottle={cosmicTab ? 16 : undefined}
+            onScroll={cosmicTab ? Animated.event([{ nativeEvent: { contentOffset: { y: tabScroll } } }], { useNativeDriver: Platform.OS !== 'web' }) : undefined}
             contentContainerStyle={{
+              paddingTop: page === 'explore' ? topInset : 0,
               paddingBottom: user ? 120 : 40,
             }}
           >
             {activePageNode}
-          </ScrollView>
+          </Animated.ScrollView>
         )}
       </View>
+      </BlurTargetView>
 
-      {/* Навигацията отдолу е видима само след успешен вход */}
-      {user && <BottomNav />}
+      {/* Навигацията отдолу е видима само след успешен вход и когато hideBottomNav не е активен */}
+      {user && !hideBottomNav && <BottomNav blurTarget={navBlurTarget} />}
 
       {showSplash && (
         <Animated.View
@@ -130,24 +181,15 @@ function Shell() {
             opacity: fade,
           }}
         >
+          <CosmicBackground offset={tabScroll} reduced />
           <Text
             style={{
               fontFamily: 'DancingScript_700Bold',
               fontSize: 68,
-              color: colors.purple,
+              color: '#f8faff',
             }}
           >
             Natala
-          </Text>
-          <Text
-            style={{
-              color: colors.gold,
-              fontSize: 12,
-              letterSpacing: 3,
-              marginTop: 10,
-            }}
-          >
-            A MOMENT OF DISCOVERY
           </Text>
         </Animated.View>
       )}
@@ -164,8 +206,10 @@ export default function App() {
       </View>
     );
   return (
-    <AppProvider>
-      <Shell />
-    </AppProvider>
+    <SafeAreaProvider>
+      <AppProvider>
+        <Shell />
+      </AppProvider>
+    </SafeAreaProvider>
   );
 }

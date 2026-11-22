@@ -1,8 +1,8 @@
-import React, { useState, useEffect } from 'react';
+import { useCalc } from '../services/calcApi';
+import React, { useEffect } from 'react';
 import {
   View,
   TouchableOpacity,
-  ActivityIndicator,
 } from 'react-native';
 import {
   ArrowLeft,
@@ -12,9 +12,10 @@ import {
   Award,
   Calendar,
   User,
-  CloudUpload,
 } from 'lucide-react-native';
 import { useApp } from '../context/AppContext';
+import { BirthDateTag } from '../components/BirthDateTag';
+import { getBirthParts } from '../services/profileDashboard';
 import { Card, T, Section, Pill, Hero } from '../components/UI';
 import { saveUserProfile } from '../services/api';
 import { UserProfile } from '../models/User';
@@ -130,6 +131,8 @@ const reduceNumber = (num: number): number => {
 // Safe date parsing and formatting function from `user`
 const getFormattedUserDate = (user: any): string | null => {
   if (!user) return null;
+  const birth = getBirthParts(user);
+  if (birth) return [birth.day, birth.month, birth.year].map((part) => String(part).padStart(2, '0')).join('.');
 
   const rawDate =
     user.birthdate ||
@@ -212,52 +215,34 @@ function calculateLifePath(dStr: string) {
 
 export default function Numerology() {
   const { colors, setPage, user, setUser } = useApp();
-  const [result, setResult] = useState<any>(null);
-  const [isSyncing, setIsSyncing] = useState(false);
-  const [syncStatus, setSyncStatus] = useState<string | null>(null);
+  const dateStr = getFormattedUserDate(user);
+  const remote = useCalc<ReturnType<typeof calculateLifePath>>('numerology/life-path', dateStr ? { user: { birthdate: dateStr } } : null);
+  const result = remote.data ?? (dateStr ? calculateLifePath(dateStr) : null);
+  const lifePath = result?.lifePathNumber;
 
   useEffect(() => {
-    const dateStr = getFormattedUserDate(user);
-    if (!dateStr) {
-      setResult(null);
-      return;
-    }
-
-    const res = calculateLifePath(dateStr);
-    setResult(res);
-
-    if (res && user && user.email) {
+    if (!remote.loading && lifePath && user?.email && user.numerology?.lifePathNumber !== lifePath) {
       const syncNumerology = async () => {
-        setIsSyncing(true);
-        setSyncStatus('Syncing with MongoDB Atlas...');
 
         const updatedUser: UserProfile = {
           ...user,
           numerology: {
-            lifePathNumber: res.lifePathNumber,
+            ...user.numerology,
+            lifePathNumber: lifePath,
           },
         };
 
         try {
           await setUser(updatedUser);
           await saveUserProfile(updatedUser);
-          setSyncStatus('Life Path number saved to database!');
         } catch (error) {
           console.warn('Offline mode: Result saved locally.', error);
-          setSyncStatus('Saved locally on device.');
-        } finally {
-          setIsSyncing(false);
         }
       };
 
       syncNumerology();
     }
-  }, [
-    user?.birthdate,
-    (user as any)?.birthDate,
-    (user as any)?.dateOfBirth,
-    (user as any)?.dob,
-  ]);
+  }, [lifePath, remote.loading, user, setUser]);
 
   return (
     <>
@@ -278,48 +263,14 @@ export default function Numerology() {
         description="Discover your birth destiny, core vibrations, and life path code."
       />
 
-      {syncStatus && (
-        <View
-          style={{
-            flexDirection: 'row',
-            alignItems: 'center',
-            justifyContent: 'center',
-            gap: 8,
-            padding: 10,
-            backgroundColor: colors.purpleSoft,
-            borderRadius: 12,
-            marginBottom: 20,
-          }}
-        >
-          {isSyncing ? (
-            <ActivityIndicator size="small" color={colors.purple} />
-          ) : (
-            <CloudUpload size={16} color={colors.purple} />
-          )}
-          <T size={12} style={{ color: colors.purple }}>
-            {syncStatus}
-          </T>
-        </View>
-      )}
-
       {result ? (
         <View style={{ gap: 18, marginBottom: 40 }}>
-          {/* Profile birth date info bar */}
-          <Card style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingVertical: 12 }}>
-            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-              <Calendar size={16} color={colors.purple} />
-              <T muted size={12}>Birth date from profile:</T>
-            </View>
-            <T bold size={13} style={{ color: colors.purple }}>
-              {result.dateStr}
-            </T>
-          </Card>
-
           {/* Main result card */}
           <Card style={{ alignItems: 'center', paddingVertical: 26, gap: 10 }}>
             <T muted size={11} style={{ letterSpacing: 2 }}>
               YOUR LIFE PATH NUMBER ({user?.name || 'User'})
             </T>
+            <BirthDateTag date={result.dateStr} />
             <View
               style={{
                 width: 84,

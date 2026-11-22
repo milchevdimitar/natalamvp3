@@ -1,0 +1,161 @@
+import { StyleSheet } from 'react-native';
+
+export const styles = StyleSheet.create({
+  backButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    marginBottom: 12,
+  },
+  syncBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    padding: 10,
+    borderRadius: 12,
+    marginBottom: 20,
+  },
+  placementsRow: {
+    flexDirection: 'row',
+    gap: 8,
+    marginBottom: 20,
+  },
+  placementCard: {
+    flex: 1,
+    padding: 12,
+    alignItems: 'center',
+  },
+  placementLabel: {
+    letterSpacing: 1,
+    marginTop: 4,
+  },
+  chartSectionHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 10,
+  },
+  switchContainer: {
+    flexDirection: 'row',
+    borderRadius: 14,
+    borderWidth: 1,
+    padding: 3,
+  },
+  switchBtn: {
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 10,
+  },
+  chartCard: {
+    alignItems: 'center',
+    paddingVertical: 20,
+    marginBottom: 20,
+    overflow: 'hidden',
+  },
+  birthDetailsCard: {
+    marginBottom: 20,
+    gap: 10,
+  },
+  birthDetailsTitleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  birthDetailsMetaRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 16,
+    marginTop: 4,
+  },
+  metaItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
+  positionsList: {
+    gap: 10,
+    marginBottom: 40,
+  },
+  positionCard: {
+    paddingVertical: 14,
+  },
+  positionRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+  },
+  positionIconBox: {
+    width: 42,
+    height: 42,
+    borderRadius: 14,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  houseBadge: {
+    borderRadius: 99,
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+  },
+  emptyCard: {
+    alignItems: 'center',
+    paddingVertical: 30,
+    gap: 12,
+    marginBottom: 40,
+  },
+  emptyIconCircle: {
+    width: 64,
+    height: 64,
+    borderRadius: 32,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  emptyDescription: {
+    textAlign: 'center',
+    maxWidth: 280,
+    lineHeight: 18,
+  },
+  stageContainer: {
+    justifyContent: 'center',
+    alignItems: 'center',
+    position: 'relative',
+  },
+  planetBaseWrapper: {
+    position: 'absolute',
+    bottom: 30,
+    zIndex: 1,
+  },
+  disk3DContainer: {
+    position: 'absolute',
+    top: 90,
+    zIndex: 2,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  diskAnimatedWrapper: {
+    width: 280,
+    height: 280,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  domeOverlay: {
+    position: 'absolute',
+    top: 10,
+    zIndex: 3,
+    pointerEvents: 'none',
+  },
+  rotationHintBadge: {
+    position: 'absolute',
+    bottom: 8,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    backgroundColor: 'rgba(22, 18, 36, 0.85)',
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: 'rgba(234, 179, 8, 0.3)',
+    zIndex: 4,
+  },
+});
