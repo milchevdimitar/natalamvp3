@@ -1,13 +1,14 @@
 import React from 'react';
 import Svg, { Circle, Defs, Ellipse, LinearGradient, Path, RadialGradient, Stop } from 'react-native-svg';
 
-type SkyArtworkKind = 'sun' | 'codex' | 'retro';
+type SkyArtworkKind = 'sun' | 'codex' | 'retro' | 'report';
 export const SKY_ARTWORK_SIZE = 69;
 
 const colors = {
   sun: ['#ffecab', '#ffc451', '#ce7414'],
   codex: ['#504eac', '#282c71', '#0b1239'],
   retro: ['#c7b6ff', '#7369d9', '#342f7e'],
+  report: ['#74568f', '#342557', '#140f32'],
 };
 
 export function SkyArtwork({ kind }: { kind: SkyArtworkKind }) {
@@ -43,6 +44,15 @@ export function SkyArtwork({ kind }: { kind: SkyArtworkKind }) {
         <Circle cx={22} cy={20} r={2} fill="#b2edff" />
         <Path d="M49 11 Q49 15 53 15 Q49 16 49 20 Q48 16 44.5 15 Q48 15 49 11Z" fill="#f8ecff" />
         <Circle cx={25} cy={56} r={1.1} fill="#d4d7ff" />
+      </>}
+      {kind === 'report' && <>
+        <Circle cx={34.5} cy={34.5} r={27} fill="none" stroke="#efc490" strokeOpacity={0.32} strokeDasharray="1 4" />
+        <Path d="M34.5 38c-5-6-11-8-19-7l2 17c7-1 12 1 17 5 5-4 10-6 17-5l2-17c-8-1-14 1-19 7Z" fill="#281e4c" stroke="#ffdc9e" strokeWidth={1.8} strokeLinejoin="round" />
+        <Path d="M34.5 38v14M21 38c4 0 7 1 10 3m-9 3c4 0 6 1 9 3m17-9c-4 0-7 1-10 3m9 3c-4 0-6 1-9 3" fill="none" stroke="#f2b976" strokeWidth={1} strokeLinecap="round" opacity={0.75} />
+        <Path d="M34.5 12c1.2 7.6 3 9.4 9.5 11-6.5 1.6-8.3 3.4-9.5 11-1.2-7.6-3-9.4-9.5-11 6.5-1.6 8.3-3.4 9.5-11Z" fill="#fff0bc" />
+        <Path d="M48 15v7m-3.5-3.5h7M20 23v5m-2.5-2.5h5" fill="none" stroke="#fbd593" strokeWidth={1.2} strokeLinecap="round" />
+        <Circle cx={51} cy={53} r={1.4} fill="#baaeff" />
+        <Circle cx={24} cy={55} r={1.2} fill="#ffd892" />
       </>}
       {kind === 'retro' && <Path d="M24 31a11 11 0 1 1 1 10 M24 23v8h8" fill="none" stroke="#e9e8ff" strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round" />}
     </Svg>

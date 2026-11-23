@@ -76,13 +76,13 @@ export function MbtiQuestionnaireSection({
 
               <View style={{ gap: 6 }}>
                 <View style={styles.scaleLabelsRow}>
-                  <T muted size={10}>
+                  <T muted size={10} style={[styles.scaleLabel, styles.scaleEndLabel, styles.scaleFirstLabel]}>
                     Disagree
                   </T>
-                  <T muted size={10}>
+                  <T muted size={10} style={styles.scaleLabel}>
                     Neutral
                   </T>
-                  <T muted size={10}>
+                  <T muted size={10} style={[styles.scaleLabel, styles.scaleEndLabel, styles.scaleLastLabel]}>
                     Agree
                   </T>
                 </View>

@@ -12,7 +12,7 @@ type Drag = { origin?: number; pageX: number; position?: number };
 export function LikertScale({ value, onChange, colors }: {
   value?: number;
   onChange: (value: number) => void;
-  colors: { surfaceAlt: string; surface: string; line: string; purple: string };
+  colors: { surface: string; line: string; purple: string };
 }) {
   const track = useRef<React.ComponentRef<typeof View>>(null);
   const width = useRef(0);
@@ -64,10 +64,9 @@ export function LikertScale({ value, onChange, colors }: {
       ref={track}
       collapsable={false}
       onLayout={({ nativeEvent }) => { width.current = nativeEvent.layout.width; }}
-      style={[styles.track, { backgroundColor: colors.surfaceAlt }]}
+      style={styles.track}
       {...responder.panHandlers}
     >
-      <View pointerEvents="none" style={[styles.rail, { backgroundColor: colors.line }]} />
       {choices.map((label, index) => {
         const selected = value === index + 1;
         const size = sizes[index];
@@ -96,8 +95,7 @@ export function LikertScale({ value, onChange, colors }: {
 }
 
 const styles = StyleSheet.create({
-  track: { flexDirection: 'row', alignItems: 'center', minHeight: 56, borderRadius: 28, ...(Platform.OS === 'web' ? { touchAction: 'pan-y' } : {}) },
-  rail: { position: 'absolute', left: '7%', right: '7%', height: 2 },
+  track: { flexDirection: 'row', alignItems: 'center', minHeight: 56, borderRadius: 28, backgroundColor: 'rgba(255,255,255,0.10)', ...(Platform.OS === 'web' ? { touchAction: 'pan-y' } : {}) },
   slot: { flex: 1, minHeight: 56, alignItems: 'center', justifyContent: 'center' },
   pressed: { opacity: 0.72 },
   marker: { position: 'absolute', width: markerSize, height: markerSize, borderRadius: markerSize / 2, borderWidth: 2, borderColor: '#ede5ff' },

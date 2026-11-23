@@ -1,6 +1,9 @@
+import * as FileSystem from 'expo-file-system/legacy';
+import * as IntentLauncher from 'expo-intent-launcher';
+import * as Sharing from 'expo-sharing';
 import React, { useEffect, useRef, useState } from 'react';
-import { ActivityIndicator, Animated, Platform, Pressable, ScrollView, StyleSheet, View } from 'react-native';
-import { ChevronLeft, ChevronRight, Sparkles } from 'lucide-react-native';
+import { ActivityIndicator, Alert, Animated, Platform, Pressable, ScrollView, StyleSheet, View } from 'react-native';
+import { ArrowLeft, ChevronLeft, ChevronRight, Download, Sparkles } from 'lucide-react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { T } from '../components/UI';
 import { API_BASE_URL } from '../services/apiBase';
@@ -21,6 +24,8 @@ export function ProfileReading({ userId, tarot, onClose }: {
   const [attempt, setAttempt] = useState(0);
   const [pages, setPages] = useState<ReadingPage[]>([]);
   const [error, setError] = useState('');
+  const [generatingPdf, setGeneratingPdf] = useState(false);
+  const [downloadError, setDownloadError] = useState('');
   const tarotValue = tarot?.value;
   const tarotDetail = tarot?.detail;
 
@@ -43,6 +48,134 @@ export function ProfileReading({ userId, tarot, onClose }: {
     return () => controller.abort();
   }, [attempt, userId, tarotValue, tarotDetail]);
 
+  const handleGeneratePdf = async () => {
+    if (generatingPdf) return;
+    setDownloadError('');
+    setGeneratingPdf(true);
+    try {
+      const response = await authorizedFetch(`${API_BASE_URL}/users/${encodeURIComponent(userId)}/report/pdf`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ tarot }),
+      });
+
+      if (!response.ok) {
+        throw new Error('Сървърът върна грешка при генерирането.');
+      }
+
+      const blob = await response.blob();
+      if (!blob.size || !response.headers.get('content-type')?.includes('application/pdf')) {
+        throw new Error('The server did not return a PDF.');
+      }
+      const fileName = `Natala_Report_${Date.now()}.pdf`;
+
+      // 1. Web: директно изтегляне в папка Downloads на компютъра
+      if (Platform.OS === 'web') {
+        const url = window.URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = fileName;
+        document.body.appendChild(link);
+        link.click();
+        link.remove();
+        setTimeout(() => window.URL.revokeObjectURL(url), 1000);
+        setGeneratingPdf(false);
+        return;
+      }
+
+      const reader = new FileReader();
+      reader.onerror = () => {
+        setGeneratingPdf(false);
+        Alert.alert('Грешка', 'Неуспешно прочитане на PDF файла.');
+      };
+
+      reader.onloadend = async () => {
+        try {
+          const base64Data = (reader.result as string).split(',')[1];
+
+          // 2. Android: запазване директно в избрана от потребителя папка (напр. Downloads) чрез StorageAccessFramework
+          if (Platform.OS === 'android') {
+            const permissions =
+              await FileSystem.StorageAccessFramework.requestDirectoryPermissionsAsync();
+
+            if (permissions.granted) {
+              const safUri =
+                await FileSystem.StorageAccessFramework.createFileAsync(
+                  permissions.directoryUri,
+                  fileName,
+                  'application/pdf'
+                );
+
+              await FileSystem.writeAsStringAsync(safUri, base64Data, {
+                encoding: FileSystem.EncodingType.Base64,
+              });
+
+              Alert.alert(
+                'Файлът е запазен',
+                `Докладът "${fileName}" беше успешно запазен на устройството ви.`,
+                [
+                  { text: 'ОК', style: 'cancel' },
+                  {
+                    text: 'Отвори',
+                    onPress: () => {
+                      IntentLauncher.startActivityAsync(
+                        'android.intent.action.VIEW',
+                        {
+                          data: safUri,
+                          flags: 1, // FLAG_GRANT_READ_URI_PERMISSION
+                          type: 'application/pdf',
+                        }
+                      ).catch(() => {});
+                    },
+                  },
+                ]
+              );
+            } else {
+              // Ако потребителят откаже избора на папка, запазваме във вътрешната памет на приложението
+              const fallbackUri = `${FileSystem.documentDirectory}${fileName}`;
+              await FileSystem.writeAsStringAsync(fallbackUri, base64Data, {
+                encoding: FileSystem.EncodingType.Base64,
+              });
+              Alert.alert(
+                'Запазено в приложението',
+                'Не избрахте външна папка, затова файлът беше запазен локално в приложението.'
+              );
+            }
+          } else {
+            // 3. iOS: запазване локално и отваряне на системния лист ("Save to Files" / "Запази във Файлове")
+            const fileUri = `${FileSystem.documentDirectory}${fileName}`;
+            await FileSystem.writeAsStringAsync(fileUri, base64Data, {
+              encoding: FileSystem.EncodingType.Base64,
+            });
+
+            await Sharing.shareAsync(fileUri, {
+              mimeType: 'application/pdf',
+              UTI: 'com.adobe.pdf',
+              dialogTitle: 'Запази AI PDF доклада на устройството',
+            });
+          }
+        } catch (saveErr) {
+          console.error('Грешка при запис на PDF:', saveErr);
+          Alert.alert('Грешка', 'Неуспешен запис на PDF файла на устройството.');
+        } finally {
+          setGeneratingPdf(false);
+        }
+      };
+
+      reader.readAsDataURL(blob);
+    } catch (err) {
+      setDownloadError('Could not download your PDF. Please try again.');
+      console.error('PDF грешка:', err);
+      Alert.alert(
+        'Грешка',
+        'Неуспешно генериране на AI доклад. Провери връзката със сървъра.'
+      );
+      setGeneratingPdf(false);
+    }
+  };
+
   const move = (next: number) => {
     if (next < 0 || next >= pages.length || !width) return;
     setIndex(next);
@@ -50,7 +183,22 @@ export function ProfileReading({ userId, tarot, onClose }: {
   };
   const current = pages[index]?.number ?? 0;
 
-  return <DetailScreen title="Your Cosmic Report" onClose={onClose} offset={offset} reduced={reduced} darkBottom travel={width * 13}>
+  return <DetailScreen title="" onClose={onClose} offset={offset} reduced={reduced} darkBottom travel={width * 13} header={
+    <View>
+      <View style={styles.header}>
+        <Pressable accessibilityRole="button" accessibilityLabel="Go back" onPress={onClose} style={styles.button}>
+          <ArrowLeft color="#efe9ff" size={21} />
+        </Pressable>
+        <Pressable accessibilityRole="button" accessibilityLabel="Download PDF" accessibilityState={{ busy: generatingPdf }}
+          onPress={handleGeneratePdf} disabled={generatingPdf} style={styles.download}>
+          <LinearGradient colors={['#ffe0a5', '#eebd66', '#d49342']} style={StyleSheet.absoluteFill} pointerEvents="none" />
+          {generatingPdf ? <ActivityIndicator color="#442914" size="small" /> : <Download color="#442914" size={17} />}
+          <T bold size={13} style={styles.downloadInk}>Download</T>
+        </Pressable>
+      </View>
+      {!!downloadError && <T size={13} style={styles.muted}>{downloadError}</T>}
+    </View>
+  }>
     <View style={styles.body} onLayout={(event) => {
       const next = event.nativeEvent.layout.width;
       if (next > 0 && next !== width) setWidth(next);
@@ -101,6 +249,10 @@ export function ProfileReading({ userId, tarot, onClose }: {
 
 const styles = StyleSheet.create({
   body: { flex: 1 },
+  header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 19, paddingVertical: 8 },
+  download: { minHeight: 44, minWidth: 112, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 7,
+    borderRadius: 22, paddingHorizontal: 13, overflow: 'hidden', backgroundColor: '#eebd66' },
+  downloadInk: { color: '#442914' },
   text: { color: '#f8f4ff' },
   muted: { color: '#c7c8e5', textAlign: 'center' },
   status: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: 25, gap: 15 },

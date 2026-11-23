@@ -54,6 +54,8 @@ export const DOSHA_META: Record<
   },
 };
 
+export const DOSHA_CATEGORIES = (['Vata', 'Pitta', 'Kapha'] as const).map((name) => [name, DOSHA_META[name].color] as const);
+
 export const PRAKRITI_QUIZ_QUESTIONS: AyurvedaQuizQuestion[] = [
   {
     id: 'q1',

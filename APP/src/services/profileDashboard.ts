@@ -17,7 +17,7 @@ type DashboardProfile = BirthProfile & {
   numerology?: { lifePathNumber?: number; isMasterNumber?: boolean };
   cardology?: { birthCard?: string };
   mbti?: { type?: string };
-  ayurveda?: { dominantDosha?: string; scores?: { vata?: number; pitta?: number; kapha?: number } };
+  ayurveda?: { constitution?: string; dominantDosha?: string; scores?: { vata?: number; pitta?: number; kapha?: number } };
   bazi?: { dayMaster?: string; zodiacAnimal?: string } | null;
 };
 
@@ -44,7 +44,7 @@ export function getDashboardBalances(user: DashboardProfile | null, activity?: S
   const saved = user?.ayurveda?.scores;
   return {
     elements: readElements(western) ?? readElements(natal?.shares) ?? readElements(natal),
-    doshas: normalizedShares([local?.Vata, local?.Pitta, local?.Kapha]) ?? normalizedShares([saved?.vata, saved?.pitta, saved?.kapha]),
+    doshas: normalizedShares([saved?.vata, saved?.pitta, saved?.kapha]) ?? normalizedShares([local?.Vata, local?.Pitta, local?.Kapha]),
   };
 }
 
@@ -115,7 +115,7 @@ export function getDashboardSystems(user: DashboardProfile | null, activity?: Sy
     numerology: { value: lifePath?.lifePathNumber ? String(lifePath.lifePathNumber) : undefined, detail: lifePath?.isMasterNumber ? 'Life path · Master number' : lifePath ? 'Life path number' : 'Add a birth date to calculate your life path.' },
     mbti: { value: type && /^[EI][SN][TF][JP]$/.test(type) ? type : undefined, detail: type ? 'Personality archetype' : 'Complete the questionnaire.' },
     cardology: { value: card || user?.cardology?.birthCard, detail: card || user?.cardology?.birthCard ? 'Birth card' : 'Add a birth date to find your birth card.' },
-    ayurveda: { value: activity?.ayurveda?.constitution || (dosha && dosha.charAt(0).toUpperCase() + dosha.slice(1)), detail: activity?.ayurveda || dosha ? 'Dosha constitution' : 'Complete the dosha assessment.' },
+    ayurveda: { value: user?.ayurveda?.constitution || (dosha && dosha.charAt(0).toUpperCase() + dosha.slice(1)) || activity?.ayurveda?.constitution, detail: activity?.ayurveda || dosha ? 'Dosha constitution' : 'Complete the dosha assessment.' },
     tarot: { value: activity?.tarot?.value, detail: activity?.tarot?.detail ?? 'Draw a daily card or reveal a spread.' },
     bazi: { value: bazi?.dayMaster || bazi?.zodiacAnimal, detail: bazi?.dayMaster && bazi.zodiacAnimal ? 'Day master · ' + bazi.zodiacAnimal : bazi?.dayMaster || bazi?.zodiacAnimal ? 'Four Pillars' : 'Save a Four Pillars reading for your profile.' },
     'chinese-zodiac': { value: chinese && chinese.element + ' ' + chinese.animal.name, detail: chinese ? chinese.polarity + ' · Birth-year sign' : 'Add a birth date to discover your birth-year animal.' },

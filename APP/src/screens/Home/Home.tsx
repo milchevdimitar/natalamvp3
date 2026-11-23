@@ -1,3 +1,7 @@
+import { hasFeature } from '../../services/account';
+import { profileId } from '../../services/profileLinks';
+import { useSystemActivity } from '../../services/systemActivity';
+import { ProfileReading } from '../ProfileReading';
 import { ProfileAvatar } from '../../components/ProfileAvatar';
 import React, { useCallback, useMemo, useRef, useState } from 'react';
 import { Animated, Platform, Pressable, RefreshControl, ScrollView, StyleSheet, Text, View } from 'react-native';
@@ -28,8 +32,8 @@ import { styles as existing } from './home.styles';
 import { useDiscoveryStreak } from './useDiscoveryStreak';
 import { usePlanetaryData } from './usePlanetaryData';
 
-type Detail = 'sun' | 'moon' | 'codex' | 'retrogrades' | 'streak';
-const PLANET_ATLAS_TITLE = 'Your Planetary Atlas';
+type Detail = 'sun' | 'moon' | 'codex' | 'retrogrades' | 'streak' | 'report';
+const PLANET_ATLAS_TITLE = 'Your planets';
 const lunarPoints: Record<string, Pick<CelestialSlide, 'tagline' | 'summary' | 'description'>> = {
   northNode: {
     tagline: 'Growth & unfamiliar territory',
@@ -48,12 +52,13 @@ const lunarPoints: Record<string, Pick<CelestialSlide, 'tagline' | 'summary' | '
   },
 };
 
-function SkyCard({ title, subtitle, hint, artwork, onPress, disabled }: {
-  title: string; subtitle: string; hint?: string; artwork: React.ReactNode; onPress: () => void; disabled?: boolean;
+function SkyCard({ title, subtitle, hint, artwork, onPress, disabled, premium }: {
+  title: string; subtitle: string; hint?: string; artwork: React.ReactNode; onPress: () => void; disabled?: boolean; premium?: boolean;
 }) {
   return (
-    <Pressable accessibilityRole="button" onPress={onPress} disabled={disabled} style={({ pressed }) => [styles.card, pressed && { opacity: 0.8 }]}>
+    <Pressable accessibilityRole="button" onPress={onPress} disabled={disabled} style={({ pressed }) => [styles.card, premium && styles.premiumCard, pressed && { opacity: 0.8 }]}>
       <LinearGradient pointerEvents="none" colors={glassPanel.colors} start={glassPanel.start} end={glassPanel.end} style={StyleSheet.absoluteFill} />
+      {premium && <View style={styles.premiumBadge}><Text style={styles.premiumText}>Premium</Text></View>}
       <View style={styles.artwork}>{artwork}</View>
       <View style={{ flex: 1, minWidth: 0 }}>
         <Text style={styles.cardTitle}>{title}</Text>
@@ -66,9 +71,11 @@ function SkyCard({ title, subtitle, hint, artwork, onPress, disabled }: {
 }
 
 export default function Home() {
-  const { colors, user, setPage, fetchActiveStories, addStory, setSelectedChat } = useApp();
+  const { colors, user, account, setPage, fetchActiveStories, addStory, setSelectedChat } = useApp();
   const palette = { ...colors, ...cosmic, purpleSoft: '#30457a', goldSoft: '#362845' };
   const insets = useSafeAreaInsets();
+  const activity = useSystemActivity(user?.email);
+  const reportUserId = profileId(user?._id ?? user?.id);
   const streak = useDiscoveryStreak(user?.email);
   const reduced = useReducedMotion();
   const scroll = useRef(new Animated.Value(0)).current;
@@ -176,14 +183,19 @@ export default function Home() {
         <View style={styles.group}>
           <Text accessibilityRole="header" style={styles.section}>The sky right now</Text>
           <SkyCard title={PLANET_ATLAS_TITLE} subtitle={planetaryPositions.length ? 'Planet meanings, your birth chart & today’s transits' : loadingNASA ? 'Calculating planetary positions…' : 'Planetary positions unavailable'} hint="Swipe through planets and lunar points" artwork={<SkyArtwork kind="codex" />} onPress={() => setDetail('codex')} disabled={!planetaryPositions.length} />
-          <SkyCard title={sun.sign + ' season'} subtitle={'Sun in ' + sun.sign + ' · ' + sun.degree + '°'} hint="Swipe through the zodiac seasons" artwork={<SkyArtwork kind="sun" />} onPress={() => setDetail('sun')} />
-          <SkyCard title={moon.phaseName} subtitle={'Moon · ' + moon.illuminated + '% illuminated'} hint="Moon phases · swipe month by month" artwork={<AnimatedMoonVisualizer moonPhase={moon} size={SKY_ARTWORK_SIZE} reduced={reduced} />} onPress={() => setDetail('moon')} />
+          <SkyCard title="The Sun" subtitle={'Sun in ' + sun.sign + ' · ' + sun.degree + '°'} hint="Swipe through the zodiac seasons" artwork={<SkyArtwork kind="sun" />} onPress={() => setDetail('sun')} />
+          <SkyCard title="The Moon" subtitle={moon.phaseName + ' · ' + moon.illuminated + '% illuminated'} hint="Moon phases · swipe month by month" artwork={<AnimatedMoonVisualizer moonPhase={moon} size={SKY_ARTWORK_SIZE} reduced={reduced} />} onPress={() => setDetail('moon')} />
+          <SkyCard title="Retrogrades" subtitle={planetaryPositions.length
+            ? (retrogradeCount === 1 ? '1 planet in retrograde' : retrogradeCount + ' planets in retrograde')
+            : loadingNASA ? 'Checking planetary motion…' : 'Planetary motion unavailable'}
+            hint="See which planets are retrograde and when they turn direct" artwork={<SkyArtwork kind="retro" />} onPress={() => setDetail('retrogrades')} disabled={!planetaryPositions.length} />
         </View>
 
-        <View style={styles.group}>
-          <Text accessibilityRole="header" style={styles.section}>Retrogrades</Text>
-          <SkyCard title={planetaryPositions.length ? (retrogradeCount ? retrogradeCount + ' active' : 'No active retrogrades') : loadingNASA ? 'Checking planetary motion…' : 'Planetary motion unavailable'} subtitle="Planetary motion at a glance" artwork={<SkyArtwork kind="retro" />} onPress={() => setDetail('retrogrades')} disabled={!planetaryPositions.length} />
-        </View>
+        <SkyCard title="Your Cosmic Report" subtitle="A personalized reading" hint="Explore 12 chapters about your life"
+          artwork={<SkyArtwork kind="report" />} premium onPress={() => {
+            if (!hasFeature(account, 'pdf-report')) { setPage('subscription'); return; }
+            if (reportUserId) setDetail('report');
+          }} />
 
         <FortuneCookieCard
           colors={palette}
@@ -196,7 +208,8 @@ export default function Home() {
         />
       </Animated.ScrollView>
 
-      {detail === 'sun' && <CelestialCarousel kind="zodiac" title="Zodiac seasons" slides={zodiacSlides(sun.sign, now)} onClose={close} reduced={reduced} />}
+      {detail === 'report' && reportUserId && <ProfileReading userId={reportUserId} tarot={activity?.tarot} onClose={close} />}
+      {detail === 'sun' && <CelestialCarousel kind="zodiac" title="The Sun" slides={zodiacSlides(sun.sign, now)} onClose={close} reduced={reduced} />}
       {detail === 'codex' && <CelestialCarousel
         title={PLANET_ATLAS_TITLE}
         kind="codex"
@@ -205,7 +218,7 @@ export default function Home() {
         onRetrogrades={() => setDetail('retrogrades')}
         reduced={reduced}
       />}
-      {detail === 'moon' && <DetailScreen title="Moon calendar" onClose={close} offset={still} reduced={reduced} darkBottom>
+      {detail === 'moon' && <DetailScreen title="The Moon" onClose={close} offset={still} reduced={reduced} darkBottom>
         <MoonCalendarDetail reduced={reduced} />
       </DetailScreen>}
       {detail === 'streak' && streak && <DetailScreen title="Discovery streak" onClose={close} offset={still} reduced={reduced} darkBottom header={
@@ -251,6 +264,9 @@ const styles = StyleSheet.create({
   group: { gap: 11 },
   section: { color: cosmic.text, fontSize: 17, fontWeight: '800', letterSpacing: -0.4 },
   card: { flexDirection: 'row', alignItems: 'center', gap: 14, overflow: 'hidden', borderRadius: 28, borderWidth: 1, borderColor: glassPanel.border, padding: 15, minHeight: 110, backgroundColor: glassPanel.background },
+  premiumCard: { paddingTop: 24 },
+  premiumBadge: { position: 'absolute', top: 7, right: 10, borderRadius: 14, paddingHorizontal: 8, paddingVertical: 2, backgroundColor: '#ffe0a5' },
+  premiumText: { color: '#442914', fontSize: 10, fontWeight: '800' },
   artwork: { width: SKY_ARTWORK_SIZE, height: SKY_ARTWORK_SIZE, flexShrink: 0, borderRadius: SKY_ARTWORK_SIZE / 2, boxShadow: '0 0 0 5px rgba(108,146,236,0.08), 0 0 24px rgba(116,156,244,0.18)' },
   cardTitle: { color: cosmic.text, fontSize: 16, lineHeight: 19, fontWeight: '800' },
   cardMeta: { color: '#d1e1ff', fontSize: 12, marginTop: 4 },

@@ -1,28 +1,23 @@
 import { ProfileReading } from './ProfileReading';
 import React, { useState } from 'react';
-import { ActivityIndicator, Alert, Animated, Platform, Pressable, StyleSheet, View } from 'react-native';
-import { Brain, ChevronRight, Compass, FileDown, Hash, Layers, Leaf, Orbit, QrCode, Settings, Share2, Sparkles, Sun } from 'lucide-react-native';
+import { Animated, Platform, Pressable, StyleSheet, View } from 'react-native';
+import { Brain, ChevronRight, Compass, Hash, Layers, Leaf, Orbit, QrCode, Settings, Share2, Sparkles, Sun } from 'lucide-react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import * as FileSystem from 'expo-file-system/legacy';
-import * as IntentLauncher from 'expo-intent-launcher';
-import * as Sharing from 'expo-sharing';
 import { Card, Section, T } from '../components/UI';
 import { CountUp, DashboardProgressBar, DoshaTriangle, ElementSymbols, useDashboardVisibility } from '../components/DashboardCharts';
-import { DOSHA_META } from './Ayurveda/ayurveda.data';
+import { DOSHA_CATEGORIES } from './Ayurveda/ayurveda.data';
 import { ProfileSettings } from './ProfileSettings';
 import { ProfilePhoto } from '../components/ProfilePhoto';
 import { ProfileQrCard } from '../components/ProfileQrCard';
 import { profileId, shareProfile } from '../services/profileLinks';
 import type { ExploreRoute } from '../data/exploreRoutes';
 import { useApp } from '../context/AppContext';
-import { authorizedFetch, hasFeature } from '../services/account';
-import { API_BASE_URL } from '../services/api';
+import { hasFeature } from '../services/account';
 import { getBirthParts, getDashboardBalances, getDashboardSystems } from '../services/profileDashboard';
 import { useSystemActivity } from '../services/systemActivity';
 
 const elements = [['Fire', '#f29986'], ['Earth', '#edc58a'], ['Air', '#b9b0ff'], ['Water', '#7ac9f5']] as const;
-const doshas = (['Vata', 'Pitta', 'Kapha'] as const).map((name) => [name, DOSHA_META[name].color] as const);
 const systemIcons: Record<ExploreRoute, typeof Sun> = {
   astrology: Sun, numerology: Hash, mbti: Brain, cardology: Layers, tarot: Sparkles,
   ayurveda: Leaf, bazi: Compass, 'chinese-zodiac': Orbit,
@@ -35,7 +30,6 @@ export default function Profile({ scrollOffset }: { scrollOffset: Animated.Value
   const [qrOpen, setQrOpen] = useState(false);
   const [shareNotice, setShareNotice] = useState('');
   const [readingOpen, setReadingOpen] = useState(false);
-  const [generatingPdf, setGeneratingPdf] = useState(false);
   const activity = useSystemActivity(user?.email);
   const systems = getDashboardSystems(user, activity);
   const ready = systems.filter((system) => system.value);
@@ -66,138 +60,6 @@ export default function Profile({ scrollOffset }: { scrollOffset: Animated.Value
       if (result === 'copied') setShareNotice('Profile link copied.');
     } catch (error) {
       if (!(error instanceof Error && error.name === 'AbortError')) setShareNotice('Could not share the profile link.');
-    }
-  };
-
-  const handleGeneratePdf = async () => {
-    if (!hasFeature(account, 'pdf-report')) { setPage('subscription'); return; }
-    const userId = user?._id || user?.id;
-    if (!userId) {
-      Alert.alert('Грешка', 'Липсва ID на потребителя.');
-      return;
-    }
-
-    setGeneratingPdf(true);
-    try {
-      const response = await authorizedFetch(`${API_BASE_URL}/users/${userId}/report/pdf`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ tarot: activity?.tarot }),
-      });
-
-      if (!response.ok) {
-        throw new Error('Сървърът върна грешка при генерирането.');
-      }
-
-      const blob = await response.blob();
-      if (!blob.size || !response.headers.get('content-type')?.includes('application/pdf')) {
-        throw new Error('The server did not return a PDF.');
-      }
-      const fileName = `Natala_Report_${Date.now()}.pdf`;
-
-      // 1. Web: директно изтегляне в папка Downloads на компютъра
-      if (Platform.OS === 'web') {
-        const url = window.URL.createObjectURL(blob);
-        const link = document.createElement('a');
-        link.href = url;
-        link.download = fileName;
-        document.body.appendChild(link);
-        link.click();
-        link.remove();
-        setTimeout(() => window.URL.revokeObjectURL(url), 1000);
-        setGeneratingPdf(false);
-        return;
-      }
-
-      const reader = new FileReader();
-      reader.onerror = () => {
-        setGeneratingPdf(false);
-        Alert.alert('Грешка', 'Неуспешно прочитане на PDF файла.');
-      };
-
-      reader.onloadend = async () => {
-        try {
-          const base64Data = (reader.result as string).split(',')[1];
-
-          // 2. Android: запазване директно в избрана от потребителя папка (напр. Downloads) чрез StorageAccessFramework
-          if (Platform.OS === 'android') {
-            const permissions =
-              await FileSystem.StorageAccessFramework.requestDirectoryPermissionsAsync();
-
-            if (permissions.granted) {
-              const safUri =
-                await FileSystem.StorageAccessFramework.createFileAsync(
-                  permissions.directoryUri,
-                  fileName,
-                  'application/pdf'
-                );
-
-              await FileSystem.writeAsStringAsync(safUri, base64Data, {
-                encoding: FileSystem.EncodingType.Base64,
-              });
-
-              Alert.alert(
-                'Файлът е запазен',
-                `Докладът "${fileName}" беше успешно запазен на устройството ви.`,
-                [
-                  { text: 'ОК', style: 'cancel' },
-                  {
-                    text: 'Отвори',
-                    onPress: () => {
-                      IntentLauncher.startActivityAsync(
-                        'android.intent.action.VIEW',
-                        {
-                          data: safUri,
-                          flags: 1, // FLAG_GRANT_READ_URI_PERMISSION
-                          type: 'application/pdf',
-                        }
-                      ).catch(() => {});
-                    },
-                  },
-                ]
-              );
-            } else {
-              // Ако потребителят откаже избора на папка, запазваме във вътрешната памет на приложението
-              const fallbackUri = `${FileSystem.documentDirectory}${fileName}`;
-              await FileSystem.writeAsStringAsync(fallbackUri, base64Data, {
-                encoding: FileSystem.EncodingType.Base64,
-              });
-              Alert.alert(
-                'Запазено в приложението',
-                'Не избрахте външна папка, затова файлът беше запазен локално в приложението.'
-              );
-            }
-          } else {
-            // 3. iOS: запазване локално и отваряне на системния лист ("Save to Files" / "Запази във Файлове")
-            const fileUri = `${FileSystem.documentDirectory}${fileName}`;
-            await FileSystem.writeAsStringAsync(fileUri, base64Data, {
-              encoding: FileSystem.EncodingType.Base64,
-            });
-
-            await Sharing.shareAsync(fileUri, {
-              mimeType: 'application/pdf',
-              UTI: 'com.adobe.pdf',
-              dialogTitle: 'Запази AI PDF доклада на устройството',
-            });
-          }
-        } catch (saveErr) {
-          console.error('Грешка при запис на PDF:', saveErr);
-          Alert.alert('Грешка', 'Неуспешен запис на PDF файла на устройството.');
-        } finally {
-          setGeneratingPdf(false);
-        }
-      };
-
-      reader.readAsDataURL(blob);
-    } catch (err) {
-      console.error('PDF грешка:', err);
-      Alert.alert(
-        'Грешка',
-        'Неуспешно генериране на AI доклад. Провери връзката със сървъра.'
-      );
-      setGeneratingPdf(false);
     }
   };
 
@@ -272,7 +134,7 @@ export default function Profile({ scrollOffset }: { scrollOffset: Animated.Value
       <View onLayout={visibility.section('ayurveda')}>
         <Section>Ayurveda balance</Section>
         <Card style={styles.ayurvedaChart} onPress={() => setPage('ayurveda')}>
-          <DoshaTriangle categories={doshas} values={balances.doshas} active={!!visibility.visible.ayurveda} />
+          <DoshaTriangle categories={DOSHA_CATEGORIES} values={balances.doshas} active={!!visibility.visible.ayurveda} />
           {!balances.doshas && <View style={styles.chartLink}>
             <T size={12} style={{ color: colors.purple }}>Open the Ayurveda assessment</T><ChevronRight size={15} color={colors.purple} />
           </View>}
@@ -308,27 +170,16 @@ export default function Profile({ scrollOffset }: { scrollOffset: Animated.Value
         </Card>
       </View>}
 
-      <Card style={styles.reading} onPress={() => {
+      <Pressable accessibilityRole="button" onPress={() => {
         if (!hasFeature(account, 'pdf-report')) { setPage('subscription'); return; }
         if (publicId) setReadingOpen(true);
-      }}>
-        <View style={styles.readingIcon}><Sparkles size={22} color="#e6ceff" /></View>
-        <View style={{ flex: 1, gap: 4 }}>
-          <T bold size={17}>Your Cosmic Report</T>
-          <T muted size={12}>A personalized AI reading in 12 chapters</T>
-        </View>
-        <ChevronRight size={18} color={colors.muted} />
-      </Card>
-
-      <Pressable accessibilityRole="button" onPress={handleGeneratePdf} disabled={generatingPdf} style={({ pressed }) => [styles.report, pressed && { opacity: 0.86 }]}>
+      }} style={({ pressed }) => [styles.report, pressed && { opacity: 0.86 }]}>
         <LinearGradient colors={['#ffe0a5', '#eebd66', '#d49342']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={StyleSheet.absoluteFill} pointerEvents="none" />
         <View style={styles.premium}><T bold size={10} style={styles.reportInk}>Premium</T></View>
-        <View style={styles.reportIcon}>
-          {generatingPdf ? <ActivityIndicator size="small" color="#442914" /> : <FileDown size={23} color="#442914" />}
-        </View>
+        <View style={styles.reportIcon}><Sparkles size={23} color="#442914" /></View>
         <View style={styles.copy}>
-          <T bold size={16} style={styles.reportInk}>{generatingPdf ? 'Generating report…' : 'Download profile report'}</T>
-          <T size={12} style={styles.reportInk}>Your personalized reading in one PDF</T>
+          <T bold size={16} style={styles.reportInk}>Your Cosmic Report</T>
+          <T size={12} style={styles.reportInk}>A personalized reading in 12 chapters</T>
         </View>
       </Pressable>
     </Animated.ScrollView>
@@ -363,8 +214,6 @@ const styles = StyleSheet.create({
   pending: { paddingHorizontal: 15, paddingVertical: 4 },
   copy: { flex: 1, minWidth: 0, gap: 2 },
   next: { minHeight: 57, flexDirection: 'row', alignItems: 'center', gap: 10, paddingVertical: 8 },
-  reading: { minHeight: 87, marginBottom: 11, flexDirection: 'row', alignItems: 'center', gap: 12, padding: 14, backgroundColor: 'rgba(66,58,126,0.43)' },
-  readingIcon: { width: 45, height: 45, borderRadius: 23, alignItems: 'center', justifyContent: 'center', backgroundColor: 'rgba(141,110,194,0.3)' },
   report: { position: 'relative', flexDirection: 'row', alignItems: 'center', minHeight: 96, paddingHorizontal: 13, paddingVertical: 24, gap: 10, borderRadius: 20, overflow: 'hidden', borderWidth: 1, borderColor: '#ffe3a5' },
   reportInk: { color: '#442914' },
   reportIcon: { width: 42, height: 42, borderRadius: 21, alignItems: 'center', justifyContent: 'center', backgroundColor: 'rgba(98,53,19,0.14)' },

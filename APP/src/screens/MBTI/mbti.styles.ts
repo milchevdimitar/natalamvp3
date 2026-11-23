@@ -39,11 +39,11 @@ export const styles = StyleSheet.create({
     flex: 1,
     lineHeight: 20,
   },
-  scaleLabelsRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    paddingHorizontal: 4,
-  },
+  scaleLabelsRow: { flexDirection: 'row', justifyContent: 'center' },
+  scaleLabel: { textAlign: 'center' },
+  scaleEndLabel: { position: 'absolute', width: 64, marginLeft: -32 },
+  scaleFirstLabel: { left: '7.142857%' },
+  scaleLastLabel: { left: '92.857143%' },
   paginationRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',

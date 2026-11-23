@@ -26,6 +26,7 @@ export interface UserProfile {
   cardology?: { birthCard?: string };
   ayurveda?: {
     dominantDosha: string;
+    constitution?: string;
     scores: { vata: number; pitta: number; kapha: number };
     answers?: Record<string, 'Vata' | 'Pitta' | 'Kapha'>;
     stress?: 'low' | 'moderate' | 'high';

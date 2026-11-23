@@ -1,493 +1,153 @@
-import React, { useEffect, useMemo, useState } from 'react';
-import {
-  View,
-  Pressable,
-  TouchableOpacity,
-  StyleSheet,
-  TextInput,
-} from 'react-native';
-import {
-  ArrowLeft,
-  Sliders,
-  Compass,
-  Clock,
-  Activity,
-  Leaf,
-  Heart,
-  Sparkles,
-} from 'lucide-react-native';
-import { Hero, Card, T, Section } from '../../components/UI';
+import React, { useState } from 'react';
+import { ActivityIndicator, Pressable, StyleSheet, View } from 'react-native';
+import { ArrowLeft, ChevronLeft, ChevronRight, Leaf } from 'lucide-react-native';
+import { DoshaTriangle } from '../../components/DashboardCharts';
+import { Card, Hero, Progress, Section, T } from '../../components/UI';
 import { useApp } from '../../context/AppContext';
-import { saveSystemActivity, useSystemActivity } from '../../services/systemActivity';
 import { saveUserProfile } from '../../services/api';
-import { getBirthParts } from '../../services/profileDashboard';
-import {
-  AyurvedaTabId,
-  AyurvedaViewComplexity,
-  DoshaName,
-} from './ayurveda.types';
+import { getDashboardBalances } from '../../services/profileDashboard';
+import { useSystemActivity } from '../../services/systemActivity';
 import { calculateAyurvedaProfile } from './ayurveda.calculator';
-import { toLocalWallClock, useCalc } from '../../services/calcApi';
-import { PRAKRITI_QUIZ_QUESTIONS } from './ayurveda.data';
-import { DoshaBalanceCard } from './DoshaBalanceCard';
-import { AyurvedaSheetModal, AyurvedaTierCard } from './AyurvedaDetailModal';
-import { AyurvedaTabDaily } from './AyurvedaTabDaily';
-import { AyurvedaTabDiagnostics } from './AyurvedaTabDiagnostics';
-import { AyurvedaTabNutrition } from './AyurvedaTabNutrition';
-import { AyurvedaTabMatch } from './AyurvedaTabMatch';
+import { DOSHA_CATEGORIES, PRAKRITI_QUIZ_QUESTIONS } from './ayurveda.data';
+import { DoshaGuide } from './DoshaGuide';
+import { DOSHA_ICONS } from './DoshaBalanceCard';
+import { AyurvedaSheetModal } from './AyurvedaDetailModal';
+import { describeDoshaBalance, doshaScoreBand, doshaTips } from './ayurveda.balance';
+import type { DoshaName } from './ayurveda.types';
 
+const questions = PRAKRITI_QUIZ_QUESTIONS;
 export default function Ayurveda() {
   const { colors, user, setPage, updateCurrentUserProfile } = useApp();
+  const activity = useSystemActivity(user?.email);
+  const values = getDashboardBalances(user, activity).doshas;
+  const [selectedDosha, setSelectedDosha] = useState<DoshaName | null>(null);
+  const [quizOpen, setQuizOpen] = useState(false);
+  const [index, setIndex] = useState(0);
+  const [answers, setAnswers] = useState<Record<string, DoshaName>>({});
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState('');
+  const question = questions[index];
+  const answered = questions.filter(({ id, options }) => options.some(({ dosha }) => dosha === answers[id])).length;
+  const done = index === questions.length - 1;
+  const balance = values ? describeDoshaBalance(values) : undefined;
 
-  const initial = useMemo(() => getBirthParts(user), [user]);
+  const startQuiz = () => {
+    setIndex(0);
+    setAnswers({});
+    setError('');
+    setQuizOpen(true);
+  };
 
-  const [activeTab, setActiveTab] = useState<AyurvedaTabId>('prakriti');
-  const [viewComplexity, setViewComplexity] = useState<AyurvedaViewComplexity>('simple');
-  const [showQuizModal, setShowQuizModal] = useState(false);
-  const [showOverviewModal, setShowOverviewModal] = useState(false);
+  const finish = async () => {
+    if (!user?.email || saving || answered !== questions.length) return;
+    setSaving(true);
+    setError('');
+    try {
+      const { prakriti, primaryDosha, constitutionType } = calculateAyurvedaProfile({ quizAnswers: answers });
+      const ayurveda = {
+        answers,
+        constitution: constitutionType,
+        dominantDosha: primaryDosha.toLowerCase(),
+        scores: { vata: prakriti.Vata, pitta: prakriti.Pitta, kapha: prakriti.Kapha },
+      };
+      const result = await saveUserProfile({ email: user.email, ayurveda });
+      if (!result.success || !result.user?.ayurveda) throw new Error('Assessment was not saved');
+      await updateCurrentUserProfile({ ayurveda: result.user.ayurveda });
+      setQuizOpen(false);
+    } catch {
+      setError('Could not save your results. Your answers are still here. Try again.');
+    } finally {
+      setSaving(false);
+    }
+  };
 
-  const [personName, setPersonName] = useState(user?.name || 'Your Ayurvedic Blueprint');
-  const [quizAnswers, setQuizAnswers] = useState<Record<string, DoshaName>>({});
-  const [stressLevel, setStressLevel] = useState<'low' | 'moderate' | 'high'>('moderate');
-  const savedAssessment = useSystemActivity(user?.email)?.ayurveda;
+  return <>
+    <Pressable accessibilityRole="button" onPress={() => setPage('explore')} style={[styles.back, { backgroundColor: colors.surfaceAlt }]}>
+      <ArrowLeft color={colors.text} size={16} /><T bold size={12}>Explore</T>
+    </Pressable>
+    <Hero eyebrow="AYURVEDA" first="Find your" accent="dosha balance." />
 
-  useEffect(() => {
-    const saved = user?.ayurveda?.answers ? user.ayurveda : savedAssessment;
-    if (saved?.answers) setQuizAnswers(saved.answers);
-    if (saved?.stress) setStressLevel(saved.stress);
-  }, [savedAssessment, user?.ayurveda]);
-
-  const options = useMemo(
-    () => ({
-        personName,
-        birthYear: initial?.year,
-        birthMonth: initial?.month,
-        birthDay: initial?.day,
-        useBirthBaseline: Boolean(initial),
-        quizAnswers,
-        currentStressLevel: stressLevel,
-      }),
-    [personName, initial, quizAnswers, stressLevel]
-  );
-  const localDate = toLocalWallClock();
-  const remote = useCalc<ReturnType<typeof calculateAyurvedaProfile>>('ayurveda/profile', {
-    options: { ...options, personName: undefined }, localDate,
-  });
-  const profile = useMemo(() => remote.data
-    ? { ...remote.data, personName }
-    : calculateAyurvedaProfile(options), [options, personName, remote.data]);
-
-  const answeredCount = PRAKRITI_QUIZ_QUESTIONS.filter(({ id, options }) =>
-    options.some(({ dosha }) => dosha === quizAnswers[id])
-  ).length;
-
-  return (
-    <>
-      {/* Top Bar: Back + Simple/Pro Toggle */}
-      <View style={styles.topNavRow}>
-        <Pressable
-          onPress={() => setPage('explore')}
-          style={[styles.backBtn, { backgroundColor: colors.surfaceAlt }]}
-        >
-          <ArrowLeft size={16} color={colors.text} />
-          <T bold size={12}>
-            Explore
-          </T>
-        </Pressable>
-
-        <View
-          style={{
-            flexDirection: 'row',
-            backgroundColor: colors.surfaceAlt,
-            borderRadius: 10,
-            padding: 3,
-            borderWidth: 1,
-            borderColor: colors.line,
-          }}
-        >
-          {(['simple', 'pro'] as AyurvedaViewComplexity[]).map((mode) => {
-            const active = viewComplexity === mode;
-            return (
-              <TouchableOpacity
-                key={mode}
-                onPress={() => setViewComplexity(mode)}
-                style={{
-                  paddingHorizontal: 10,
-                  paddingVertical: 5,
-                  borderRadius: 7,
-                  backgroundColor: active ? colors.action : 'transparent',
-                }}
-              >
-                <T
-                  bold
-                  size={10}
-                  style={{ color: active ? '#FFFFFF' : colors.muted }}
-                >
-                  {mode === 'simple' ? 'Simple' : 'Pro'}
-                </T>
-              </TouchableOpacity>
-            );
-          })}
+    <Card style={styles.card}>
+      <View style={styles.row}>
+        <Leaf size={20} color={colors.purple} />
+        <View style={styles.copy}>
+          <T bold size={16}>{values ? 'Your dosha balance' : 'Discover your doshas'}</T>
+          <T muted size={13}>{values ? 'Your results also appear in Profile.' : 'Answer based on what is usually true for you.'}</T>
         </View>
       </View>
+      {values && <DoshaTriangle categories={DOSHA_CATEGORIES} values={values} active />}
+      <Pressable accessibilityRole="button" onPress={startQuiz} style={[styles.primary, { backgroundColor: colors.action }]}>
+        <T bold size={14} style={styles.primaryText}>{values ? 'Retake quiz' : 'Take the quiz'}</T>
+      </Pressable>
+    </Card>
 
-      <Hero
-        eyebrow="AYURVEDA · SCIENCE OF LIFE"
-        first="Harmonize your"
-        accent="inner elements."
-        description="Prakriti & Vikriti constitution, Agni fire, Dinacharya rhythms & Ahara nutrition."
-      />
+    {balance && <View style={styles.recommendations}>
+      <Card style={styles.card}>
+        <T muted size={12}>Your dosha type</T>
+        <T bold size={20}>{balance.type}</T>
+        <T muted size={13} style={styles.body}>{balance.description}</T>
+      </Card>
+      <Section>Ways to find balance</Section>
+      {balance.doshas.map(({ name, color, value }) => {
+        const band = doshaScoreBand(value);
+        const tips = doshaTips[name];
+        const Icon = DOSHA_ICONS[name];
+        return <Card key={name} style={styles.card} onPress={() => setSelectedDosha(name)}>
+          <View style={styles.row}>
+            <Icon color={color} size={20} />
+            <View style={styles.copy}><T bold size={15} style={{ color }}>{name} · {value}%</T></View>
+            <ChevronRight size={17} color={colors.muted} />
+          </View>
+          <T muted size={13} style={styles.body}>{tips.general}</T>
+          {band !== 'even' && <>
+            <T bold size={12}>{band === 'higher' ? 'Higher in your result' : 'Lower in your result'}</T>
+            <T muted size={13} style={styles.body}>{tips[band]}</T>
+          </>}
+        </Card>;
+      })}
+    </View>}
 
-      {/* 5-Tab Tiered Navigation */}
-      <View
-        style={{
-          flexDirection: 'row',
-          backgroundColor: colors.surfaceAlt,
-          borderRadius: 14,
-          padding: 4,
-          marginTop: 12,
-          marginBottom: 14,
-          borderWidth: 1,
-          borderColor: colors.line,
-        }}
-      >
-        {(
-          [
-            { id: 'prakriti', label: 'Prakriti', Icon: Compass },
-            { id: 'clock', label: 'Clock', Icon: Clock },
-            { id: 'diagnostics', label: 'Agni & Qi', Icon: Activity },
-            { id: 'ahara', label: 'Ahara', Icon: Leaf },
-            { id: 'match', label: 'Match', Icon: Heart },
-          ] as const
-        ).map(({ id, label, Icon }) => {
-          const active = activeTab === id;
-          return (
-            <TouchableOpacity
-              key={id}
-              onPress={() => setActiveTab(id)}
-              style={{
-                flex: 1,
-                paddingVertical: 8,
-                borderRadius: 10,
-                alignItems: 'center',
-                justifyContent: 'center',
-                gap: 3,
-                backgroundColor: active ? colors.action : 'transparent',
-              }}
-            >
-              <Icon size={14} color={active ? '#FFFFFF' : colors.muted} />
-              <T bold size={10} style={{ color: active ? '#FFFFFF' : colors.muted }}>
-                {label}
-              </T>
-            </TouchableOpacity>
-          );
+    {selectedDosha && <DoshaGuide dosha={selectedDosha} onClose={() => setSelectedDosha(null)} />}
+
+    <AyurvedaSheetModal visible={quizOpen} onClose={() => { if (!saving) setQuizOpen(false); }}
+      eyebrow={`QUESTION ${index + 1} OF ${questions.length}`} title="Dosha quiz" colors={colors}>
+      <View style={styles.quiz}>
+        <Progress value={answered / questions.length * 100} color={colors.purple} />
+        <T bold size={17}>{question.prompt}</T>
+        {question.options.map(({ dosha, label }) => {
+          const checked = answers[question.id] === dosha;
+          return <Pressable key={dosha} accessibilityRole="radio" accessibilityState={{ checked }} disabled={saving}
+            onPress={() => setAnswers((current) => ({ ...current, [question.id]: dosha }))}
+            style={[styles.option, { backgroundColor: checked ? colors.purpleSoft : colors.surfaceAlt, borderColor: checked ? colors.purple : colors.line }]}>
+            <T size={14}>{label}</T>
+          </Pressable>;
         })}
+        {!!error && <View accessibilityRole="alert"><T size={13}>{error}</T></View>}
+        <View style={styles.row}>
+          {index > 0 && <Pressable accessibilityRole="button" disabled={saving} onPress={() => setIndex(index - 1)} style={styles.secondary}>
+            <ChevronLeft size={18} color={colors.text} /><T bold size={13}>Back</T>
+          </Pressable>}
+          <Pressable accessibilityRole="button" disabled={saving || !answers[question.id] || (done && answered !== questions.length)}
+            onPress={done ? finish : () => setIndex(index + 1)} style={[styles.primary, { flex: 1, backgroundColor: colors.action, opacity: answers[question.id] ? 1 : 0.5 }]}>
+            {saving ? <ActivityIndicator color="#fff" /> : <T bold size={14} style={styles.primaryText}>{done ? 'Save results' : 'Next'}</T>}
+            {!done && <ChevronRight size={17} color="#fff" />}
+          </Pressable>
+        </View>
       </View>
-
-      {activeTab === 'prakriti' && (
-        <View style={{ gap: 14 }}>
-          {/* Compact Constitution Header + Quiz Button */}
-          <Card style={styles.profileCard}>
-            <View style={styles.profileRow}>
-              <Sparkles size={18} color={colors.gold} />
-              <View style={{ flex: 1, gap: 2 }}>
-                <T bold size={14}>
-                  {profile.personName} · {profile.constitutionType}
-                </T>
-                <T muted size={11}>
-                  Primary: {profile.primaryDosha} · Secondary: {profile.secondaryDosha} ·{' '}
-                  {answeredCount > 0
-                    ? `${answeredCount}/${PRAKRITI_QUIZ_QUESTIONS.length} quiz refined`
-                    : 'Birth baseline'}
-                </T>
-              </View>
-
-              <TouchableOpacity
-                onPress={() => setShowQuizModal(true)}
-                style={{
-                  flexDirection: 'row',
-                  alignItems: 'center',
-                  gap: 4,
-                  paddingHorizontal: 10,
-                  paddingVertical: 6,
-                  borderRadius: 9,
-                  backgroundColor: colors.purpleSoft,
-                }}
-              >
-                <Sliders size={12} color={colors.purple} />
-                <T bold size={11} style={{ color: colors.purple }}>
-                  Quiz
-                </T>
-              </TouchableOpacity>
-            </View>
-          </Card>
-
-          {/* Prakriti & Vikriti Tridosha Card */}
-          <DoshaBalanceCard
-            profile={profile}
-            mode={viewComplexity}
-            colors={colors}
-          />
-
-          {/* Tier 1: Constitution Archetype Synthesis */}
-          <AyurvedaTierCard
-            eyebrow={`CONSTITUTION · ${profile.constitutionType.toUpperCase()}`}
-            badgeText={
-              profile.hasActiveImbalance
-                ? `Pacify ${profile.imbalancedDosha}`
-                : 'In Balance'
-            }
-            badgeColor={profile.hasActiveImbalance ? colors.gold : '#10B981'}
-            title={profile.archetypeHeadline}
-            summary={profile.archetypeSummary}
-            onPressMore={() => setShowOverviewModal(true)}
-            colors={colors}
-          />
-
-          {/* Quick Seasonal & Agni Snapshot */}
-          <Section>Current Alignment Snapshot</Section>
-          <Card style={styles.snapshotCard}>
-            <T bold size={13} style={{ color: colors.gold }}>
-              {profile.season.seasonName} ({profile.season.sanskritName}) ·{' '}
-              {profile.agni.type}
-            </T>
-            <T muted size={12} style={{ lineHeight: 18 }}>
-              {profile.agni.balancingProtocol}
-            </T>
-          </Card>
-        </View>
-      )}
-
-      {activeTab === 'clock' && (
-        <AyurvedaTabDaily
-          profile={profile}
-          mode={viewComplexity}
-          colors={colors}
-        />
-      )}
-
-      {activeTab === 'diagnostics' && (
-        <AyurvedaTabDiagnostics
-          profile={profile}
-          mode={viewComplexity}
-          colors={colors}
-        />
-      )}
-
-      {activeTab === 'ahara' && (
-        <AyurvedaTabNutrition
-          profile={profile}
-          mode={viewComplexity}
-          colors={colors}
-        />
-      )}
-
-      {activeTab === 'match' && (
-        <AyurvedaTabMatch userProfile={profile} colors={colors} />
-      )}
-
-      {/* Tier 2: Full Constitution Synthesis Modal */}
-      <AyurvedaSheetModal
-        visible={showOverviewModal}
-        onClose={() => setShowOverviewModal(false)}
-        eyebrow={`PRAKRITI: ${profile.constitutionType.toUpperCase()}`}
-        title={profile.archetypeHeadline}
-        colors={colors}
-      >
-        <T size={14} style={{ lineHeight: 21 }}>
-          {profile.archetypeSummary}
-        </T>
-        <View style={{ padding: 12, borderRadius: 12, backgroundColor: colors.surfaceAlt }}>
-          <T bold size={11} style={{ color: '#10B981' }}>
-            NATURAL GIFTS & STRENGTHS
-          </T>
-          <T size={13} style={{ marginTop: 3, lineHeight: 19 }}>
-            {profile.strengths}
-          </T>
-        </View>
-        <View style={{ padding: 12, borderRadius: 12, backgroundColor: colors.purpleSoft }}>
-          <T bold size={11} style={{ color: colors.purple }}>
-            IMBALANCE SIGNS TO WATCH ({profile.imbalancedDosha.toUpperCase()})
-          </T>
-          <T size={13} style={{ marginTop: 3, lineHeight: 19 }}>
-            {profile.watchOuts}
-          </T>
-        </View>
-      </AyurvedaSheetModal>
-
-      {/* Tier 2: Interactive Prakriti & Vikriti Assessment Quiz Modal */}
-      <AyurvedaSheetModal
-        visible={showQuizModal}
-        onClose={() => setShowQuizModal(false)}
-        eyebrow="DOSHA ASSESSMENT"
-        title="Refine Prakriti & Current Stress"
-        colors={colors}
-      >
-        <TextInput
-          value={personName}
-          onChangeText={setPersonName}
-          placeholder="Your Name"
-          placeholderTextColor={colors.muted}
-          style={{
-            borderWidth: 1,
-            borderColor: colors.line,
-            borderRadius: 10,
-            paddingHorizontal: 12,
-            paddingVertical: 9,
-            color: colors.text,
-          }}
-        />
-
-        {/* Current Stress / Vikriti Modulator */}
-        <View style={{ gap: 6 }}>
-          <T bold size={11} style={{ color: colors.gold }}>
-            CURRENT STRESS & PACING (VIKRITI)
-          </T>
-          <View style={{ flexDirection: 'row', gap: 6 }}>
-            {(['low', 'moderate', 'high'] as const).map((lvl) => {
-              const active = stressLevel === lvl;
-              return (
-                <TouchableOpacity
-                  key={lvl}
-                  onPress={() => setStressLevel(lvl)}
-                  style={{
-                    flex: 1,
-                    paddingVertical: 8,
-                    borderRadius: 9,
-                    alignItems: 'center',
-                    backgroundColor: active ? colors.action : colors.surfaceAlt,
-                  }}
-                >
-                  <T
-                    bold
-                    size={11}
-                    style={{ color: active ? '#FFFFFF' : colors.muted }}
-                  >
-                    {lvl.toUpperCase()}
-                  </T>
-                </TouchableOpacity>
-              );
-            })}
-          </View>
-        </View>
-
-        {/* 6 Constitutional Questions */}
-        {PRAKRITI_QUIZ_QUESTIONS.map((q) => (
-          <View
-            key={q.id}
-            style={{
-              padding: 12,
-              borderRadius: 12,
-              backgroundColor: colors.surfaceAlt,
-              gap: 7,
-            }}
-          >
-            <T bold size={11} style={{ color: colors.purple }}>
-              {q.category.toUpperCase()}
-            </T>
-            <T bold size={13}>
-              {q.prompt}
-            </T>
-            <View style={{ gap: 5 }}>
-              {q.options.map((opt) => {
-                const selected = quizAnswers[q.id] === opt.dosha;
-                return (
-                  <TouchableOpacity
-                    key={opt.dosha}
-                    onPress={() =>
-                      setQuizAnswers((prev) => ({ ...prev, [q.id]: opt.dosha }))
-                    }
-                    style={{
-                      paddingVertical: 8,
-                      paddingHorizontal: 10,
-                      borderRadius: 9,
-                      backgroundColor: selected ? colors.purpleSoft : colors.surface,
-                      borderWidth: 1,
-                      borderColor: selected ? colors.purple : colors.line,
-                    }}
-                  >
-                    <T
-                      bold={selected}
-                      size={12}
-                      style={{ color: selected ? colors.purple : colors.text }}
-                    >
-                      {opt.label}
-                    </T>
-                  </TouchableOpacity>
-                );
-              })}
-            </View>
-          </View>
-        ))}
-
-        <TouchableOpacity
-          disabled={answeredCount < PRAKRITI_QUIZ_QUESTIONS.length}
-          onPress={async () => {
-            if (user?.email) {
-              try {
-                const { prakriti, primaryDosha, constitutionType } = calculateAyurvedaProfile(options);
-                await saveSystemActivity(user.email, 'ayurveda', {
-                  answers: quizAnswers, stress: stressLevel, constitution: constitutionType, scores: prakriti,
-                });
-                const ayurveda = {
-                  answers: quizAnswers, stress: stressLevel, constitution: constitutionType,
-                  dominantDosha: primaryDosha.toLowerCase() as 'vata' | 'pitta' | 'kapha',
-                  scores: { vata: prakriti.Vata, pitta: prakriti.Pitta, kapha: prakriti.Kapha },
-                };
-                await updateCurrentUserProfile({ ayurveda });
-                void saveUserProfile({ email: user.email, ayurveda }).catch(() => undefined);
-              } catch (error) {
-                console.warn('Could not save Ayurveda assessment:', error);
-                return;
-              }
-            }
-            setShowQuizModal(false);
-          }}
-          style={{
-            backgroundColor: colors.action,
-            opacity: answeredCount < PRAKRITI_QUIZ_QUESTIONS.length ? 0.5 : 1,
-            paddingVertical: 11,
-            borderRadius: 12,
-            alignItems: 'center',
-          }}
-        >
-          <T bold size={13} style={{ color: '#FFFFFF' }}>
-            Save & Update Blueprint
-          </T>
-        </TouchableOpacity>
-      </AyurvedaSheetModal>
-    </>
-  );
+    </AyurvedaSheetModal>
+  </>;
 }
 
 const styles = StyleSheet.create({
-  topNavRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    marginBottom: 10,
-  },
-  backBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    borderRadius: 12,
-  },
-  profileCard: {
-    padding: 14,
-    borderRadius: 16,
-  },
-  profileRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 10,
-  },
-  snapshotCard: {
-    padding: 15,
-    borderRadius: 16,
-    gap: 6,
-    marginBottom: 24,
-  },
+  back: { alignSelf: 'flex-start', flexDirection: 'row', alignItems: 'center', gap: 6, borderRadius: 18, paddingHorizontal: 12, minHeight: 42, marginBottom: 9 },
+  card: { padding: 16, gap: 10 },
+  row: { flexDirection: 'row', alignItems: 'center', gap: 10 },
+  copy: { flex: 1, gap: 4 },
+  primary: { minHeight: 46, borderRadius: 14, alignItems: 'center', justifyContent: 'center', flexDirection: 'row', gap: 5 },
+  primaryText: { color: '#fff' },
+  recommendations: { marginTop: 18, gap: 9 },
+  body: { lineHeight: 20 },
+  quiz: { gap: 12, paddingBottom: 10 },
+  option: { minHeight: 50, borderRadius: 13, borderWidth: 1, justifyContent: 'center', padding: 12 },
+  secondary: { minHeight: 44, paddingHorizontal: 7, flexDirection: 'row', alignItems: 'center' },
 });
