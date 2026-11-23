@@ -1,13 +1,12 @@
-import { BackButton } from '../../components/BackButton';
+import { ExploreSystemHeader } from '../ExploreSystemHeader';
 import React, { useMemo, useState } from 'react';
 import {
   View,
   TouchableOpacity,
   ActivityIndicator,
   Share,
-  Switch,
 } from 'react-native';
-import { CloudUpload, Bell, Crown, Share2, Compass, Orbit, Sparkles, Heart, BookOpen } from 'lucide-react-native';
+import { CloudUpload, Compass, Orbit, Sparkles, Heart, BookOpen } from 'lucide-react-native';
 import { useApp } from '../../context/AppContext';
 import { saveUserProfile } from '../../services/api';
 import { Card, T, Section, Hero } from '../../components/UI';
@@ -34,7 +33,6 @@ import {
   ChartTechnicalDrawerTrigger,
   MissingBirthDateEmptyState,
 } from './AstrologySections';
-import { DetailSheetModal } from './AstrologyDetailModal';
 import { AstrologyTabTodayTransits } from './AstrologyTabTodayTransits';
 import { AstrologyTabPatterns } from './AstrologyTabPatterns';
 import { AstrologyTabBonds } from './AstrologyTabBonds';
@@ -52,10 +50,9 @@ const DEFAULT_COLLECTIONS: UserCollectionGroup[] = [
 ];
 
 export default function Astrology() {
-  const { colors, setPage, user, setUser, account } = useApp();
+  const { colors, setPage, user, setUser } = useApp();
   const [activeTab, setActiveTab] = useState<AstrologyAppTab>('chart');
   const [viewMode, setViewMode] = useState<ChartViewMode>('2D');
-  const [showSettingsModal, setShowSettingsModal] = useState(false);
 
   const [aiChartText, setAiChartText] = useState<string | null>(null);
   const [isAiChartLoading, setIsAiChartLoading] = useState(false);
@@ -206,67 +203,9 @@ export default function Astrology() {
     }
   };
 
-  const notifications = effectiveUser.notifications || {
-    dailyUpdates: true,
-    newInsights: true,
-    personalTransits: true,
-    bondTransits: true,
-  };
-
-  const subscriptionTier = account?.tier ?? 'free';
-
   return (
     <>
-      <View
-        style={{
-          flexDirection: 'row',
-          alignItems: 'center',
-          justifyContent: 'space-between',
-          marginBottom: 4,
-        }}
-      >
-        <BackButton onPress={() => setPage('explore')} label="Back to Explore" />
-
-        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-          {results && sunData && moonData && ascData && (
-            <TouchableOpacity
-              onPress={() =>
-                handleShareText(
-                  `${effectiveUser.name || 'My'} Natal Chart`,
-                  `☉ Sun in ${sunData.sign} · ☾ Moon in ${moonData.sign} · ↑ Rising in ${ascData.sign}`
-                )
-              }
-              style={{
-                padding: 8,
-                borderRadius: 10,
-                backgroundColor: colors.surfaceAlt,
-              }}
-            >
-              <Share2 size={15} color={colors.purple} />
-            </TouchableOpacity>
-          )}
-
-          <TouchableOpacity
-            onPress={() => setShowSettingsModal(true)}
-            style={{
-              flexDirection: 'row',
-              alignItems: 'center',
-              gap: 5,
-              paddingHorizontal: 10,
-              paddingVertical: 7,
-              borderRadius: 10,
-              backgroundColor:
-                subscriptionTier !== 'free' ? colors.goldSoft : colors.purpleSoft,
-            }}
-          >
-            <Bell size={14} color={colors.purple} />
-            <Crown
-              size={14}
-              color={subscriptionTier !== 'free' ? colors.gold : colors.purple}
-            />
-          </TouchableOpacity>
-        </View>
-      </View>
+      <ExploreSystemHeader route="astrology" />
 
       <Hero
         eyebrow="NATALA ASTROLOGY STUDIO"
@@ -482,76 +421,6 @@ export default function Astrology() {
         <MissingBirthDateEmptyState colors={colors} onGoToProfile={() => setPage('profile')} />
       )}
 
-      {/* Модал за известия и Go Deeper+ */}
-      <DetailSheetModal
-        visible={showSettingsModal}
-        onClose={() => setShowSettingsModal(false)}
-        eyebrow="PREFERENCES"
-        title="Notifications & subscription"
-        colors={colors}
-      >
-        <View
-          style={{
-            padding: 12,
-            borderRadius: 12,
-            backgroundColor: colors.goldSoft,
-            flexDirection: 'row',
-            justifyContent: 'space-between',
-            alignItems: 'center',
-          }}
-        >
-          <View>
-            <T bold size={13}>
-              Natala subscription
-            </T>
-            <T muted size={11}>
-              View your current plan
-            </T>
-          </View>
-          <TouchableOpacity
-            onPress={() => setPage('subscription')}
-            style={{
-              paddingHorizontal: 12,
-              paddingVertical: 6,
-              borderRadius: 8,
-              backgroundColor: colors.gold,
-            }}
-          >
-            <T bold size={11} style={{ color: '#FFFFFF' }}>
-              View plans
-            </T>
-          </TouchableOpacity>
-        </View>
-
-        {(
-          [
-            { key: 'dailyUpdates', label: 'Daily Cosmic Updates' },
-            { key: 'newInsights', label: 'New Personalized Insights' },
-            { key: 'personalTransits', label: 'Personal Transits & Peak Alerts' },
-            { key: 'bondTransits', label: 'Bond Transits & Timing Alerts' },
-          ] as const
-        ).map((item) => (
-          <View
-            key={item.key}
-            style={{
-              flexDirection: 'row',
-              justifyContent: 'space-between',
-              alignItems: 'center',
-              paddingVertical: 4,
-            }}
-          >
-            <T size={13}>{item.label}</T>
-            <Switch
-              value={Boolean(notifications[item.key])}
-              onValueChange={(val) =>
-                persistUserPatch({
-                  notifications: { ...notifications, [item.key]: val },
-                })
-              }
-            />
-          </View>
-        ))}
-      </DetailSheetModal>
     </>
   );
 }

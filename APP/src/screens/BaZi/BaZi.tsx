@@ -1,4 +1,4 @@
-import { BackButton } from '../../components/BackButton';
+import { ExploreSystemHeader } from '../ExploreSystemHeader';
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import {
   View,
@@ -87,7 +87,7 @@ function extractInitialProfile(user: any) {
 }
 
 export default function BaZi() {
-  const { colors, user, setPage, updateCurrentUserProfile } = useApp();
+  const { colors, user, updateCurrentUserProfile } = useApp();
 
   const initial = useMemo(() => extractInitialProfile(user), [user]);
 
@@ -179,9 +179,7 @@ export default function BaZi() {
 
   return (
     <>
-      {/* Top Bar: Back + Simple/Pro Toggle */}
-      <View style={styles.topNavRow}>
-        <BackButton onPress={() => setPage('explore')} label="Back to Explore" />
+      <ExploreSystemHeader route="bazi">
 
         <View
           style={{
@@ -217,7 +215,7 @@ export default function BaZi() {
             );
           })}
         </View>
-      </View>
+      </ExploreSystemHeader>
 
       <Hero
         eyebrow="BAZI · FOUR PILLARS OF DESTINY"
@@ -553,12 +551,6 @@ export default function BaZi() {
 }
 
 const styles = StyleSheet.create({
-  topNavRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    marginBottom: 10,
-  },
   profileInfoCard: {
     padding: 14,
     borderRadius: 16,

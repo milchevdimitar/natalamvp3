@@ -1,4 +1,4 @@
-import { BackButton } from '../components/BackButton';
+import { ExploreSystemHeader } from './ExploreSystemHeader';
 import React, { useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { Sparkles } from 'lucide-react-native';
@@ -9,7 +9,7 @@ import { animals, chineseZodiacForYear } from '../data/chineseZodiac';
 import { getBirthParts } from '../services/profileDashboard';
 
 export default function ChineseZodiac() {
-  const { colors, user, setPage } = useApp();
+  const { colors, user } = useApp();
   const year = getBirthParts(user)?.year;
   const result = year === undefined ? undefined : chineseZodiacForYear(year);
   const [selected, setSelected] = useState<number | null>(null);
@@ -19,7 +19,7 @@ export default function ChineseZodiac() {
 
   return (
     <>
-      <BackButton onPress={() => setPage('explore')} label="Back to Explore" />
+      <ExploreSystemHeader route="chinese-zodiac" />
       <Hero eyebrow="CHINESE ZODIAC" first="Your birth year," accent="in symbols." description="Explore the twelve animals and the elements of the sixty-year cycle." />
       {animal ? <>
         <Card style={styles.heroCard}>

@@ -1,4 +1,4 @@
-import { BackButton } from '../../components/BackButton';
+import { ExploreSystemHeader } from '../ExploreSystemHeader';
 import React from 'react';
 import { Pressable, View } from 'react-native';
 
@@ -66,7 +66,7 @@ export default function Tarot() {
 
   return (
     <>
-      <BackButton onPress={() => setPage('explore')} label="Back to Explore" />
+      <ExploreSystemHeader route="tarot" />
 
       <Hero
         eyebrow="CARDS OF THE UNSEEN"

@@ -1,4 +1,4 @@
-import { BackButton } from '../components/BackButton';
+import { ExploreSystemHeader } from './ExploreSystemHeader';
 import { Image } from 'expo-image';
 import { cardologyArtwork } from '../data/cardologyArtwork';
 import { useCalc } from '../services/calcApi';
@@ -245,7 +245,7 @@ export default function Cardology() {
 
   return (
     <>
-      <BackButton onPress={() => setPage('explore')} label="Back to Explore" />
+      <ExploreSystemHeader route="cardology" />
 
       <Hero
         eyebrow="CARDOLOGY"

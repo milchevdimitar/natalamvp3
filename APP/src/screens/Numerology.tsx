@@ -1,4 +1,4 @@
-import { BackButton } from '../components/BackButton';
+import { ExploreSystemHeader } from './ExploreSystemHeader';
 import { useCalc } from '../services/calcApi';
 import React, { useEffect } from 'react';
 import {
@@ -237,7 +237,7 @@ export default function Numerology() {
 
   return (
     <>
-      <BackButton onPress={() => setPage('explore')} label="Back to Explore" />
+      <ExploreSystemHeader route="numerology" />
 
       <Hero
         eyebrow="NUMEROLOGY ENGINE · LIFE PATH"

@@ -44,12 +44,12 @@ const symbols = {
 
 export type ExploreArtworkKind = keyof typeof symbols;
 
-export function ExploreArtwork({ kind, muted = false }: { kind: ExploreArtworkKind; muted?: boolean }) {
+export function ExploreArtwork({ kind, muted = false, onDark = false }: { kind: ExploreArtworkKind; muted?: boolean; onDark?: boolean }) {
   const { colors, theme } = useApp();
   const Icon = symbols[kind];
   return (
     <View style={styles.slot} accessible={false}>
-      <Icon size={34} strokeWidth={1.45} color={muted ? colors.muted : theme === 'dark' ? '#d5c8ff' : colors.purple} />
+      <Icon size={34} strokeWidth={1.45} color={muted ? colors.muted : (onDark || theme === 'dark') ? '#d5c8ff' : colors.purple} />
     </View>
   );
 }

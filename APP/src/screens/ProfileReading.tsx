@@ -1,10 +1,11 @@
+import { PagerDots } from '../components/PagerDots';
 import { BackButton, backHeaderSpacing } from '../components/BackButton';
 import * as FileSystem from 'expo-file-system/legacy';
 import * as IntentLauncher from 'expo-intent-launcher';
 import * as Sharing from 'expo-sharing';
 import React, { useEffect, useRef, useState } from 'react';
 import { ActivityIndicator, Alert, Animated, Platform, Pressable, ScrollView, StyleSheet, View } from 'react-native';
-import { ChevronLeft, ChevronRight, Download, Sparkles } from 'lucide-react-native';
+import { Download, Sparkles } from 'lucide-react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { T } from '../components/UI';
 import { API_BASE_URL } from '../services/apiBase';
@@ -178,7 +179,6 @@ export function ProfileReading({ userId, onClose }: {
     setIndex(next);
     pager.current?.scrollTo({ x: width * next, animated: !reduced });
   };
-  const current = pages[index]?.number ?? 0;
 
   return <DetailScreen title="" onClose={onClose} offset={offset} reduced={reduced} darkBottom travel={width * 13} header={
     <View>
@@ -186,9 +186,10 @@ export function ProfileReading({ userId, onClose }: {
         <BackButton onPress={onClose} onDark />
         <Pressable accessibilityRole="button" accessibilityLabel="Download PDF" accessibilityState={{ busy: generatingPdf }}
           onPress={handleGeneratePdf} disabled={generatingPdf} style={styles.download}>
-          <LinearGradient colors={['#ffe0a5', '#eebd66', '#d49342']} style={StyleSheet.absoluteFill} pointerEvents="none" />
-          {generatingPdf ? <ActivityIndicator color="#442914" size="small" /> : <Download color="#442914" size={17} />}
-          <T bold size={13} style={styles.downloadInk}>Download</T>
+          <View style={styles.downloadSurface}>
+            <T bold size={13} style={styles.downloadInk}>Download</T>
+            {generatingPdf ? <ActivityIndicator color="#392510" size="small" /> : <Download color="#392510" size={17} strokeWidth={2.3} />}
+          </View>
         </Pressable>
       </View>
       {!!downloadError && <T size={13} style={styles.muted}>{downloadError}</T>}
@@ -232,11 +233,7 @@ export function ProfileReading({ userId, onClose }: {
             </ScrollView>
           </View>)}
         </Animated.ScrollView>
-        <View style={styles.controls}>
-          <Pressable accessibilityRole="button" accessibilityLabel="Previous page" disabled={index === 0} onPress={() => move(index - 1)} style={[styles.button, index === 0 && styles.disabled]}><ChevronLeft color="#efe9ff" size={22} /></Pressable>
-          <T size={13} style={styles.muted}>{current ? `${current} of 12` : 'Introduction'}</T>
-          <Pressable accessibilityRole="button" accessibilityLabel="Next page" disabled={index === 12} onPress={() => move(index + 1)} style={[styles.button, index === 12 && styles.disabled]}><ChevronRight color="#efe9ff" size={22} /></Pressable>
-        </View>
+        <PagerDots labels={pages.map(({ title }) => title)} index={index} onSelect={move} />
       </>}
     </View>
   </DetailScreen>;
@@ -245,9 +242,10 @@ export function ProfileReading({ userId, onClose }: {
 const styles = StyleSheet.create({
   body: { flex: 1 },
   header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', width: '100%', maxWidth: 720, alignSelf: 'center', ...backHeaderSpacing, paddingBottom: 8 },
-  download: { minHeight: 44, minWidth: 112, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 7,
-    borderRadius: 22, paddingHorizontal: 13, overflow: 'hidden', backgroundColor: '#eebd66' },
-  downloadInk: { color: '#442914' },
+  download: { height: 44, justifyContent: 'center' },
+  downloadSurface: { minHeight: 34, paddingHorizontal: 14, flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
+    gap: 8, borderRadius: 10, backgroundColor: '#efc270' },
+  downloadInk: { color: '#392510', textAlign: 'center' },
   text: { color: '#f8f4ff' },
   muted: { color: '#c7c8e5', textAlign: 'center' },
   status: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: 25, gap: 15 },
@@ -258,7 +256,5 @@ const styles = StyleSheet.create({
   subtitle: { color: '#d7caef', textAlign: 'center', lineHeight: 21 },
   card: { padding: 17, gap: 13, marginTop: 8, borderRadius: 22, borderWidth: 1, borderColor: '#878bc05e', backgroundColor: '#30356266' },
   paragraph: { color: '#f2efff', lineHeight: 23 },
-  controls: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', alignSelf: 'center', width: '100%', maxWidth: 360, paddingHorizontal: 24, paddingVertical: 8 },
   button: { minWidth: 44, minHeight: 44, paddingHorizontal: 12, alignItems: 'center', justifyContent: 'center', borderRadius: 22, borderWidth: 1, borderColor: '#878bc05e', backgroundColor: '#303562' },
-  disabled: { opacity: 0.3 },
 });

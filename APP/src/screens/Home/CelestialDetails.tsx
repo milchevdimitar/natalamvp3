@@ -1,8 +1,8 @@
+import { PagerDots } from '../../components/PagerDots';
 import { BackButton, backHeaderSpacing } from '../../components/BackButton';
 import React, { useEffect, useRef, useState } from 'react';
 import { Animated, Easing, Modal, Platform, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { ChevronLeft, ChevronRight } from 'lucide-react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import Svg, { Circle, ClipPath, Defs, Ellipse, G, Path, RadialGradient, Rect, Stop } from 'react-native-svg';
 import { SearchSunLongitude } from 'astronomy-engine';
@@ -361,21 +361,7 @@ export function CelestialCarousel({ title, kind, slides, onClose, reduced, onRet
           })}
         </Animated.ScrollView>}
       </View>
-      <View style={styles.controls}>
-        <Pressable accessibilityLabel="Previous card" accessibilityRole="button" disabled={index === 0} onPress={() => move(index - 1)} style={[styles.icon, index === 0 && styles.disabled]}>
-          <ChevronLeft color={cosmic.text} />
-        </Pressable>
-        <View style={styles.dots}>
-          {slides.map((slide, i) => (
-            <Pressable key={slide.title} accessibilityRole="button" accessibilityLabel={'Go to ' + slide.title} aria-selected={i === index} onPress={() => move(i)} style={styles.dotTarget}>
-              <View style={[styles.dot, i === index && styles.activeDot]} />
-            </Pressable>
-          ))}
-        </View>
-        <Pressable accessibilityLabel="Next card" accessibilityRole="button" disabled={index >= slides.length - 1} onPress={() => move(index + 1)} style={[styles.icon, index >= slides.length - 1 && styles.disabled]}>
-          <ChevronRight color={cosmic.text} />
-        </Pressable>
-      </View>
+      <PagerDots labels={slides.map(({ title }) => title)} index={index} onSelect={move} />
     </DetailScreen>
   );
 }
@@ -389,7 +375,6 @@ const styles = StyleSheet.create({
   counter: { position: 'absolute', left: '25%', width: '50%', textAlign: 'center', color: cosmic.muted, fontSize: 11, letterSpacing: 1.2, fontWeight: '800', pointerEvents: 'none' },
   headerEnd: { minWidth: 42, alignItems: 'flex-end' },
   shortcut: { minHeight: 40, justifyContent: 'center', paddingHorizontal: 10 },
-  icon: { width: 42, height: 42, justifyContent: 'center', alignItems: 'center', borderRadius: 22, borderWidth: 1, borderColor: cosmic.line, backgroundColor: 'rgba(36,58,126,0.46)' },
   track: { flex: 1, minHeight: 0, width: '100%' },
   slide: { width: '100%', maxWidth: 560, alignSelf: 'center', paddingHorizontal: 20, paddingTop: 5, paddingBottom: 20, gap: 10 },
   codexSlide: { flex: 1, minHeight: 0, paddingBottom: 4 },
@@ -417,11 +402,5 @@ const styles = StyleSheet.create({
   divider: { height: StyleSheet.hairlineWidth, backgroundColor: glassPanel.border, marginVertical: 13 },
   more: { color: '#c4d1ed', fontSize: 13, lineHeight: 21 },
   note: { color: cosmic.muted, textAlign: 'center', fontSize: 10, paddingVertical: 2 },
-  controls: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', width: '100%', maxWidth: 560, alignSelf: 'center', gap: 8, paddingHorizontal: 17, paddingBottom: 9, paddingTop: 3 },
-  disabled: { opacity: 0.35 },
-  dots: { flexDirection: 'row', flexShrink: 1, alignItems: 'center', justifyContent: 'center' },
-  dotTarget: { height: 40, justifyContent: 'center', paddingHorizontal: 3 },
-  dot: { width: 7, height: 7, borderRadius: 6, backgroundColor: '#576d9e' },
-  activeDot: { width: 18, backgroundColor: '#baaaff' },
   link: { color: '#d7c6ff', fontSize: 12, fontWeight: '800' },
 });

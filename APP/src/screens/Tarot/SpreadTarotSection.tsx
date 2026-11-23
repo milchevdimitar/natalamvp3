@@ -35,8 +35,8 @@ interface Props {
   onShareToStory: () => void;
 }
 
-function CardReader({ colors, cards, position, active, select, onClose, onClarify, canClarify, limitReached }: {
-  colors: any; cards: TarotCardData[]; position: number; active: number; select: (index: number) => void;
+function CardReader({ colors, cards, active, select, onClose, onClarify, canClarify, limitReached }: {
+  colors: any; cards: TarotCardData[]; active: number; select: (index: number) => void;
   onClose: () => void; onClarify: () => void; canClarify: boolean; limitReached: boolean;
 }) {
   const reduced = useReducedMotion();
@@ -53,7 +53,7 @@ function CardReader({ colors, cards, position, active, select, onClose, onClarif
     return () => animation.stop();
   }, [appearance, card.id, reduced]);
 
-  return <DetailScreen title={`Position ${position + 1}`} onClose={onClose} offset={offset} reduced={reduced} darkBottom>
+  return <DetailScreen title="" onClose={onClose} offset={offset} reduced={reduced} darkBottom>
     <ScrollView ref={scroll} contentContainerStyle={ui.reader}>
       <Animated.View style={[ui.reading, { opacity: appearance, transform: [{ translateY: appearance.interpolate({ inputRange: [0, 1], outputRange: [8, 0] }) }] }]}>
         <View style={ui.fullCard}><TarotArtworkCard card={card} isRevealed colors={colors} size="large" /></View>
@@ -199,7 +199,7 @@ export function SpreadTarotSection(props: Props) {
       </View>
     </>}
 
-    {inspected !== null && stack.length > 0 && <CardReader colors={colors} cards={stack} position={inspected} active={activeCard}
+    {inspected !== null && stack.length > 0 && <CardReader colors={colors} cards={stack} active={activeCard}
       select={setActiveCard} onClose={() => setInspected(null)} limitReached={stack.length - 1 >= MAX_CLARIFIERS}
       canClarify={remainingCount > 0 && stack.length - 1 < MAX_CLARIFIERS}
       onClarify={() => { const next = onAddClarification(inspected); if (next !== null) setActiveCard(next); }} />}

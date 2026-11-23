@@ -1,4 +1,5 @@
 import { BackButton } from '../../components/BackButton';
+import { ExploreSystemHeader } from '../ExploreSystemHeader';
 import React, { useState } from 'react';
 import { ActivityIndicator, Pressable, StyleSheet, View } from 'react-native';
 import { ChevronRight, Leaf } from 'lucide-react-native';
@@ -18,7 +19,7 @@ import type { DoshaName } from './ayurveda.types';
 
 const questions = PRAKRITI_QUIZ_QUESTIONS;
 export default function Ayurveda() {
-  const { colors, user, setPage, updateCurrentUserProfile } = useApp();
+  const { colors, user, updateCurrentUserProfile } = useApp();
   const activity = useSystemActivity(user?.email);
   const values = getDashboardBalances(user, activity).doshas;
   const [selectedDosha, setSelectedDosha] = useState<DoshaName | null>(null);
@@ -63,7 +64,7 @@ export default function Ayurveda() {
   };
 
   return <>
-    <BackButton onPress={() => setPage('explore')} label="Back to Explore" />
+    <ExploreSystemHeader route="ayurveda" />
     <Hero eyebrow="AYURVEDA" first="Find your" accent="dosha balance." />
 
     <Card style={styles.card}>

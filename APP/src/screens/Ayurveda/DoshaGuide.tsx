@@ -1,7 +1,7 @@
+import { PagerDots } from '../../components/PagerDots';
 import React, { useRef, useState } from 'react';
-import { Animated, Platform, Pressable, ScrollView, StyleSheet, View } from 'react-native';
+import { Animated, Platform, ScrollView, StyleSheet, View } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
-import { ChevronLeft, ChevronRight } from 'lucide-react-native';
 import { T } from '../../components/UI';
 import { DetailScreen } from '../Home/CelestialDetails';
 import { useReducedMotion } from '../Home/CosmicBackground';
@@ -57,14 +57,14 @@ export function DoshaGuide({ dosha, onClose }: { dosha: DoshaName; onClose: () =
     if (page >= 0 && page < states.length) pager.current?.scrollTo({ x: page * width, animated: !reduced });
   };
 
-  return <DetailScreen title={dosha} onClose={onClose} offset={offset} reduced={reduced} darkBottom travel={width * 3}>
+  return <DetailScreen title="" onClose={onClose} offset={offset} reduced={reduced} darkBottom travel={width * 3}>
     <View style={styles.body} onLayout={(event) => setWidth(event.nativeEvent.layout.width)}>
       {width > 0 && <Animated.ScrollView ref={pager} horizontal pagingEnabled bounces={false}
         directionalLockEnabled nestedScrollEnabled showsHorizontalScrollIndicator={false} scrollEventThrottle={16}
         onScroll={Animated.event([{ nativeEvent: { contentOffset: { x: offset } } }], {
           useNativeDriver: Platform.OS !== 'web',
           listener: (event: { nativeEvent: { contentOffset: { x: number } } }) =>
-            setIndex(Math.max(0, Math.min(2, Math.round(event.nativeEvent.contentOffset.x / width)))),
+            setIndex(Math.max(0, Math.min(states.length - 1, Math.round(event.nativeEvent.contentOffset.x / width)))),
         })}>
         {content.readings.map(([title, reading, reflection], page) => (
           <View key={states[page]} style={{ width }}>
@@ -72,7 +72,7 @@ export function DoshaGuide({ dosha, onClose }: { dosha: DoshaName; onClose: () =
               <LinearGradient colors={[color + '66', '#1a2049']} style={[styles.orb, { borderColor: color + 'aa' }]}>
                 <Icon size={46} color={color} strokeWidth={1.8} />
               </LinearGradient>
-              <T bold size={12} style={styles.eyebrow}>{dosha.toUpperCase()} · {content.theme.toUpperCase()}</T>
+              <T bold size={12} style={styles.eyebrow}>{content.theme.toUpperCase()}</T>
               <T bold size={31} style={styles.title}>{states[page]}</T>
               <View style={styles.card}>
                 {page === 0 && <T size={15} style={styles.text}>{content.intro}</T>}
@@ -87,12 +87,8 @@ export function DoshaGuide({ dosha, onClose }: { dosha: DoshaName; onClose: () =
           </View>
         ))}
       </Animated.ScrollView>}
-      <View style={styles.controls}>
-        <Pressable accessibilityRole="button" accessibilityLabel="Previous state" disabled={index === 0} onPress={() => move(index - 1)} style={[styles.button, index === 0 && styles.disabled]}><ChevronLeft color="#f1edff" size={22} /></Pressable>
-        <T size={13} style={styles.note}>{index + 1} of 3</T>
-        <Pressable accessibilityRole="button" accessibilityLabel="Next state" disabled={index === 2} onPress={() => move(index + 1)} style={[styles.button, index === 2 && styles.disabled]}><ChevronRight color="#f1edff" size={22} /></Pressable>
+      <PagerDots labels={states} index={index} onSelect={move} />
       </View>
-    </View>
   </DetailScreen>;
 }
 
@@ -107,7 +103,4 @@ const styles = StyleSheet.create({
   text: { color: '#ebe6fa', lineHeight: 22 },
   note: { color: '#c7c8e5', textAlign: 'center', lineHeight: 17 },
   rule: { height: 1, backgroundColor: '#848dc069' },
-  controls: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', width: '100%', maxWidth: 330, alignSelf: 'center', paddingHorizontal: 19, paddingVertical: 8 },
-  button: { width: 44, height: 44, borderRadius: 22, justifyContent: 'center', alignItems: 'center', borderWidth: 1, borderColor: '#848dc069', backgroundColor: '#2b3269' },
-  disabled: { opacity: 0.32 },
 });

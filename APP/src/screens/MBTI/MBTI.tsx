@@ -1,4 +1,4 @@
-import { BackButton } from '../../components/BackButton';
+import { ExploreSystemHeader } from '../ExploreSystemHeader';
 import React from 'react';
 
 import { useApp } from '../../context/AppContext';
@@ -9,7 +9,7 @@ import { MbtiResultSection } from './MbtiResultSection';
 import { MbtiStoryCard } from './MbtiStoryCard';
 
 export default function MBTI() {
-  const { colors, setPage, user, setUser, addStory } = useApp();
+  const { colors, user, setUser, addStory } = useApp();
 
   const {
     answers,
@@ -38,7 +38,7 @@ export default function MBTI() {
 
   return (
     <>
-      <BackButton onPress={() => setPage('explore')} label="Back to Explore" />
+      <ExploreSystemHeader route="mbti" />
 
       <Hero
         eyebrow="16 ARCHETYPES"
