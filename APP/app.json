@@ -5,6 +5,7 @@
     "scheme": "natala",
     "version": "0.21.0",
     "orientation": "portrait",
+    "icon": "./assets/icon.png",
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
     "ios": {
@@ -15,6 +16,12 @@
     },
     "android": {
       "package": "app.natala.prototype",
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/adaptive-icon.png",
+        "backgroundImage": "./assets/adaptive-icon-background.png",
+        "backgroundColor": "#CA007E",
+        "monochromeImage": "./assets/adaptive-icon-monochrome.png"
+      },
       "intentFilters": [
         {
           "action": "VIEW",
