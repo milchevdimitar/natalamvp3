@@ -1,7 +1,8 @@
+import { authorizedFetch } from './account';
 import { API_BASE_URL } from './api';
 import { PersonProfile } from '../screens/People/people.types';
 
-const BASE_URL = API_BASE_URL;
+
 
 export type SharedProfile = {
   avatarUrl?: string;
@@ -17,7 +18,7 @@ export type SharedProfile = {
 export async function fetchSharedProfile(user: any, id: string): Promise<SharedProfile> {
   const { userId, email } = getAuthPayload(user);
   const query = new URLSearchParams({ userId: String(userId), email: String(email) });
-  const response = await fetch(`${BASE_URL}/people/shared/${encodeURIComponent(id)}?${query}`);
+  const response = await authorizedFetch(`${API_BASE_URL}/people/shared/${encodeURIComponent(id)}?${query}`);
   const result = await response.json().catch(() => null);
   if (!response.ok || !result?.success) throw new Error(result?.message || 'Could not load this profile.');
   return result.profile;
@@ -48,7 +49,7 @@ export async function fetchPeopleHub(user: any): Promise<PeopleHubResponse> {
   if (userId) params.append('userId', String(userId));
   if (email) params.append('email', String(email));
 
-  const res = await fetch(`${BASE_URL}/people/hub?${params.toString()}`);
+  const res = await authorizedFetch(`${API_BASE_URL}/people/hub?${params.toString()}`);
   const data = await res.json();
   if (!res.ok || !data.success) {
     throw new Error(data.message || 'Failed to load people');
@@ -60,7 +61,7 @@ export async function likeOrRequestPerson(
   user: any,
   targetId: string
 ): Promise<{ success: boolean; matched: boolean; person?: PersonProfile }> {
-  const res = await fetch(`${BASE_URL}/people/like`, {
+  const res = await authorizedFetch(`${API_BASE_URL}/people/like`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ ...getAuthPayload(user), targetId }),
@@ -73,7 +74,7 @@ export async function likeOrRequestPerson(
 }
 
 export async function cancelConnectionRequest(user: any, targetId: string) {
-  const res = await fetch(`${BASE_URL}/people/cancel-request`, {
+  const res = await authorizedFetch(`${API_BASE_URL}/people/cancel-request`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ ...getAuthPayload(user), targetId }),
@@ -85,7 +86,7 @@ export async function acceptConnectionRequest(
   user: any,
   targetId: string
 ): Promise<{ success: boolean; person?: PersonProfile }> {
-  const res = await fetch(`${BASE_URL}/people/accept`, {
+  const res = await authorizedFetch(`${API_BASE_URL}/people/accept`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ ...getAuthPayload(user), targetId }),
@@ -98,7 +99,7 @@ export async function acceptConnectionRequest(
 }
 
 export async function declineConnectionRequest(user: any, targetId: string) {
-  const res = await fetch(`${BASE_URL}/people/decline`, {
+  const res = await authorizedFetch(`${API_BASE_URL}/people/decline`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ ...getAuthPayload(user), targetId }),
@@ -111,7 +112,7 @@ export async function skipMatchPerson(
   targetId: string,
   undo = false
 ) {
-  const res = await fetch(`${BASE_URL}/people/skip`, {
+  const res = await authorizedFetch(`${API_BASE_URL}/people/skip`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ ...getAuthPayload(user), targetId, undo }),
@@ -120,7 +121,7 @@ export async function skipMatchPerson(
 }
 
 export async function removeFriendPerson(user: any, targetId: string) {
-  const res = await fetch(`${BASE_URL}/people/remove`, {
+  const res = await authorizedFetch(`${API_BASE_URL}/people/remove`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ ...getAuthPayload(user), targetId }),
@@ -138,7 +139,7 @@ export async function connectByCosmicCode(
   person?: PersonProfile;
   message?: string;
 }> {
-  const res = await fetch(`${BASE_URL}/people/connect-by-code`, {
+  const res = await authorizedFetch(`${API_BASE_URL}/people/connect-by-code`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ ...getAuthPayload(user), codeOrEmail }),

@@ -1,3 +1,5 @@
+import { hasFeature, isPlanFeature } from './src/services/account';
+import { ProfileSettings } from './src/screens/ProfileSettings';
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import {
   View,
@@ -41,7 +43,7 @@ import { checkHealth } from './src/services/api';
 import { registerForPushNotificationsAsync } from './src/services/notifications';
 
 function Shell() {
-  const { page, setPage, colors, theme, user, hideBottomNav } = useApp();
+  const { page, setPage, colors, theme, user, hideBottomNav, account, restoring } = useApp();
   const [pendingProfile, setPendingProfile] = useState<string | null>(null);
   const [sharedProfile, setSharedProfile] = useState<string | null>(null);
   const [showSplash, setShowSplash] = useState(true);
@@ -119,16 +121,20 @@ function Shell() {
     login: <Login />,
   };
 
-  const activePageNode = !user ? <Login /> : pages[page] || <Home />;
+  const gated = isPlanFeature(page) && !hasFeature(account, page);
+  const showSubscription = page === 'subscription' || gated;
+  const activePageNode = restoring ? null : !user ? <Login /> : showSubscription
+    ? <ProfileSettings initialSubscription onClose={() => setPage(gated ? 'explore' : 'profile')} />
+    : pages[page] || <Home />;
 
   // Страниците Login, Home, Chat и Feed управляват сами своя скрол и клавиатура
   const isFullHeightPage =
-    !user || page === 'login' || page === 'home' || page === 'chat' || page === 'feed' || page === 'profile';
+    !user || showSubscription || page === 'login' || page === 'home' || page === 'chat' || page === 'feed' || page === 'profile';
   const topInset = Platform.OS === 'web' ? 30 : Math.max((StatusBar.currentHeight || 0) + 16, 28);
 
   return (
     <View style={{ flex: 1, backgroundColor: page === 'feed' ? '#000000' : colors.bg }}>
-      <ExpoStatusBar style={cosmicHome || theme === 'dark' ? 'light' : 'dark'} />
+      <ExpoStatusBar style={!user || cosmicHome || theme === 'dark' ? 'light' : 'dark'} />
 
       <BlurTargetView ref={navBlurTarget} style={{ flex: 1 }}>
       {cosmicTab && <CosmicBackground offset={tabScroll} reduced={reducedMotion} light={theme === 'light'} />}
@@ -137,10 +143,10 @@ function Shell() {
         key={user ? page : 'login'}
         style={{
           flex: 1,
-          paddingTop: cosmicHome || page === 'profile' || page === 'explore' ? 0 : topInset,
-          paddingHorizontal: cosmicHome || page === 'feed' || page === 'profile' ? 0 : 18,
+          paddingTop: !user || cosmicHome || page === 'profile' || page === 'explore' ? 0 : topInset,
+          paddingHorizontal: !user || cosmicHome || page === 'feed' || page === 'profile' ? 0 : 18,
           width: '100%',
-          maxWidth: cosmicHome || page === 'feed' ? '100%' : cosmicTab ? 620 : 720,
+          maxWidth: !user || cosmicHome || page === 'feed' ? '100%' : cosmicTab ? 620 : 720,
           alignSelf: 'center',
         }}
       >

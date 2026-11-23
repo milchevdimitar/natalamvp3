@@ -1,18 +1,20 @@
+import { SubscriptionDetails } from './SubscriptionDetails';
+import { authorizedFetch, deleteAccount } from '../services/account';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import React, { useRef, useState } from 'react';
 import { ActivityIndicator, Animated, Linking, Modal, Platform, Pressable, ScrollView, StyleSheet, TextInput, View } from 'react-native';
-import { ArrowLeft, Bell, CalendarDays, ChevronRight, Mail, Pencil, UserRound } from 'lucide-react-native';
+import { ArrowLeft, Bell, CalendarDays, ChevronRight, Mail, Pencil, UserRound, LogOut, Trash2, CreditCard } from 'lucide-react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Card, Section, T } from '../components/UI';
 import { useApp } from '../context/AppContext';
-import { saveUserProfile } from '../services/api';
+import { API_BASE_URL, saveUserProfile } from '../services/api';
 import { CitySearchPicker } from '../components/CitySearchPicker';
 import type { CityLocation } from '../services/locationService';
-import { findBirthCard, getBirthParts } from '../services/profileDashboard';
-import { calculateLifePathNumber } from '../services/profileManager';
+import { getBirthParts } from '../services/profileDashboard';
 import { CosmicBackground, useReducedMotion } from './Home/CosmicBackground';
 
-export function ProfileSettings({ onClose, birthLabel, birthCity }: {
-  onClose: () => void; birthLabel?: string; birthCity?: string;
+export function ProfileSettings({ onClose, birthLabel, birthCity, initialSubscription = false }: {
+  onClose: () => void; birthLabel?: string; birthCity?: string; initialSubscription?: boolean;
 }) {
   const { user, setUser, colors, theme, logout } = useApp();
   const offset = useRef(new Animated.Value(0)).current;
@@ -20,8 +22,9 @@ export function ProfileSettings({ onClose, birthLabel, birthCity }: {
   const [name, setName] = useState(String(user?.name || ''));
   const [editing, setEditing] = useState(false);
   const [editingBirth, setEditingBirth] = useState(false);
-  const [birthDate, setBirthDate] = useState('');
-  const [birthTime, setBirthTime] = useState('');
+  const [birthDate, setBirthDate] = useState(['', '', '']);
+  const [birthTime, setBirthTime] = useState(['', '']);
+  const [unknownTime, setUnknownTime] = useState(true);
   const [selectedCity, setSelectedCity] = useState<CityLocation | null>(null);
   const [saving, setSaving] = useState(false);
   const [notice, setNotice] = useState('');
@@ -30,6 +33,35 @@ export function ProfileSettings({ onClose, birthLabel, birthCity }: {
   const [editingGender, setEditingGender] = useState(false);
   const [deviceNotice, setDeviceNotice] = useState('');
   const [confirm, setConfirm] = useState(false);
+  const [showSubscription, setShowSubscription] = useState(initialSubscription);
+  const [confirmDelete, setConfirmDelete] = useState(false);
+  const [deleteNotice, setDeleteNotice] = useState('');
+  const back = () => {
+    if (showSubscription && !initialSubscription) {
+      offset.setValue(0);
+      setShowSubscription(false);
+    }
+    else onClose();
+  };
+  const removeAccount = async () => {
+    setSaving(true);
+    setDeleteNotice('');
+    try {
+      await deleteAccount();
+      if (user?.email) {
+        const email = user.email.trim().toLowerCase();
+        await AsyncStorage.getAllKeys().then((keys) => AsyncStorage.multiRemove(
+          keys.filter((key) => key.startsWith(`natala:system:${email}:`) || key === `natala:discovery-streak:${email}` ||
+            key === `natala:tab-activity:${API_BASE_URL}:${email}` || key === `natala:feed-recent:${API_BASE_URL}:${email}`),
+        )).catch(() => {});
+      }
+      await logout();
+    } catch (failure) {
+      setDeleteNotice(failure instanceof Error ? failure.message : 'Could not delete this account.');
+    } finally {
+      setSaving(false);
+    }
+  };
   const displayName = name.trim();
   const canSave = !!user && !!displayName && displayName !== user.name && !saving;
 
@@ -53,10 +85,13 @@ export function ProfileSettings({ onClose, birthLabel, birthCity }: {
 
   const editBirth = () => {
     const parts = getBirthParts(user);
-    setBirthDate(parts ? [parts.day, parts.month, parts.year].map((part) => String(part).padStart(2, '0')).join('.') : '');
-    setBirthTime(String(user?.birthTime || user?.birthDate?.time || ''));
+    setBirthDate(parts ? [parts.day, parts.month, parts.year].map((part) => String(part).padStart(2, '0')) : ['', '', '']);
+    const savedTime = user?.hasExactBirthTime === false ? '' : String(user?.birthTime || user?.birthDate?.time || '');
+    setBirthTime(savedTime ? savedTime.split(':').slice(0, 2) : ['', '']);
+    setUnknownTime(!savedTime);
     const city = user?.birthCity;
-    setSelectedCity(city && typeof city !== 'string' && Number.isFinite(city.latitude) && Number.isFinite(city.longitude) ? {
+    setSelectedCity(city && typeof city !== 'string' && typeof city.latitude === 'number' && typeof city.longitude === 'number' &&
+      Number.isFinite(city.latitude) && Number.isFinite(city.longitude) ? {
       name: city.name, country: city.country || '', lat: city.latitude, lng: city.longitude, timezone: city.timezone || '',
     } : null);
     setBirthNotice('');
@@ -65,54 +100,38 @@ export function ProfileSettings({ onClose, birthLabel, birthCity }: {
 
   const saveBirth = async () => {
     if (!user?.email || saving) return;
-    const date = getBirthParts({ birthdate: birthDate });
-    if (!date || new Date(date.year, date.month - 1, date.day) > new Date()) {
-      setBirthNotice('Enter a valid birth date in DD.MM.YYYY format.');
+    const [day, month, year] = birthDate.map(Number);
+    const date = getBirthParts({ birthdate: birthDate.map((part) => part.padStart(2, '0')).join('.') });
+    if (!date || year < 1900 || birthDate[2].length !== 4 || new Date(year, month - 1, day) > new Date()) {
+      setBirthNotice('Enter a valid day, month and year.');
       return;
     }
-    const time = birthTime.trim();
-    if (time && !/^(?:[01]\d|2[0-3]):[0-5]\d$/.test(time)) {
-      setBirthNotice('Use HH:MM for the birth time, or leave it blank if unknown.');
+    const [hour, minute] = birthTime.map(Number);
+    if (!unknownTime && (!birthTime.every(Boolean) || hour > 23 || minute > 59)) {
+      setBirthNotice('Enter an hour from 0 to 23 and minutes from 0 to 59, or choose Unknown time.');
       return;
     }
-    const [hour, minute] = time ? time.split(':').map(Number) : [12, 0];
-    const city = selectedCity ? {
-      name: selectedCity.name, country: selectedCity.country, latitude: selectedCity.lat, longitude: selectedCity.lng,
-      ...(selectedCity.timezone ? { timezone: selectedCity.timezone } : {}),
-    } : typeof user.birthCity === 'string' ? { name: user.birthCity } : user.birthCity;
-    if (!city?.name) {
-      setBirthNotice('Select a birth city.');
+    if (!selectedCity) {
+      setBirthNotice('Choose a city from the search results.');
       return;
     }
-    const previous = getBirthParts(user);
-    const sameDate = previous?.year === date.year && previous?.month === date.month && previous?.day === date.day;
-    const previousCity = user.birthCity;
-    const sameCity = !selectedCity || (previousCity && typeof previousCity !== 'string' &&
-      previousCity.name === selectedCity.name && previousCity.latitude === selectedCity.lat &&
-      previousCity.longitude === selectedCity.lng && (previousCity.timezone || '') === selectedCity.timezone);
-    if (sameDate && sameCity && time === String(user.birthTime || user.birthDate?.time || '')) {
-      setEditingBirth(false);
-      return;
-    }
-    const patch = {
-      birthdate: new Date(Date.UTC(date.year, date.month - 1, date.day, hour, minute)).toISOString(),
-      birthTime: time || null,
-      hasExactBirthTime: Boolean(time),
-      birthCity: city,
-      numerology: calculateLifePathNumber(date.day, date.month, date.year),
-      cardology: { birthCard: findBirthCard(date) },
-      natalChart: null, westernElements: null, polarity: null, bazi: null,
-    };
     setSaving(true);
     setBirthNotice('');
     try {
-      const result = await saveUserProfile({ email: user.email, ...patch });
-      if (!result.success) throw new Error('Birth details update was rejected');
-      await setUser({ ...user, ...result.user, ...patch });
+      const response = await authorizedFetch(`${API_BASE_URL}/users/profile/birth`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ day, month, year, time: unknownTime ? '' : [hour, minute].map((part) => String(part).padStart(2, '0')).join(':'),
+          city: { name: selectedCity.name, country: selectedCity.country, latitude: selectedCity.lat, longitude: selectedCity.lng, timezone: selectedCity.timezone },
+        }),
+      });
+      const result = await response.json();
+      if (!response.ok || !result.user) throw new Error(result.error || 'Could not save birth details.');
+      setUser(result.user);
       setEditingBirth(false);
       setBirthNotice('Birth details updated.');
-    } catch {
-      setBirthNotice('Could not save the birth details. Try again when you are connected.');
+    } catch (error) {
+      setBirthNotice(error instanceof Error ? error.message : 'Could not save birth details.');
     } finally {
       setSaving(false);
     }
@@ -135,11 +154,36 @@ export function ProfileSettings({ onClose, birthLabel, birthCity }: {
     }
   };
 
+  const numberFields = (labels: string[], values: string[], onChange: (values: string[]) => void) => (
+    <View style={styles.actions}>
+      {labels.map((label, index) => <View key={label} style={styles.copy}>
+        <T muted size={12}>{label}</T>
+        <TextInput accessibilityLabel={label} inputMode="numeric" keyboardType="number-pad"
+          value={values[index] ?? ''} maxLength={label === 'Year' ? 4 : 2} editable={!saving}
+          placeholder={label === 'Year' ? 'YYYY' : label.slice(0, 1).repeat(2)} placeholderTextColor={colors.muted}
+          onChangeText={(text) => onChange(values.map((value, i) => i === index ? text.replace(/\D/g, '') : value))}
+          style={[styles.input, { color: colors.text, backgroundColor: colors.surface, borderColor: colors.line }]} />
+      </View>)}
+    </View>
+  );
+
+  const accountRow = (title: string, icon: typeof Trash2, action: () => void) => {
+    const Icon = icon;
+    return <Card style={styles.card} onPress={saving ? undefined : action}>
+      <View style={styles.row}>
+        <View style={[styles.icon, { backgroundColor: colors.purpleSoft }]}><Icon size={19} color={colors.purple} /></View>
+        <View style={styles.copy}><T bold size={15}>{title}</T></View>
+        <ChevronRight size={17} color={colors.muted} />
+      </View>
+    </Card>;
+  };
+
   return (
-    <Modal visible animationType={reduced ? 'none' : 'fade'} onRequestClose={() => { if (!saving) onClose(); }}>
+    <Modal visible animationType={reduced ? 'none' : 'fade'} onRequestClose={() => { if (!saving) back(); }}>
       <SafeAreaView style={{ flex: 1, backgroundColor: colors.bg }}>
         <CosmicBackground offset={offset} reduced={reduced} light={theme === 'light'} />
         <Animated.ScrollView
+          key={showSubscription ? 'subscription' : 'settings'}
           keyboardShouldPersistTaps="handled"
           scrollEventThrottle={16}
           onScroll={Animated.event([{ nativeEvent: { contentOffset: { y: offset } } }], { useNativeDriver: Platform.OS !== 'web' })}
@@ -147,11 +191,12 @@ export function ProfileSettings({ onClose, birthLabel, birthCity }: {
         >
           <View style={styles.header}>
             <T size={40} style={styles.logo}>Natala</T>
-            <Pressable accessibilityRole="button" accessibilityLabel="Close settings" disabled={saving} onPress={onClose} style={[styles.close, { backgroundColor: colors.surfaceAlt, borderColor: colors.line }]}>
+            <Pressable accessibilityRole="button" accessibilityLabel="Close settings" disabled={saving} onPress={back} style={[styles.close, { backgroundColor: colors.surfaceAlt, borderColor: colors.line }]}>
               <ArrowLeft size={18} color={colors.text} />
             </Pressable>
           </View>
-          <T bold size={30} style={styles.title}>Settings</T>
+          <T bold size={30} style={styles.title}>{showSubscription ? 'Subscription' : 'Settings'}</T>
+          {showSubscription ? <SubscriptionDetails /> : <>
 
           <Section>Account</Section>
           <Card style={styles.card}>
@@ -179,24 +224,24 @@ export function ProfileSettings({ onClose, birthLabel, birthCity }: {
           <Card style={styles.card}>
             <View style={styles.row}>
               <View style={[styles.icon, { backgroundColor: colors.purpleSoft }]}><CalendarDays size={19} color={colors.purple} /></View>
-              <View style={styles.copy}><T bold size={15}>Birth details</T><T muted size={12}>{[birthLabel, birthCity].filter(Boolean).join(' · ') || 'Add your birth details'}</T></View>
+              <View style={styles.copy}><T bold size={15}>Birth details</T><T muted size={12}>{[birthLabel, birthLabel && (user?.birthTime || 'Unknown time'), birthCity].filter(Boolean).join(' · ') || 'Add your birth details'}</T></View>
               {!editingBirth && <Pressable accessibilityRole="button" accessibilityLabel="Edit birth details" onPress={editBirth} style={[styles.edit, { backgroundColor: colors.purpleSoft }]}>
                 <Pencil size={14} color={colors.purple} /><T bold size={12} style={{ color: colors.purple }}>Edit</T>
               </Pressable>}
             </View>
             {editingBirth && <>
-              <View style={styles.actions}>
-                <View style={styles.copy}>
-                  <T bold size={12}>Birth date</T>
-                  <TextInput accessibilityLabel="Birth date" value={birthDate} onChangeText={setBirthDate} placeholder="DD.MM.YYYY" placeholderTextColor={colors.muted} maxLength={10} editable={!saving} style={[styles.input, { color: colors.text, backgroundColor: colors.surface, borderColor: colors.line }]} />
-                </View>
-                <View style={styles.copy}>
-                  <T bold size={12}>Birth time · optional</T>
-                  <TextInput accessibilityLabel="Birth time" value={birthTime} onChangeText={setBirthTime} placeholder="HH:MM" placeholderTextColor={colors.muted} maxLength={5} editable={!saving} style={[styles.input, { color: colors.text, backgroundColor: colors.surface, borderColor: colors.line }]} />
-                </View>
+              <T bold size={13}>Birth date</T>
+              {numberFields(['Day', 'Month', 'Year'], birthDate, setBirthDate)}
+              <View style={styles.row}>
+                <View style={styles.copy}><T bold size={13}>Birth time</T><T muted size={12}>24-hour clock</T></View>
+                <Pressable accessibilityRole="checkbox" accessibilityState={{ checked: unknownTime }} disabled={saving}
+                  onPress={() => setUnknownTime(!unknownTime)} style={[styles.edit, { backgroundColor: colors.purpleSoft }]}>
+                  <T size={12}>{unknownTime ? '? ' : ''}Unknown time</T>
+                </Pressable>
               </View>
-              <T bold size={12}>Birth city</T>
-              <CitySearchPicker selectedCity={selectedCity} onSelectCity={setSelectedCity} colors={colors} />
+              {!unknownTime && numberFields(['Hour', 'Minute'], birthTime, setBirthTime)}
+              <T bold size={13}>Birth city</T>
+              <CitySearchPicker selectedCity={selectedCity} onSelectCity={setSelectedCity} colors={colors} cosmicTheme={theme} />
               {!selectedCity && !!birthCity && <T muted size={12}>Current city · {birthCity}</T>}
               <View style={styles.actions}>
                 <Pressable accessibilityRole="button" disabled={saving} onPress={() => { setEditingBirth(false); setBirthNotice(''); }} style={[styles.action, { borderColor: colors.line }]}><T bold size={13}>Cancel</T></Pressable>
@@ -234,6 +279,16 @@ export function ProfileSettings({ onClose, birthLabel, birthCity }: {
             </View>
           </Card>}
 
+          {confirmDelete ? <Card style={styles.card}>
+            <T bold size={16}>Permanently delete your account?</T>
+            <T muted size={13}>Your profile, stories and conversations will be removed. If you pay through an app store, manage renewal in Subscription.</T>
+            <View style={styles.actions}>
+              <Pressable accessibilityRole="button" disabled={saving} onPress={() => setConfirmDelete(false)} style={[styles.action, { borderColor: colors.line }]}><T bold size={13}>Keep account</T></Pressable>
+              <Pressable accessibilityRole="button" disabled={saving} onPress={removeAccount} style={[styles.action, styles.danger]}><T bold size={13} style={styles.dangerText}>{saving ? 'Deleting?' : 'Delete permanently'}</T></Pressable>
+            </View>
+            {!!deleteNotice && <T size={12}>{deleteNotice}</T>}
+          </Card> : accountRow('Delete account', Trash2, () => setConfirmDelete(true))}
+
           {Platform.OS !== 'web' && <>
             <Section>Notifications</Section>
             <Card style={styles.card} onPress={() => Linking.openSettings().catch(() => setDeviceNotice('Could not open device settings.'))}>
@@ -246,15 +301,16 @@ export function ProfileSettings({ onClose, birthLabel, birthCity }: {
             {!!deviceNotice && <T muted size={12}>{deviceNotice}</T>}
           </>}
 
-          {confirm ? <Card style={[styles.card, styles.signOutCard]}>
+          {accountRow('Manage subscriptions', CreditCard, () => { offset.setValue(0); setShowSubscription(true); })}
+
+          {confirm ? <Card style={styles.card}>
             <T bold size={16}>Sign out of Natala?</T>
             <View style={styles.actions}>
               <Pressable accessibilityRole="button" onPress={() => setConfirm(false)} style={[styles.action, { borderColor: colors.line }]}><T bold size={13}>Cancel</T></Pressable>
               <Pressable accessibilityRole="button" disabled={saving} onPress={logout} style={[styles.action, styles.danger]}><T bold size={13} style={styles.dangerText}>Sign out</T></Pressable>
             </View>
-          </Card> : <Pressable accessibilityRole="button" disabled={saving} onPress={() => setConfirm(true)} style={({ pressed }) => [styles.signOutCard, styles.signOut, pressed && { opacity: 0.84 }]}>
-            <T bold size={16} style={styles.dangerText}>Sign out</T>
-          </Pressable>}
+          </Card> : accountRow('Sign out', LogOut, () => setConfirm(true))}
+          </>}
         </Animated.ScrollView>
       </SafeAreaView>
     </Modal>
@@ -275,8 +331,6 @@ const styles = StyleSheet.create({
   input: { borderWidth: 1, minHeight: 50, borderRadius: 15, paddingHorizontal: 13, fontSize: 15 },
   actions: { flexDirection: 'row', gap: 8 },
   action: { flex: 1, borderWidth: 1, borderColor: 'transparent', borderRadius: 15, minHeight: 45, justifyContent: 'center', alignItems: 'center' },
-  signOutCard: { marginTop: 15, borderRadius: 23 },
-  signOut: { minHeight: 74, alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: 'rgba(190,205,246,0.28)', backgroundColor: 'rgba(0,0,0,0.45)' },
   danger: { backgroundColor: 'rgba(0,0,0,0.50)', borderColor: 'rgba(190,205,246,0.28)' },
   dangerText: { color: '#f8faff' },
 });

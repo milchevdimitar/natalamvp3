@@ -67,7 +67,11 @@ app.use('/api/people', peopleRoutes);
 app.use('/api/calc', calcRoutes);
 
 // Запис и синхронизация на изчисления профил
-app.post('/api/users/profile', async (req, res) => {
+const { router: accountRoutes, requireAccount, requireFeature } = require('./routes/account');
+app.use('/api/account', accountRoutes);
+app.put('/api/users/profile/birth', requireAccount, require('./routes/birthProfile'));
+
+app.post('/api/users/profile', requireAccount, async (req, res) => {
   let newPhoto;
   try {
     const userData = req.body || {};
@@ -75,7 +79,10 @@ app.post('/api/users/profile', async (req, res) => {
       return res.status(400).json({ success: false, error: 'Липсва имейл.' });
     }
 
-    const normalizedEmail = userData.email.toLowerCase().trim();
+    const normalizedEmail = req.account.email;
+    if (typeof userData.email !== 'string' || userData.email.toLowerCase().trim() !== normalizedEmail) {
+      return res.sendStatus(403);
+    }
     const photoPattern = /^data:image\/(jpeg|png);base64,([A-Za-z0-9+/]+={0,2})$/;
     const storedPhotoPattern = /^\/uploads\/profilepic\/[a-f\d-]{36}\.(?:jpg|png)$/;
     const avatar = userData.avatarUrl;
@@ -87,7 +94,10 @@ app.post('/api/users/profile', async (req, res) => {
     }
 
     // Премахваме системните/непроменяеми полета на MongoDB преди $set
-    const { _id, id, __v, createdAt, updatedAt, ...safeUpdateFields } = userData;
+    const protectedFields = new Set(['_id', 'id', '__v', 'email', 'createdAt', 'updatedAt', 'subscription',
+      'passwordHash', 'verifiedEmail', 'googleSubject', 'appleSubject', 'ownerTestAccount', 'previewTier', 'appleRefreshToken']);
+    const safeUpdateFields = Object.fromEntries(Object.entries(userData)
+      .filter(([key]) => !key.startsWith('$') && !key.includes('.') && !protectedFields.has(key)));
     // Full profile saves can echo the current avatar path. Only a fresh upload or deletion can replace it.
     if (echoedPath) delete safeUpdateFields.avatarUrl;
     let previousPhoto;
@@ -105,9 +115,9 @@ app.post('/api/users/profile', async (req, res) => {
     }
 
     const updatedUser = await User.findOneAndUpdate(
-      { email: normalizedEmail },
+      { _id: req.account._id },
       { $set: { ...safeUpdateFields, email: normalizedEmail, lastActiveAt: new Date() } },
-      { new: true, upsert: true, runValidators: true }
+      { new: true, runValidators: true }
     );
     newPhoto = undefined;
     if (previousPhoto && storedPhotoPattern.test(previousPhoto)) {
@@ -123,7 +133,8 @@ app.post('/api/users/profile', async (req, res) => {
   }
 });
 
-app.get('/api/users/profile/:email', async (req, res) => {
+app.get('/api/users/profile/:email', requireAccount, async (req, res) => {
+  if (req.params.email.toLowerCase().trim() !== req.account.email) return res.sendStatus(403);
   try {
     const user = await User.findOne({
       email: req.params.email.toLowerCase().trim(),
@@ -140,54 +151,20 @@ app.get('/api/users/profile/:email', async (req, res) => {
 });
 
 // Логин / Бърза регистрация
-app.post('/api/users/login', async (req, res) => {
-  try {
-    const { email, name, birthdate, birthTime, birthCity } = req.body || {};
-
-    if (!email) {
-      return res
-        .status(400)
-        .json({ success: false, error: 'Имейлът е задължителен.' });
-    }
-
-    const normalizedEmail = email.toLowerCase().trim();
-
-    // Търсим съществуващ потребител
-    let user = await User.findOne({ email: normalizedEmail });
-
-    // Ако не съществува, създаваме стартов профил
-    if (!user) {
-      user = new User({
-        name: name || normalizedEmail.split('@')[0],
-        email: normalizedEmail,
-        birthdate: birthdate || new Date(),
-        ...(birthTime ? { birthTime, hasExactBirthTime: true } : {}),
-        birthCity:
-          birthCity && typeof birthCity === 'object'
-            ? birthCity
-            : { name: typeof birthCity === 'string' && birthCity ? birthCity : 'София', country: 'България' },
-        lastActiveAt: new Date(),
-      });
-      await user.save();
-      console.log(`✨ Създаден нов потребител в MongoDB: ${user.email}`);
-    } else {
-      user.lastActiveAt = new Date();
-      await user.save();
-      console.log(`🔑 Успешен логин за: ${user.email}`);
-    }
-
-    res.status(200).json({ success: true, user });
-  } catch (error) {
-    console.error('❌ Грешка при логин:', error.message);
-    res.status(500).json({ success: false, error: error.message });
-  }
-});
-
 const aiAstrologyRoutes = require('./routes/aiAstrology');
 app.use('/api/ai/astrology', aiAstrologyRoutes);
 
 const reportRoutes = require('./routes/report');
+app.use('/api/users/:id/report/pdf', requireAccount, (req, res, next) => {
+  if (req.params.id !== req.account.id) return res.sendStatus(403);
+  next();
+}, requireFeature('pdf-report'));
 app.use(reportRoutes);
+app.use((error, req, res, next) => {
+  console.error('API request failed:', error.name);
+  if (res.headersSent) return next(error);
+  res.status(500).json({ error: 'Something went wrong. Try again.' });
+});
 
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => {

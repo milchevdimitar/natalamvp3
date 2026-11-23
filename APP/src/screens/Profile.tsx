@@ -15,6 +15,7 @@ import { ProfileQrCard } from '../components/ProfileQrCard';
 import { profileId, shareProfile } from '../services/profileLinks';
 import type { ExploreRoute } from '../data/exploreRoutes';
 import { useApp } from '../context/AppContext';
+import { authorizedFetch, hasFeature } from '../services/account';
 import { API_BASE_URL } from '../services/api';
 import { getBirthParts, getDashboardBalances, getDashboardSystems } from '../services/profileDashboard';
 import { useSystemActivity } from '../services/systemActivity';
@@ -27,7 +28,7 @@ const systemIcons: Record<ExploreRoute, typeof Sun> = {
 };
 
 export default function Profile({ scrollOffset }: { scrollOffset: Animated.Value }) {
-  const { colors, user, setPage } = useApp();
+  const { colors, user, setPage, account } = useApp();
   const insets = useSafeAreaInsets();
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [qrOpen, setQrOpen] = useState(false);
@@ -67,6 +68,7 @@ export default function Profile({ scrollOffset }: { scrollOffset: Animated.Value
   };
 
   const handleGeneratePdf = async () => {
+    if (!hasFeature(account, 'pdf-report')) { setPage('subscription'); return; }
     const userId = user?._id || user?.id;
     if (!userId) {
       Alert.alert('Грешка', 'Липсва ID на потребителя.');
@@ -75,7 +77,7 @@ export default function Profile({ scrollOffset }: { scrollOffset: Animated.Value
 
     setGeneratingPdf(true);
     try {
-      const response = await fetch(`${API_BASE_URL}/users/${userId}/report/pdf`, {
+      const response = await authorizedFetch(`${API_BASE_URL}/users/${userId}/report/pdf`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

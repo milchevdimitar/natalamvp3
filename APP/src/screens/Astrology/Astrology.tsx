@@ -62,7 +62,7 @@ const DEFAULT_COLLECTIONS: UserCollectionGroup[] = [
 ];
 
 export default function Astrology() {
-  const { colors, setPage, user, setUser } = useApp();
+  const { colors, setPage, user, setUser, account } = useApp();
   const [activeTab, setActiveTab] = useState<AstrologyAppTab>('chart');
   const [viewMode, setViewMode] = useState<ChartViewMode>('2D');
   const [showSettingsModal, setShowSettingsModal] = useState(false);
@@ -223,7 +223,7 @@ export default function Astrology() {
     bondTransits: true,
   };
 
-  const subscriptionTier = effectiveUser.subscription?.tier || 'free';
+  const subscriptionTier = account?.tier ?? 'free';
 
   return (
     <>
@@ -271,13 +271,13 @@ export default function Astrology() {
               paddingVertical: 7,
               borderRadius: 10,
               backgroundColor:
-                subscriptionTier === 'go_deeper_plus' ? colors.goldSoft : colors.purpleSoft,
+                subscriptionTier !== 'free' ? colors.goldSoft : colors.purpleSoft,
             }}
           >
             <Bell size={14} color={colors.purple} />
             <Crown
               size={14}
-              color={subscriptionTier === 'go_deeper_plus' ? colors.gold : colors.purple}
+              color={subscriptionTier !== 'free' ? colors.gold : colors.purple}
             />
           </TouchableOpacity>
         </View>
@@ -502,7 +502,7 @@ export default function Astrology() {
         visible={showSettingsModal}
         onClose={() => setShowSettingsModal(false)}
         eyebrow="PREFERENCES"
-        title="Notifications & Go Deeper+"
+        title="Notifications & subscription"
         colors={colors}
       >
         <View
@@ -517,21 +517,14 @@ export default function Astrology() {
         >
           <View>
             <T bold size={13}>
-              Go Deeper+ Membership
+              Natala subscription
             </T>
             <T muted size={11}>
-              Unlimited AI readings & Bond Time Travel
+              View your current plan
             </T>
           </View>
           <TouchableOpacity
-            onPress={() =>
-              persistUserPatch({
-                subscription: {
-                  tier: subscriptionTier === 'free' ? 'go_deeper_plus' : 'free',
-                  status: 'active',
-                },
-              })
-            }
+            onPress={() => setPage('subscription')}
             style={{
               paddingHorizontal: 12,
               paddingVertical: 6,
@@ -540,7 +533,7 @@ export default function Astrology() {
             }}
           >
             <T bold size={11} style={{ color: '#FFFFFF' }}>
-              {subscriptionTier === 'go_deeper_plus' ? 'Active ✓' : 'Upgrade'}
+              View plans
             </T>
           </TouchableOpacity>
         </View>

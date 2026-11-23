@@ -1,8 +1,9 @@
+import { ProfileAvatar } from '../../components/ProfileAvatar';
 import React, { useCallback, useMemo, useRef, useState } from 'react';
 import { Animated, Platform, Pressable, RefreshControl, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
-import { ChevronLeft, ChevronRight, Flame, UserRound } from 'lucide-react-native';
+import { ChevronLeft, ChevronRight, Flame } from 'lucide-react-native';
 import ConfettiCannon from 'react-native-confetti-cannon';
 import { SunPosition } from 'astronomy-engine';
 import { useApp } from '../../context/AppContext';
@@ -150,8 +151,8 @@ export default function Home() {
       >
         <View style={styles.header}>
           <Text style={styles.brand}>Natala</Text>
-          <Pressable accessibilityRole="button" accessibilityLabel="Open profile" onPress={() => setPage('profile')} style={styles.profile}>
-            <UserRound color={cosmic.text} size={18} />
+          <Pressable accessibilityRole="button" accessibilityLabel="Open profile" onPress={() => setPage('profile')}>
+            <ProfileAvatar name={user?.name || ''} size={36} source={typeof user?.avatarUrl === 'string' ? user.avatarUrl : typeof user?.photoUrl === 'string' ? user.photoUrl : undefined} showInitials={false} />
           </Pressable>
         </View>
 

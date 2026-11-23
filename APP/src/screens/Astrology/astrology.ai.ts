@@ -1,4 +1,4 @@
-import * as Api from '../../services/api';
+import { API_BASE_URL } from '../../services/api';
 import {
   BondAnalysisResult,
   NatalChartResults,
@@ -10,16 +10,6 @@ export type AstrologyAIMode =
   | 'transit_guidance'
   | 'bond_synastry'
   | 'astro_coach';
-
-function resolveApiBaseUrl(): string {
-  const apiAny = Api as Record<string, any>;
-  return (
-    process.env.EXPO_PUBLIC_API_URL ||
-    apiAny.API_URL ||
-    apiAny.BASE_URL ||
-    'http://localhost:5000'
-  ).replace(/\/$/, '');
-}
 
 function summarizeChart(chart: NatalChartResults) {
   return {
@@ -104,8 +94,7 @@ export async function requestAstrologyAI(
   if (extra.history) payload.recentHistory = extra.history.slice(-4);
 
   try {
-    const baseUrl = resolveApiBaseUrl();
-    const res = await fetch(`${baseUrl}/api/ai/astrology`, {
+    const res = await fetch(`${API_BASE_URL}/ai/astrology`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ mode, payload }),

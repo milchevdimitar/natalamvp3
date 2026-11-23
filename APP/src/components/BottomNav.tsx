@@ -16,7 +16,7 @@ const items = [
 ] as const;
 
 export default function BottomNav({ blurTarget }: Pick<BlurViewProps, 'blurTarget'>) {
-  const { page, setPage } = useApp();
+  const { page, setPage, tabActivity } = useApp();
   const insets = useSafeAreaInsets();
   const reduced = useReducedMotion();
   const [rowWidth, setRowWidth] = useState(0);
@@ -66,12 +66,13 @@ export default function BottomNav({ blurTarget }: Pick<BlurViewProps, 'blurTarge
             />
           )}
           {items.map(([id, label, Icon]) => {
+            const hasActivity = (id === 'chat' || id === 'people') && tabActivity[id];
             const selected = currentTab === id;
             return (
-              <Pressable key={id} onPress={() => setPage(id)} accessibilityRole="tab" accessibilityState={{ selected }} aria-selected={selected} style={styles.tab}>
+              <Pressable key={id} onPress={() => setPage(id)} accessibilityRole="tab" accessibilityLabel={hasActivity ? label + ', new activity' : label} accessibilityState={{ selected }} aria-selected={selected} style={styles.tab}>
                 <View>
                   <Icon size={23} strokeWidth={selected ? 2.4 : 1.9} color={selected ? '#dfccff' : '#bdc9e9'} />
-                  {id === 'chat' && <View style={styles.notification} />}
+                  {hasActivity && <View style={styles.notification} />}
                 </View>
                 <Text style={[styles.label, selected && styles.selectedLabel]}>{label}</Text>
               </Pressable>

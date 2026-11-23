@@ -1,15 +1,13 @@
 const express = require('express');
 const router = express.Router();
+router.use(require('./account').requireAccount);
 const Chat = require('../models/Chat');
 const User = require('../models/User');
 
 // 1. Извличане на всички чатове за даден потребител
 router.get('/', async (req, res) => {
   try {
-    const { email } = req.query;
-    if (!email) return res.status(400).json({ error: 'Email is required' });
-
-    const userEmail = email.toLowerCase().trim();
+    const userEmail = req.account.email;
     const chats = await Chat.find({ participants: userEmail }).sort({ updatedAt: -1 });
 
     const formattedChats = await Promise.all(
@@ -48,10 +46,12 @@ router.get('/', async (req, res) => {
 // 2. Старт или намиране на съществуващ чат по имейл
 router.post('/start', async (req, res) => {
   try {
-    const { userEmail, partnerEmail } = req.body;
+    const { partnerEmail } = req.body;
+    const userEmail = req.account.email;
 
     const uEmail = userEmail.toLowerCase().trim();
-    const pEmail = partnerEmail.toLowerCase().trim();
+    const pEmail = typeof partnerEmail === 'string' ? partnerEmail.toLowerCase().trim() : '';
+    if (!pEmail) return res.sendStatus(400);
 
     const partnerUser = await User.findOne({ email: pEmail });
     if (!partnerUser) {
@@ -99,7 +99,8 @@ router.post('/start', async (req, res) => {
 router.post('/:chatId/messages', async (req, res) => {
   try {
     const { chatId } = req.params;
-    const { senderEmail, text, type, storyData, replyTo } = req.body;
+    const { text, type, storyData, replyTo } = req.body;
+    const senderEmail = req.account.email;
 
     const now = new Date();
     const timeStr = `${String(now.getHours()).padStart(2, '0')}:${String(
@@ -107,7 +108,7 @@ router.post('/:chatId/messages', async (req, res) => {
     ).padStart(2, '0')}`;
 
     const chat = await Chat.findById(chatId);
-    if (!chat) return res.status(404).json({ message: 'Чаталнята не е намерена' });
+    if (!chat || !chat.participants.includes(req.account.email)) return res.status(404).json({ message: 'Чаталнята не е намерена' });
 
     const msgType = type || 'text';
     const msgText = text || (msgType === 'story_reply' ? '💬 Отговор на стори' : msgType === 'story_share' ? '📷 Споделено стори' : '');
@@ -149,7 +150,7 @@ router.post('/:chatId/messages', async (req, res) => {
 router.get('/:chatId/messages', async (req, res) => {
   try {
     const chat = await Chat.findById(req.params.chatId);
-    if (!chat) return res.status(404).json({ message: 'Чаталнята не е намерена' });
+    if (!chat || !chat.participants.includes(req.account.email)) return res.status(404).json({ message: 'Чаталнята не е намерена' });
 
     const formattedMessages = chat.messages.map((m) => ({
       id: m._id.toString(),

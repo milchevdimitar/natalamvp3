@@ -18,7 +18,7 @@ type DashboardProfile = BirthProfile & {
   cardology?: { birthCard?: string };
   mbti?: { type?: string };
   ayurveda?: { dominantDosha?: string; scores?: { vata?: number; pitta?: number; kapha?: number } };
-  bazi?: { dayMaster?: string; zodiacAnimal?: string };
+  bazi?: { dayMaster?: string; zodiacAnimal?: string } | null;
 };
 
 type ElementShares = Partial<Record<'fire' | 'earth' | 'air' | 'water', number>>;

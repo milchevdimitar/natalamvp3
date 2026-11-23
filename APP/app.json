@@ -9,6 +9,7 @@
     "newArchEnabled": true,
     "ios": {
       "supportsTablet": true,
+      "usesAppleSignIn": true,
       "associatedDomains": ["applinks:natala.app"],
       "bundleIdentifier": "app.natala.prototype"
     },
@@ -34,6 +35,8 @@
       "expo-asset",
       "expo-status-bar",
       "expo-sharing",
+      "expo-apple-authentication",
+      "expo-secure-store",
       ["expo-camera", {
         "cameraPermission": "Allow Natala to scan profile QR codes.",
         "recordAudioAndroid": false

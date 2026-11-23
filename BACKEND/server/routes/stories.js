@@ -19,9 +19,11 @@ router.get('/active', async (req, res) => {
 });
 
 // POST /api/stories/upload-base64 - Безопасно качване чрез Base64 (без FormData)
+router.use(require('./account').requireAccount);
+
 router.post('/upload-base64', async (req, res) => {
   try {
-    const { imageBase64, userId, authorName } = req.body;
+    const { imageBase64 } = req.body;
 
     if (!imageBase64) {
       return res.status(400).json({ error: 'Липсват base64 данни за снимката.' });
@@ -39,8 +41,8 @@ router.post('/upload-base64', async (req, res) => {
     const imageUrl = `${serverUrl}/uploads/${filename}`;
 
     const newStory = new Story({
-      userId: userId ? String(userId).toLowerCase().trim() : 'guest',
-      authorName: authorName || 'Stargazer',
+      userId: req.account.email,
+      authorName: req.account.name,
       imageUrl: imageUrl,
       likes: [],
     });
@@ -56,7 +58,7 @@ router.post('/upload-base64', async (req, res) => {
 // POST /api/stories/:id/like - Харесване / Отхаресване на стори
 router.post('/:id/like', async (req, res) => {
   try {
-    const { userId } = req.body;
+    const userId = req.account.email;
     if (!userId) {
       return res.status(400).json({ error: 'userId е задължителен.' });
     }
@@ -99,7 +101,8 @@ router.post('/:id/like', async (req, res) => {
 // DELETE /api/stories/:id
 router.delete('/:id', async (req, res) => {
   try {
-    await Story.findByIdAndDelete(req.params.id);
+    const story = await Story.findOneAndDelete({ _id: req.params.id, userId: { $in: [req.account.email, req.account.id] } });
+    if (!story) return res.sendStatus(404);
     res.json({ success: true, message: 'Сторито е изтрито.' });
   } catch (err) {
     res.status(500).json({ error: err.message });

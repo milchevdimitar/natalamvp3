@@ -5,6 +5,7 @@ const Story = require('../models/Story');
 const { annotatePerson, enrichPeopleHub } = require('../calc');
 
 const router = express.Router();
+router.use(require('./account').requireAccount);
 
 router.get('/shared/:profileId', async (req, res) => {
   const { profileId } = req.params;
@@ -12,7 +13,7 @@ router.get('/shared/:profileId', async (req, res) => {
     return res.status(404).json({ success: false, message: 'Profile unavailable.' });
   }
   try {
-    const viewer = await resolveCurrentUser(req.query.userId, req.query.email);
+    const viewer = req.account;
     if (!viewer) return res.status(401).json({ success: false, message: 'Sign in to view this profile.' });
     const target = await User.findById(profileId)
       .select('name email bio interests isActive isDiscoverable blockedUsers avatarUrl')
@@ -93,8 +94,7 @@ function serializePerson(doc, extra = {}) {
 // Зарежда всички реални потребители от базата и ги разпределя в секции
 router.get('/hub', async (req, res) => {
   try {
-    const { userId, email } = req.query;
-    const me = await resolveCurrentUser(userId, email);
+    const me = await resolveCurrentUser(req.account.id, req.account.email);
 
     if (!me) {
       return res.status(404).json({ success: false, message: 'Потребителят не е намерен.' });
@@ -173,8 +173,8 @@ router.get('/hub', async (req, res) => {
 // Харесване или изпращане на покана; при взаимно харесване стават приятели веднага
 router.post('/like', async (req, res) => {
   try {
-    const { userId, email, targetId } = req.body;
-    const me = await resolveCurrentUser(userId, email);
+    const { targetId } = req.body;
+    const me = await resolveCurrentUser(req.account.id, req.account.email);
 
     if (!me || !mongoose.Types.ObjectId.isValid(targetId)) {
       return res.status(400).json({ success: false, message: 'Невалидни данни за заявката.' });
@@ -245,8 +245,8 @@ router.post('/like', async (req, res) => {
 // Отменя изпратена покана от Discover секцията
 router.post('/cancel-request', async (req, res) => {
   try {
-    const { userId, email, targetId } = req.body;
-    const me = await resolveCurrentUser(userId, email);
+    const { targetId } = req.body;
+    const me = await resolveCurrentUser(req.account.id, req.account.email);
 
     if (!me || !mongoose.Types.ObjectId.isValid(targetId)) {
       return res.status(400).json({ success: false, message: 'Невалидни данни.' });
@@ -268,8 +268,8 @@ router.post('/cancel-request', async (req, res) => {
 // Приема входяща покана за приятелство
 router.post('/accept', async (req, res) => {
   try {
-    const { userId, email, targetId } = req.body;
-    const me = await resolveCurrentUser(userId, email);
+    const { targetId } = req.body;
+    const me = await resolveCurrentUser(req.account.id, req.account.email);
 
     if (!me || !mongoose.Types.ObjectId.isValid(targetId)) {
       return res.status(400).json({ success: false, message: 'Невалидни данни.' });
@@ -305,8 +305,8 @@ router.post('/accept', async (req, res) => {
 // Отхвърля входяща покана
 router.post('/decline', async (req, res) => {
   try {
-    const { userId, email, targetId } = req.body;
-    const me = await resolveCurrentUser(userId, email);
+    const { targetId } = req.body;
+    const me = await resolveCurrentUser(req.account.id, req.account.email);
 
     if (!me || !mongoose.Types.ObjectId.isValid(targetId)) {
       return res.status(400).json({ success: false, message: 'Невалидни данни.' });
@@ -328,8 +328,8 @@ router.post('/decline', async (req, res) => {
 // Пропуска предложение (или го възстановява при undo: true)
 router.post('/skip', async (req, res) => {
   try {
-    const { userId, email, targetId, undo } = req.body;
-    const me = await resolveCurrentUser(userId, email);
+    const { targetId, undo } = req.body;
+    const me = await resolveCurrentUser(req.account.id, req.account.email);
 
     if (!me || !mongoose.Types.ObjectId.isValid(targetId)) {
       return res.status(400).json({ success: false, message: 'Невалидни данни.' });
@@ -351,8 +351,8 @@ router.post('/skip', async (req, res) => {
 // Премахва приятел от списъка на двамата потребители
 router.post('/remove', async (req, res) => {
   try {
-    const { userId, email, targetId } = req.body;
-    const me = await resolveCurrentUser(userId, email);
+    const { targetId } = req.body;
+    const me = await resolveCurrentUser(req.account.id, req.account.email);
 
     if (!me || !mongoose.Types.ObjectId.isValid(targetId)) {
       return res.status(400).json({ success: false, message: 'Невалидни данни.' });
@@ -374,8 +374,8 @@ router.post('/remove', async (req, res) => {
 // Търси реален потребител по Cosmic ID (NTL-XXXXXX) или имейл и изпраща покана
 router.post('/connect-by-code', async (req, res) => {
   try {
-    const { userId, email, codeOrEmail } = req.body;
-    const me = await resolveCurrentUser(userId, email);
+    const { codeOrEmail } = req.body;
+    const me = await resolveCurrentUser(req.account.id, req.account.email);
 
     if (!me || !codeOrEmail || !String(codeOrEmail).trim()) {
       return res.status(400).json({ success: false, message: 'Въведете валиден Cosmic ID или имейл.' });

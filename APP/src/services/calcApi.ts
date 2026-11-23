@@ -1,3 +1,4 @@
+import { authorizedFetch } from './account';
 import { useEffect, useState } from 'react';
 import { API_BASE_URL } from './api';
 
@@ -19,7 +20,7 @@ function remember(key: string, value: unknown) {
 }
 
 export async function calc<T>(path: string, body: object = {}): Promise<T> {
-  const key = `${path}|${JSON.stringify(body)}`;
+  const key = `${API_BASE_URL}|${path}|${JSON.stringify(body)}`;
   if (cache.has(key)) return cache.get(key) as T;
 
   const pending = inflight.get(key);
@@ -29,7 +30,7 @@ export async function calc<T>(path: string, body: object = {}): Promise<T> {
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), 5000);
     try {
-      const response = await fetch(`${API_BASE_URL}/calc/${path}`, {
+      const response = await authorizedFetch(`${API_BASE_URL}/calc/${path}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(body),
@@ -59,7 +60,7 @@ export async function calc<T>(path: string, body: object = {}): Promise<T> {
  * Подайте `null`, за да пропуснете заявката. Пази последния резултат по време на презареждане.
  */
 export function useCalc<T>(path: string, body: object | null) {
-  const key = body ? `${path}|${JSON.stringify(body)}` : null;
+  const key = body ? `${API_BASE_URL}|${path}|${JSON.stringify(body)}` : null;
   const [state, setState] = useState<{ key: string | null; data: T | null; error: string | null; loading: boolean }>(
     () => ({
       key,

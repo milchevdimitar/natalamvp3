@@ -18,7 +18,7 @@ import { FeedLoadingState, FeedErrorState, FeedEmptyState } from './FeedStateVie
 import { styles } from './feed.styles';
 
 export default function Feed() {
-  const { colors, user, setPage } = useApp();
+  const { colors, user, setPage, account } = useApp();
   const reducedMotion = useReducedMotion();
   const flatListRef = useRef<FlatList<FeedVideoItem>>(null);
 
@@ -37,7 +37,7 @@ export default function Feed() {
     retryFetch,
     handleLoadMore,
     handleRefresh,
-  } = useFeedVideos(user);
+  } = useFeedVideos(user, account);
 
   const handleLayout = (event: LayoutChangeEvent) => {
     const { height } = event.nativeEvent.layout;

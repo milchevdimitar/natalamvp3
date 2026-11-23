@@ -3,6 +3,15 @@ const { handlers, CalcInputError, setPlanetPositionLookup } = require('../calc')
 const { getPlanetPosition } = require('./horizons');
 
 const router = express.Router();
+const { requireAccount, requireFeature } = require('./account');
+for (const domain of ['bazi', 'ayurveda', 'mbti', 'numerology', 'cardology']) {
+  router.use('/' + domain, requireAccount, requireFeature(domain));
+}
+// Home uses the atlas independently of the Explore Astrology screen.
+router.use('/astrology', (req, res, next) => {
+  if (req.path === '/atlas') return next();
+  requireAccount(req, res, (error) => error ? next(error) : requireFeature('astrology')(req, res, next));
+});
 
 setPlanetPositionLookup(getPlanetPosition);
 

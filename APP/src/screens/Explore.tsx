@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { StyleSheet, View } from 'react-native';
-import { ChevronRight } from 'lucide-react-native';
+import { hasFeature } from '../services/account';
+import { ChevronRight, LockKeyhole } from 'lucide-react-native';
 import { Hero, SearchBar, Card, T, Section } from '../components/UI';
 import { ExploreArtwork } from '../components/ExploreArtwork';
 import { systems } from '../data/demo';
@@ -31,13 +32,13 @@ const upcomingSystems = systems.filter((system) => !isExploreRoute(system.name.t
 
 export default function Explore() {
   const [search, setSearch] = useState('');
-  const { colors, setPage, user } = useApp();
+  const { colors, setPage, user, account } = useApp();
   const activity = useSystemActivity(user?.email);
   const status = getDashboardSystems(user, activity);
   const query = search.trim().toLowerCase();
   const matches = (text: string) => text.toLowerCase().includes(query);
   const available = activeSystems.filter((system) => matches(system.name + ' ' + system.description + ' ' + system.route));
-  const comingSoon = upcomingSystems.filter((system) => matches(system.name + ' ' + system.description));
+  const comingSoon = account?.tier === 'owner' ? upcomingSystems.filter((system) => matches(system.name + ' ' + system.description)) : [];
 
   return (
     <>
@@ -53,9 +54,10 @@ export default function Explore() {
         <Section>Explore your systems</Section>
         <View style={styles.list}>
           {available.map((system) => {
+            const locked = !hasFeature(account, system.route);
             const ready = Boolean(status.find(({ route }) => route === system.route)?.value);
             return (
-            <Card key={system.route} onPress={() => setPage(system.route)} activeOpacity={0.7} style={styles.card}>
+            <Card key={system.route} onPress={() => setPage(locked ? 'subscription' : system.route)} activeOpacity={0.7} style={styles.card}>
               <View style={styles.row}>
                 <ExploreArtwork kind={system.route} />
                 <View style={styles.copy}>
@@ -66,9 +68,9 @@ export default function Explore() {
                       <T muted size={9}>{ready ? 'Ready' : 'To do'}</T>
                     </View>
                   </View>
-                  <T muted size={12}>{system.description}</T>
+                  <T muted size={12}>{locked ? 'Plan access' : system.description}</T>
                 </View>
-                <ChevronRight color={colors.muted} size={18} />
+                {locked ? <LockKeyhole color={colors.muted} size={16} /> : <ChevronRight color={colors.muted} size={18} />}
               </View>
             </Card>
             );
@@ -77,7 +79,7 @@ export default function Explore() {
       </>}
 
       {comingSoon.length > 0 && <>
-        <Section style={available.length > 0 ? { marginTop: 24 } : undefined}>Coming soon</Section>
+        <Section style={available.length > 0 ? { marginTop: 24 } : undefined}>To develop</Section>
         <View style={styles.list}>
           {comingSoon.map((system) => (
             <Card key={system.name} style={[styles.card, styles.unavailable]} treatment="muted">

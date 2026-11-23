@@ -1,494 +1,225 @@
-import React, { useState } from 'react';
-import {
-  View,
-  TextInput,
-  ActivityIndicator,
-  TouchableOpacity,
-  ScrollView,
-  Alert,
-  Platform,
-} from 'react-native';
-import {
-  LogIn,
-  User as UserIcon,
-  Mail,
-  Sparkles,
-  Clock,
-} from 'lucide-react-native';
+import { API_BASE_URL } from '../services/apiBase';
+import React, { useEffect, useRef, useState } from 'react';
+import { ActivityIndicator, Animated, KeyboardAvoidingView, Platform, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import * as AppleAuthentication from 'expo-apple-authentication';
+import * as Crypto from 'expo-crypto';
+import Constants, { ExecutionEnvironment } from 'expo-constants';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { useApp } from '../context/AppContext';
-import { Card, T, Hero, Pill } from '../components/UI';
-import { loginUser, saveUserProfile } from '../services/api';
-import { saveAndSyncProfile } from '../services/profileManager';
-import { CitySearchPicker } from '../components/CitySearchPicker';
-import { CityLocation } from '../services/locationService';
+import { accountMethods, authenticate, changeBackend, sendEmailCode } from '../services/account';
+import { CosmicBackground, useReducedMotion } from './Home/CosmicBackground';
 
-const showAlert = (title: string, message: string) => {
-  if (Platform.OS === 'web') {
-    window.alert(`${title}: ${message}`);
-  } else {
-    Alert.alert(title, message);
-  }
-};
+const googleClientId = process.env.EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID;
+const googleIosClientId = process.env.EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID;
+const deviceGoogleAvailable = Platform.OS !== 'web' && Constants.executionEnvironment !== ExecutionEnvironment.StoreClient &&
+  !!googleClientId && (Platform.OS !== 'ios' || !!googleIosClientId);
+const ownerTesting = (__DEV__ || Constants.expoConfig?.extra?.lanTestBuild === true) && process.env.EXPO_PUBLIC_NATALA_OWNER_TEST_LOGIN === 'true';
 
 export default function Login() {
-  const { colors, setUser, setPage } = useApp();
-  const [mode, setMode] = useState<'login' | 'register'>('login');
-
-  // Form state
+  const { setUser, setPage, setAccount } = useApp();
+  const reduced = useReducedMotion();
+  const offset = useRef(new Animated.Value(0)).current;
+  const [register, setRegister] = useState(false);
+  const [recover, setRecover] = useState(false);
+  const [needsCode, setNeedsCode] = useState(false);
+  const [code, setCode] = useState('');
+  const [codeSent, setCodeSent] = useState(false);
+  const [appleAvailable, setAppleAvailable] = useState(false);
   const [email, setEmail] = useState('');
   const [name, setName] = useState('');
-  const [birthDay, setBirthDay] = useState('15');
-  const [birthMonth, setBirthMonth] = useState('6');
-  const [birthYear, setBirthYear] = useState('1995');
-  const [birthHour, setBirthHour] = useState('');
-  const [birthMinute, setBirthMinute] = useState('');
+  const [password, setPassword] = useState('');
+  const [pairingCode, setPairingCode] = useState('');
+  const [editingBackend, setEditingBackend] = useState(false);
+  const [backendInput, setBackendInput] = useState('');
+  const [backendNotice, setBackendNotice] = useState('');
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState('');
 
-  // Selected city state compatible with CitySearchPicker (CityLocation | null)
-  const [selectedCity, setSelectedCity] = useState<CityLocation | null>({
-    name: 'Sofia',
-    country: 'Bulgaria',
-    lat: 42.6977,
-    lng: 23.3219,
-    timezone: 'Europe/Sofia',
-    region: 'Sofia-City',
-  });
+  useEffect(() => {
+    if (Platform.OS === 'ios') void AppleAuthentication.isAvailableAsync().then(setAppleAvailable).catch(() => {});
+    void accountMethods().then((methods) => setNeedsCode(methods.emailVerification)).catch(() => {});
+  }, []);
 
-  const [loading, setLoading] = useState(false);
-
-  const handleSubmit = async () => {
-    if (!email.trim() || !email.includes('@')) {
-      showAlert('Invalid Email', 'Please enter a valid email address.');
-      return;
-    }
-
-    if (mode === 'login') {
-      setLoading(true);
-      try {
-        const res = await loginUser(email.trim(), name.trim() || undefined);
-        if (res.success && res.user) {
-          setUser(res.user);
-          setPage('home');
-        }
-      } catch {
-        showAlert(
-          'Connection Error',
-          'Could not connect to the server. Please try again.'
-        );
-      } finally {
-        setLoading(false);
-      }
-      return;
-    }
-
-    if (!name.trim()) {
-      showAlert('Missing Name', 'Please enter your full name.');
-      return;
-    }
-
-    if (!selectedCity) {
-      showAlert('Missing City', 'Please select your city of birth.');
-      return;
-    }
-
-    const dayNum = parseInt(birthDay, 10);
-    const monthNum = parseInt(birthMonth, 10);
-    const yearNum = parseInt(birthYear, 10);
-
-    if (
-      Number.isNaN(dayNum) ||
-      dayNum < 1 ||
-      dayNum > 31 ||
-      Number.isNaN(monthNum) ||
-      monthNum < 1 ||
-      monthNum > 12 ||
-      Number.isNaN(yearNum) ||
-      yearNum < 1900 ||
-      yearNum > 2100
-    ) {
-      showAlert(
-        'Invalid Date',
-        'Please enter a valid date of birth (DD / MM / YYYY).'
-      );
-      return;
-    }
-
-    // Parse optional birth time ("HH:MM")
-    const rawHour = birthHour.trim();
-    const rawMinute = birthMinute.trim();
-    const hasCustomTime = rawHour !== '' || rawMinute !== '';
-
-    const hourNum = rawHour === '' ? 0 : parseInt(rawHour, 10);
-    const minuteNum = rawMinute === '' ? 0 : parseInt(rawMinute, 10);
-
-    if (
-      hasCustomTime &&
-      (Number.isNaN(hourNum) ||
-        hourNum < 0 ||
-        hourNum > 23 ||
-        Number.isNaN(minuteNum) ||
-        minuteNum < 0 ||
-        minuteNum > 59)
-    ) {
-      showAlert(
-        'Invalid Time',
-        'Please enter a valid time of birth (00–23h and 00–59m).'
-      );
-      return;
-    }
-
-    const exactBirthTime = hasCustomTime
-      ? `${String(hourNum).padStart(2, '0')}:${String(minuteNum).padStart(2, '0')}`
-      : undefined;
-
-    setLoading(true);
-
+  const submit = async (operation: () => Promise<Awaited<ReturnType<typeof authenticate>> | null>) => {
+    if (busy) return;
+    setBusy(true);
+    setError('');
     try {
-      // Embed exact hours & minutes into the UTC ISO date string
-      const isoBirthDate = new Date(
-        Date.UTC(
-          yearNum,
-          monthNum - 1,
-          dayNum,
-          hasCustomTime ? hourNum : 12,
-          hasCustomTime ? minuteNum : 0
-        )
-      ).toISOString();
-
-      // Map CityLocation (lat/lng) to MongoDB User schema (latitude/longitude)
-      const schemaBirthCity = {
-        name: selectedCity.name,
-        country: selectedCity.country,
-        latitude: selectedCity.lat,
-        longitude: selectedCity.lng,
-        ...(selectedCity.timezone ? { timezone: selectedCity.timezone } : {}),
-        ...(selectedCity.region ? { region: selectedCity.region } : {}),
-      };
-
-      const calculatedProfile = await saveAndSyncProfile({
-        name: name.trim(),
-        email: email.trim().toLowerCase(),
-        birthdate: isoBirthDate,
-        birthDate: {
-          day: dayNum,
-          month: monthNum,
-          year: yearNum,
-          ...(exactBirthTime ? { time: exactBirthTime } : {}),
-        },
-        ...(exactBirthTime ? { birthTime: exactBirthTime } : {}),
-        birthCity: {
-          ...selectedCity,
-          ...schemaBirthCity,
-        },
-      } as any);
-
-      // Remove helper birthDate object before persisting to MongoDB
-      const { birthDate: _ignoredBirthDate, ...cleanCalculated } =
-        (calculatedProfile as any) || {};
-
-      const payloadToSave = {
-        ...cleanCalculated,
-        name: name.trim(),
-        email: email.trim().toLowerCase(),
-        birthdate: isoBirthDate,
-        birthTime: exactBirthTime || cleanCalculated?.birthTime || null,
-        birthCity: schemaBirthCity,
-      };
-
-      const synced = await saveUserProfile(payloadToSave);
-
-      const finalUser = synced?.user
-        ? {
-            ...synced.user,
-            birthTime: synced.user.birthTime || payloadToSave.birthTime,
-          }
-        : payloadToSave;
-
-      setUser(finalUser);
+      const result = await operation();
+      if (!result) return;
+      setAccount(result);
+      setUser(result.user);
       setPage('home');
-    } catch {
-      showAlert(
-        'Connection Error',
-        'Could not connect to the server. Please try again.'
-      );
+    } catch (failure: unknown) {
+      const code = (failure as { code?: string })?.code;
+      if (code !== 'ERR_REQUEST_CANCELED' && code !== 'SIGN_IN_CANCELLED') {
+        setError(failure instanceof Error ? failure.message : 'Could not sign in. Please try again.');
+      }
     } finally {
-      setLoading(false);
+      setBusy(false);
     }
   };
 
+  const applyBackend = async (value: string | null) => {
+    if (busy) return;
+    setBusy(true);
+    setBackendNotice('');
+    setError('');
+    try {
+      const url = await changeBackend(value);
+      setCode('');
+      setCodeSent(false);
+      setPairingCode('');
+      setNeedsCode(await accountMethods().then((methods) => methods.emailVerification).catch(() => false));
+      setBackendNotice(`Connected to ${url.replace(/\/api$/, '')}`);
+    } catch (failure) {
+      setBackendNotice(failure instanceof Error ? failure.message : 'Could not change backend.');
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const signInWithApple = () => submit(async () => {
+    const nonce = Array.from(await Crypto.getRandomBytesAsync(32), (byte) => byte.toString(16).padStart(2, '0')).join('');
+    const credential = await AppleAuthentication.signInAsync({
+      nonce: await Crypto.digestStringAsync(Crypto.CryptoDigestAlgorithm.SHA256, nonce),
+      requestedScopes: [AppleAuthentication.AppleAuthenticationScope.EMAIL, AppleAuthentication.AppleAuthenticationScope.FULL_NAME],
+    });
+    return authenticate('/provider', {
+      provider: 'apple', token: credential.identityToken, nonce, authorizationCode: credential.authorizationCode,
+      name: [credential.fullName?.givenName, credential.fullName?.familyName].filter(Boolean).join(' '),
+    });
+  });
+
+  const signInWithGoogle = () => submit(async () => {
+    const { GoogleSignin } = require('@react-native-google-signin/google-signin') as typeof import('@react-native-google-signin/google-signin');
+    GoogleSignin.configure({ webClientId: googleClientId, iosClientId: googleIosClientId });
+    await GoogleSignin.hasPlayServices();
+    const result = await GoogleSignin.signIn();
+    if (result.type !== 'success') return null;
+    return authenticate('/provider', { provider: 'google', token: result.data.idToken, name: result.data.user.name });
+  });
+
+  const emailAction = () => submit(() => authenticate('/email', { email, password, name, register, recover, code }));
+  const showCode = recover || (register && needsCode);
+  const requestCode = () => submit(async () => {
+    await sendEmailCode(email);
+    setCodeSent(true);
+    return null;
+  });
+  const googleModule = deviceGoogleAvailable ? require('@react-native-google-signin/google-signin') as typeof import('@react-native-google-signin/google-signin') : null;
+  const GoogleButton = googleModule?.GoogleSigninButton;
+  const googleAvailable = deviceGoogleAvailable && (Platform.OS !== 'ios' || appleAvailable);
+  const field = (label: string, value: string, change: (value: string) => void, options: React.ComponentProps<typeof TextInput> = {}) => (
+    <View style={styles.field}>
+      <Text style={styles.label}>{label}</Text>
+      <TextInput accessibilityLabel={label} style={styles.input} value={value} onChangeText={change} editable={!busy} {...options} />
+    </View>
+  );
+
   return (
-    <ScrollView
-      showsVerticalScrollIndicator={false}
-      keyboardShouldPersistTaps="handled"
-      contentContainerStyle={{ gap: 20, paddingBottom: 40 }}
-    >
-      <Hero
-        eyebrow="WELCOME TO NATALA"
-        first="Unlock your"
-        accent="inner world."
-        description="Sign in or register to access your Natal Charts, Ayurveda, and 16 Archetypes profile."
-      />
-
-      {/* Mode Switcher (Sign In / Register) */}
-      <View
-        style={{
-          flexDirection: 'row',
-          backgroundColor: colors.surfaceAlt,
-          borderRadius: 14,
-          padding: 4,
-        }}
-      >
-        <TouchableOpacity
-          onPress={() => setMode('login')}
-          style={{
-            flex: 1,
-            paddingVertical: 10,
-            alignItems: 'center',
-            borderRadius: 10,
-            backgroundColor: mode === 'login' ? colors.purple : 'transparent',
-          }}
-        >
-          <T
-            bold
-            size={13}
-            style={{ color: mode === 'login' ? '#FFF' : colors.muted }}
-          >
-            Sign In
-          </T>
-        </TouchableOpacity>
-
-        <TouchableOpacity
-          onPress={() => setMode('register')}
-          style={{
-            flex: 1,
-            paddingVertical: 10,
-            alignItems: 'center',
-            borderRadius: 10,
-            backgroundColor: mode === 'register' ? colors.purple : 'transparent',
-          }}
-        >
-          <T
-            bold
-            size={13}
-            style={{ color: mode === 'register' ? '#FFF' : colors.muted }}
-          >
-            Register
-          </T>
-        </TouchableOpacity>
-      </View>
-
-      <Card style={{ gap: 16, padding: 20 }}>
-        {mode === 'register' && (
-          <View style={{ gap: 8 }}>
-            <T bold size={13}>
-              Full Name
-            </T>
-            <View
-              style={{
-                flexDirection: 'row',
-                alignItems: 'center',
-                backgroundColor: colors.surfaceAlt,
-                borderRadius: 12,
-                paddingHorizontal: 12,
-                height: 48,
-                gap: 10,
-              }}
-            >
-              <UserIcon size={18} color={colors.muted} />
-              <TextInput
-                placeholder="e.g. Alex Mercer"
-                placeholderTextColor={colors.muted}
-                value={name}
-                onChangeText={setName}
-                style={{ flex: 1, color: colors.text, fontSize: 14 }}
-              />
-            </View>
-          </View>
-        )}
-
-        <View style={{ gap: 8 }}>
-          <T bold size={13}>
-            Email Address
-          </T>
-          <View
-            style={{
-              flexDirection: 'row',
-              alignItems: 'center',
-              backgroundColor: colors.surfaceAlt,
-              borderRadius: 12,
-              paddingHorizontal: 12,
-              height: 48,
-              gap: 10,
-            }}
-          >
-            <Mail size={18} color={colors.muted} />
-            <TextInput
-              placeholder="email@domain.com"
-              placeholderTextColor={colors.muted}
-              keyboardType="email-address"
-              autoCapitalize="none"
-              value={email}
-              onChangeText={setEmail}
-              style={{ flex: 1, color: colors.text, fontSize: 14 }}
-            />
-          </View>
-        </View>
-
-        {mode === 'register' && (
-          <>
-            <View style={{ gap: 8 }}>
-              <T bold size={13}>
-                Date of Birth (DD / MM / YYYY)
-              </T>
-              <View style={{ flexDirection: 'row', gap: 10 }}>
-                <TextInput
-                  placeholder="DD"
-                  placeholderTextColor={colors.muted}
-                  keyboardType="numeric"
-                  maxLength={2}
-                  value={birthDay}
-                  onChangeText={setBirthDay}
-                  style={{
-                    flex: 1,
-                    backgroundColor: colors.surfaceAlt,
-                    borderRadius: 12,
-                    textAlign: 'center',
-                    color: colors.text,
-                    height: 48,
-                  }}
-                />
-                <TextInput
-                  placeholder="MM"
-                  placeholderTextColor={colors.muted}
-                  keyboardType="numeric"
-                  maxLength={2}
-                  value={birthMonth}
-                  onChangeText={setBirthMonth}
-                  style={{
-                    flex: 1,
-                    backgroundColor: colors.surfaceAlt,
-                    borderRadius: 12,
-                    textAlign: 'center',
-                    color: colors.text,
-                    height: 48,
-                  }}
-                />
-                <TextInput
-                  placeholder="YYYY"
-                  placeholderTextColor={colors.muted}
-                  keyboardType="numeric"
-                  maxLength={4}
-                  value={birthYear}
-                  onChangeText={setBirthYear}
-                  style={{
-                    flex: 2,
-                    backgroundColor: colors.surfaceAlt,
-                    borderRadius: 12,
-                    textAlign: 'center',
-                    color: colors.text,
-                    height: 48,
-                  }}
-                />
-              </View>
-            </View>
-
-            <View style={{ gap: 8 }}>
-              <View
-                style={{
-                  flexDirection: 'row',
-                  justifyContent: 'space-between',
-                  alignItems: 'center',
-                }}
-              >
-                <T bold size={13}>
-                  Time of Birth (HH : MM)
-                </T>
-                <T muted size={11}>
-                  24h format · optional
-                </T>
-              </View>
-              <View
-                style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}
-              >
-                <View
-                  style={{
-                    flex: 1,
-                    flexDirection: 'row',
-                    alignItems: 'center',
-                    backgroundColor: colors.surfaceAlt,
-                    borderRadius: 12,
-                    paddingHorizontal: 12,
-                    height: 48,
-                    gap: 8,
-                  }}
-                >
-                  <Clock size={16} color={colors.gold} />
-                  <TextInput
-                    placeholder="HH (e.g. 14)"
-                    placeholderTextColor={colors.muted}
-                    keyboardType="numeric"
-                    maxLength={2}
-                    value={birthHour}
-                    onChangeText={setBirthHour}
-                    style={{
-                      flex: 1,
-                      textAlign: 'center',
-                      color: colors.text,
-                      fontSize: 14,
-                    }}
+    <View style={styles.screen}>
+      <CosmicBackground offset={offset} reduced={reduced} darkBottom />
+      <SafeAreaView style={styles.screen}>
+        <KeyboardAvoidingView style={styles.screen} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+          <ScrollView keyboardShouldPersistTaps="handled" contentContainerStyle={styles.scroll}>
+            <View style={styles.content}>
+              <Text style={styles.logo}>Natala</Text>
+              <Text accessibilityRole="header" style={styles.title}>{recover ? 'Set your password.' : register ? 'Find your cosmic rhythm.' : 'Welcome back.'}</Text>
+              <Text style={styles.subtitle}>{recover ? 'Verify your email to access your existing profile.' : register ? 'Create an account to save your discoveries.' : 'Sign in to pick up where you left off.'}</Text>
+              <View style={styles.panel}>
+                {!recover && appleAvailable && <View pointerEvents={busy ? 'none' : 'auto'}>
+                  <AppleAuthentication.AppleAuthenticationButton
+                    buttonType={AppleAuthentication.AppleAuthenticationButtonType.CONTINUE}
+                    buttonStyle={AppleAuthentication.AppleAuthenticationButtonStyle.WHITE}
+                    cornerRadius={12} style={styles.provider} onPress={signInWithApple}
                   />
-                </View>
-
-                <T bold size={18} style={{ color: colors.muted }}>
-                  :
-                </T>
-
-                <TextInput
-                  placeholder="MM (e.g. 30)"
-                  placeholderTextColor={colors.muted}
-                  keyboardType="numeric"
-                  maxLength={2}
-                  value={birthMinute}
-                  onChangeText={setBirthMinute}
-                  style={{
-                    flex: 1,
-                    backgroundColor: colors.surfaceAlt,
-                    borderRadius: 12,
-                    textAlign: 'center',
-                    color: colors.text,
-                    height: 48,
-                    fontSize: 14,
-                  }}
-                />
+                </View>}
+                {!recover && googleAvailable && GoogleButton && <GoogleButton
+                  size={GoogleButton.Size.Wide} color={GoogleButton.Color.Light} disabled={busy}
+                  style={styles.provider} onPress={signInWithGoogle}
+                />}
+                {!recover && (appleAvailable || googleAvailable) && <View style={styles.divider}><View style={styles.line} /><Text style={styles.label}>or use email</Text><View style={styles.line} /></View>}
+                {register && field('Name', name, setName, { autoComplete: 'name', maxLength: 80 })}
+                {field('Email', email, (value) => { setEmail(value); setCodeSent(false); setCode(''); }, { autoCapitalize: 'none', autoComplete: 'email', keyboardType: 'email-address', maxLength: 254 })}
+                {showCode && <>
+                  <Pressable accessibilityRole="button" disabled={busy} onPress={requestCode} style={styles.switch}>
+                    <Text style={styles.switchText}>{codeSent ? 'Send a new code' : 'Send verification code'}</Text>
+                  </Pressable>
+                  {codeSent && <Text style={styles.label}>Check your email for an 8-digit code.</Text>}
+                  {field('Verification code', code, setCode, { autoComplete: 'one-time-code', keyboardType: 'number-pad', maxLength: 8 })}
+                </>}
+                {field(recover ? 'New password' : 'Password', password, setPassword, { autoCapitalize: 'none', autoComplete: register || recover ? 'new-password' : 'current-password', secureTextEntry: true, maxLength: 128, onSubmitEditing: emailAction })}
+                {!!error && <Text accessibilityRole="alert" style={styles.error}>{error}</Text>}
+                <Pressable accessibilityRole="button" disabled={busy} onPress={emailAction} style={styles.primary}>
+                  {busy ? <ActivityIndicator color="#15143d" /> : <Text style={styles.primaryText}>{recover ? 'Save password and sign in' : register ? 'Create account' : 'Sign in'}</Text>}
+                </Pressable>
               </View>
+              <Pressable accessibilityRole="button" disabled={busy} style={styles.switch} onPress={() => { setRegister(!register && !recover); setRecover(false); setError(''); }}>
+                <Text style={styles.switchText}>{recover ? 'Back to sign in' : register ? 'Already have an account? Sign in' : 'New to Natala? Create an account'}</Text>
+              </Pressable>
+              {!register && !recover && <Pressable accessibilityRole="button" disabled={busy} style={styles.switch} onPress={() => { setRecover(true); setPassword(''); setError(''); }}>
+                <Text style={styles.switchText}>Set or reset password</Text>
+              </Pressable>}
+              <Pressable accessibilityRole="button" disabled={busy} style={styles.switch} onPress={() => {
+                if (!editingBackend) {
+                  setBackendInput(API_BASE_URL.replace(/^http:\/\//, '').replace(/\/api\/?$/, ''));
+                  setBackendNotice('');
+                }
+                setEditingBackend(!editingBackend);
+              }}>
+                <Text style={styles.switchText}>Change backend IP</Text>
+              </Pressable>
+              {editingBackend && <View style={styles.panel}>
+                {field('Backend IP', backendInput, setBackendInput, {
+                  autoCapitalize: 'none', autoCorrect: false, placeholder: '192.168.1.10:5000',
+                  keyboardType: Platform.OS === 'ios' ? 'numbers-and-punctuation' : 'default',
+                  returnKeyType: 'go', onSubmitEditing: () => applyBackend(backendInput),
+                })}
+                <Pressable accessibilityRole="button" disabled={busy || !backendInput.trim()} style={styles.primary} onPress={() => applyBackend(backendInput)}>
+                  <Text style={styles.primaryText}>Use this backend</Text>
+                </Pressable>
+                <Pressable accessibilityRole="button" disabled={busy} style={styles.switch} onPress={() => applyBackend(null)}>
+                  <Text style={styles.switchText}>Use default backend</Text>
+                </Pressable>
+                {!!backendNotice && <Text accessibilityLiveRegion="polite" style={styles.label}>{backendNotice}</Text>}
+              </View>}
+              {ownerTesting && <View style={styles.panel}>
+                <Text style={styles.label}>Owner testing</Text>
+                {field('Device pairing code', pairingCode, setPairingCode, { secureTextEntry: true, autoCapitalize: 'none' })}
+                <View style={styles.owners}>
+                  {(['alex', 'dimitar'] as const).map((username) => <Pressable key={username} accessibilityRole="button" disabled={busy} style={styles.owner} onPress={() => submit(() => authenticate('/owner-test', { username, pairingCode }))}>
+                    <Text style={styles.switchText}>{username}</Text>
+                  </Pressable>)}
+                </View>
+              </View>}
             </View>
-
-            <CitySearchPicker
-              selectedCity={selectedCity}
-              onSelectCity={(city) => setSelectedCity(city)}
-              colors={colors}
-            />
-          </>
-        )}
-
-        <View style={{ marginTop: 10 }}>
-          <Pill selected onPress={handleSubmit}>
-            {loading ? (
-              <ActivityIndicator color="#FFF" size="small" />
-            ) : (
-              <>
-                {mode === 'login' ? (
-                  <LogIn size={16} color="#FFF" />
-                ) : (
-                  <Sparkles size={16} color="#FFF" />
-                )}
-                <T bold style={{ color: '#FFF' }}>
-                  {mode === 'login' ? 'Sign In' : 'Create Profile & Continue'}
-                </T>
-              </>
-            )}
-          </Pill>
-        </View>
-      </Card>
-    </ScrollView>
+          </ScrollView>
+        </KeyboardAvoidingView>
+      </SafeAreaView>
+    </View>
   );
 }
+
+const styles = StyleSheet.create({
+  screen: { flex: 1, backgroundColor: 'transparent' },
+  scroll: { flexGrow: 1, justifyContent: 'center', padding: 22 },
+  content: { width: '100%', maxWidth: 420, alignSelf: 'center', gap: 12 },
+  logo: { fontFamily: 'DancingScript_700Bold', fontSize: 41, color: '#fbf8ff', textAlign: 'center', marginBottom: 14 },
+  title: { fontSize: 29, fontWeight: '800', color: '#f6f3ff', textAlign: 'center' },
+  subtitle: { fontSize: 14, color: '#bbc8ee', textAlign: 'center', marginBottom: 10 },
+  panel: { gap: 12, padding: 17, borderRadius: 24, backgroundColor: '#242958a6', borderWidth: 1, borderColor: '#7e87d466' },
+  provider: { height: 49, width: '100%' },
+  divider: { flexDirection: 'row', alignItems: 'center', gap: 10, marginVertical: 3 },
+  line: { flex: 1, height: 1, backgroundColor: '#707aae65' },
+  field: { gap: 5 },
+  label: { color: '#c4cbed', fontSize: 13 },
+  input: { height: 48, paddingHorizontal: 13, color: '#fff', backgroundColor: '#151d44', borderRadius: 12, borderWidth: 1, borderColor: '#626eb18c' },
+  primary: { minHeight: 49, borderRadius: 12, backgroundColor: '#c4b7ff', alignItems: 'center', justifyContent: 'center', marginTop: 3 },
+  primaryText: { color: '#171331', fontWeight: '800', fontSize: 15 },
+  error: { color: '#ffb8bf', fontSize: 13 },
+  switch: { padding: 12, alignItems: 'center' },
+  switchText: { color: '#ded6ff', fontWeight: '700', textAlign: 'center' },
+  owners: { flexDirection: 'row', gap: 12 },
+  owner: { flex: 1, padding: 12, borderRadius: 12, backgroundColor: '#4c4a87' },
+});

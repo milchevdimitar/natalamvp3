@@ -68,11 +68,19 @@ function parseTimeString(raw: any): { hour: number; minute: number } | null {
 function extractInitialProfile(user: any) {
   const { day, month, year } = getBirthParts(user) ?? { day: 15, month: 6, year: 1995 };
 
-  const parsedTime =
+  const parsedTime = user?.hasExactBirthTime === false ? null :
     parseTimeString(user?.birthTime) || parseTimeString(user?.birthDate?.time);
-  const city = findCityPreset(
-    typeof user?.birthCity === 'string' ? user.birthCity : user?.birthCity?.name
-  );
+  const savedCity = user?.birthCity;
+  let city = findCityPreset(typeof savedCity === 'string' ? savedCity : savedCity?.name);
+  if (savedCity?.timezone && Number.isFinite(savedCity?.longitude)) {
+    try {
+      const instant = new Date(user?.natalChart?.birthDateTimeUtc || Date.UTC(year, month - 1, day, 12));
+      const offset = new Intl.DateTimeFormat('en', { timeZone: savedCity.timezone, timeZoneName: 'longOffset' })
+        .formatToParts(instant).find(({ type }) => type === 'timeZoneName')?.value.match(/GMT([+-])(\d{2}):(\d{2})/);
+      const tzOffsetHours = offset ? (offset[1] === '-' ? -1 : 1) * (Number(offset[2]) + Number(offset[3]) / 60) : 0;
+      city = { name: savedCity.name, country: savedCity.country || '', longitude: savedCity.longitude, tzOffsetHours };
+    } catch { /* Keep the preset for older profiles with invalid location data. */ }
+  }
   const gender: Gender =
     user?.gender === 'male' || user?.sex === 'male' ? 'male' : 'female';
 

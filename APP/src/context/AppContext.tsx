@@ -1,13 +1,13 @@
+import { useTabActivity } from '../services/tabActivity';
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { UserProfile } from '../models/User';
 import { cosmicTabColors, isCosmicPage } from '../theme/cosmic';
 
-const SESSION_KEY = '@natala_active_user_session';
+import { authorizedFetch, restoreAccount, signOutAccount, type AccountState } from '../services/account';
 const THEME_KEY = '@natala_theme';
-import { API_BASE_URL as API_URL } from '../services/api';
+import { API_BASE_URL } from '../services/api';
 
-const API_BASE_URL = API_URL.replace(/\/api$/, '');
 
 export interface AppStory {
   _id: string;
@@ -34,11 +34,15 @@ export interface SelectedChatData {
 
 interface AppContextType {
   page: string;
+  tabActivity: { chat: boolean; people: boolean };
   setPage: (page: string) => void;
   theme: 'dark' | 'light';
   toggleTheme: () => void;
   colors: any;
   user: UserProfile | null;
+  account: AccountState | null;
+  setAccount: (account: AccountState | null) => void;
+  restoring: boolean;
   setUser: (user: UserProfile | null) => void;
   logout: () => Promise<void>;
   updateCurrentUserProfile: (updatedData: Partial<UserProfile>) => Promise<void>;
@@ -63,6 +67,9 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const [theme, setTheme] = useState<'dark' | 'light'>('dark');
   const [themeLoaded, setThemeLoaded] = useState(false);
   const [user, setUserState] = useState<UserProfile | null>(null);
+  const [account, setAccount] = useState<AccountState | null>(null);
+  const [restoring, setRestoring] = useState(true);
+  const tabActivity = useTabActivity(user?.email, page);
   const [stories, setStories] = useState<AppStory[]>([]);
   const [hideBottomNav, setHideBottomNav] = useState(false);
   const [selectedChat, setSelectedChat] = useState<SelectedChatData | null>(null);
@@ -81,7 +88,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     if (themeLoaded) void AsyncStorage.setItem(THEME_KEY, theme).catch(() => undefined);
   }, [theme, themeLoaded]);
 
-  const colors = isCosmicPage(page) ? cosmicTabColors[theme] : {
+  const colors = isCosmicPage(page === 'subscription' ? 'profile' : page) ? cosmicTabColors[theme] : {
     bg: theme === 'dark' ? '#0F0D15' : '#F7F6FB',
     surface: theme === 'dark' ? '#1A1726' : '#FFFFFF',
     surfaceAlt: theme === 'dark' ? '#252136' : '#F0EEF8',
@@ -95,7 +102,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
 
   const fetchActiveStories = async () => {
     try {
-      const response = await fetch(`${API_BASE_URL}/api/stories/active`);
+      const response = await authorizedFetch(`${API_BASE_URL}/stories/active`);
       if (response.ok) {
         const data = await response.json();
         setStories(data);
@@ -106,35 +113,31 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   };
 
   useEffect(() => {
-    (async () => {
-      try {
-        const savedSession = await AsyncStorage.getItem(SESSION_KEY);
-        if (savedSession) {
-          setUserState(JSON.parse(savedSession));
-        }
-      } catch (err) {
-        console.warn('Грешка при зареждане на сесията:', err);
-      }
-    })();
-
-    fetchActiveStories();
+    let active = true;
+    void restoreAccount().then((result) => {
+      if (!active || !result) return;
+      setUserState(result.user);
+      setAccount(result);
+    }).catch(() => {}).finally(() => {
+      if (active) setRestoring(false);
+    });
+    void AsyncStorage.removeItem('@natala_active_user_session').catch(() => {});
+    return () => { active = false; };
   }, []);
 
-  const setUser = async (newUser: UserProfile | null) => {
-    setUserState(newUser);
-    try {
-      if (newUser) {
-        await AsyncStorage.setItem(SESSION_KEY, JSON.stringify(newUser));
-      } else {
-        await AsyncStorage.removeItem(SESSION_KEY);
-      }
-    } catch (err) {
-      console.error('Грешка при запис на сесията:', err);
-    }
-  };
+  useEffect(() => {
+    if (user?.email) void fetchActiveStories();
+  }, [user?.email]);
+
+  const setUser = setUserState;
 
   const logout = async () => {
-    await setUser(null);
+    await signOutAccount().catch(() => {});
+    setUser(null);
+    setAccount(null);
+    setStories([]);
+    setSelectedChat(null);
+    setHideBottomNav(false);
     setPage('login');
   };
 
@@ -154,7 +157,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       const userIdVal = String(user?.email || user?.name || 'guest_id').toLowerCase().trim();
       const authorNameVal = String(user?.name || user?.email || 'Stargazer');
 
-      const response = await fetch(`${API_BASE_URL}/api/stories/upload-base64`, {
+      const response = await authorizedFetch(`${API_BASE_URL}/stories/upload-base64`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -180,7 +183,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
 
   const deleteStory = async (id: string) => {
     try {
-      const response = await fetch(`${API_BASE_URL}/api/stories/${id}`, {
+      const response = await authorizedFetch(`${API_BASE_URL}/stories/${id}`, {
         method: 'DELETE',
       });
 
@@ -207,7 +210,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       }
 
       // 1. Старт / Намиране на съществуващ чат с автора
-      const startRes = await fetch(`${API_BASE_URL}/api/chats/start`, {
+      const startRes = await authorizedFetch(`${API_BASE_URL}/chats/start`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -225,7 +228,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
 
       if (chatData?.id) {
         // 2. Публикуване на съобщението с отговор на сторито
-        await fetch(`${API_BASE_URL}/api/chats/${chatData.id}/messages`, {
+        await authorizedFetch(`${API_BASE_URL}/chats/${chatData.id}/messages`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
@@ -265,7 +268,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       );
 
       // 2. Изпращане на заявка към MongoDB бекенда
-      const response = await fetch(`${API_BASE_URL}/api/stories/${storyId}/like`, {
+      const response = await authorizedFetch(`${API_BASE_URL}/stories/${storyId}/like`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -295,12 +298,16 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       value={{
         page,
         setPage,
+        tabActivity,
         theme,
         toggleTheme,
         colors,
         user,
         setUser,
         logout,
+        account,
+        setAccount,
+        restoring,
         updateCurrentUserProfile,
         stories,
         addStory,

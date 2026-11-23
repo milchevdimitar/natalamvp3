@@ -274,10 +274,16 @@ const UserSchema = new mongoose.Schema(
   {
     name: { type: String, required: true, trim: true },
     email: { type: String, required: true, unique: true, lowercase: true, trim: true },
+    passwordHash: { type: String, select: false },
+    verifiedEmail: { type: Boolean, select: false },
+    googleSubject: { type: String, unique: true, sparse: true, select: false },
+    appleSubject: { type: String, unique: true, sparse: true, select: false },
+    appleRefreshToken: { type: String, select: false },
+    ownerTestAccount: { type: Boolean, select: false },
+    previewTier: { type: String, enum: ['free', 'plus', 'pro', 'go_deeper_plus', null], select: false },
     cosmicCode: { type: String, unique: true, sparse: true },
     birthdate: {
       type: Date,
-      required: true,
       set: normalizeBirthdateInput,
     },
     birthTime: {
@@ -443,7 +449,7 @@ const UserSchema = new mongoose.Schema(
     subscription: {
       tier: {
         type: String,
-        enum: ['free', 'go_deeper_plus'],
+        enum: ['free', 'plus', 'pro', 'go_deeper_plus'],
         default: 'free',
       },
       status: {

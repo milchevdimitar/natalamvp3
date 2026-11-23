@@ -1,5 +1,7 @@
+import { CosmicBackground, useReducedMotion } from '../screens/Home/CosmicBackground';
 import React, { useState, useRef, useEffect } from 'react';
 import {
+  Animated,
   View,
   TextInput,
   TouchableOpacity,
@@ -18,9 +20,12 @@ interface Props {
   selectedCity: CityLocation | null;
   onSelectCity: (city: CityLocation) => void;
   colors: any;
+  cosmicTheme?: 'dark' | 'light';
 }
 
-export function CitySearchPicker({ selectedCity, onSelectCity, colors }: Props) {
+export function CitySearchPicker({ selectedCity, onSelectCity, colors, cosmicTheme }: Props) {
+  const reducedMotion = useReducedMotion();
+  const offset = useRef(new Animated.Value(0)).current;
   const [modalVisible, setModalVisible] = useState(false);
   const [query, setQuery] = useState('');
   const [results, setResults] = useState<CityLocation[]>([]);
@@ -144,6 +149,7 @@ export function CitySearchPicker({ selectedCity, onSelectCity, colors }: Props) 
             },
           ]}
         >
+          {modalVisible && cosmicTheme && <CosmicBackground offset={offset} reduced={reducedMotion} light={cosmicTheme === 'light'} />}
           <View style={styles.modalHeader}>
             <T bold size={17} style={{ color: colors.text }}>
               Place of Birth
@@ -210,7 +216,7 @@ export function CitySearchPicker({ selectedCity, onSelectCity, colors }: Props) 
                       : 'No cities found matching your search.'}
                   </T>
                 </View>
-              ) : null
+              ) : undefined
             }
             renderItem={({ item }) => (
               <TouchableOpacity
