@@ -154,7 +154,7 @@ export interface NatalChartResults {
   signature: string;
   calculatedAt: string;
   zodiacType: 'Tropical';
-  houseSystem: 'Placidus';
+  houseSystem: 'Placidus' | 'Porphyry';
   ephemerisSource: 'astronomy-engine-jpl';
   hasExactBirthTime: boolean;
 

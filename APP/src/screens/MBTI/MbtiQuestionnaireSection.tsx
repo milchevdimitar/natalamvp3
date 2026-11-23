@@ -1,8 +1,9 @@
 import React from 'react';
-import { View, TouchableOpacity } from 'react-native';
+import { View } from 'react-native';
 import { Card, T, Pill, Progress } from '../../components/UI';
 import { Question } from './mbti.types';
 import { styles } from './mbti.styles';
+import { LikertScale } from './LikertScale';
 
 interface MbtiQuestionnaireSectionProps {
   colors: any;
@@ -18,15 +19,6 @@ interface MbtiQuestionnaireSectionProps {
   onPrevPage: () => void;
   onNextPage: () => void;
   onComplete: () => void;
-}
-
-const SCALE_VALUES = [1, 2, 3, 4, 5, 6, 7];
-
-function getScaleCircleSize(val: number): number {
-  if (val === 1 || val === 7) return 32;
-  if (val === 2 || val === 6) return 28;
-  if (val === 3 || val === 5) return 24;
-  return 22;
 }
 
 export function MbtiQuestionnaireSection({
@@ -95,47 +87,7 @@ export function MbtiQuestionnaireSection({
                   </T>
                 </View>
 
-                <View
-                  style={[
-                    styles.scaleButtonsPill,
-                    { backgroundColor: colors.surfaceAlt },
-                  ]}
-                >
-                  {SCALE_VALUES.map((val) => {
-                    const isSelected = currentVal === val;
-                    const size = getScaleCircleSize(val);
-
-                    return (
-                      <TouchableOpacity
-                        key={val}
-                        onPress={() => onSelectAnswer(q.id, val)}
-                        style={[
-                          styles.scaleCircle,
-                          {
-                            width: size,
-                            height: size,
-                            borderRadius: size / 2,
-                            backgroundColor: isSelected
-                              ? colors.purple
-                              : val === 4
-                              ? colors.line
-                              : colors.surface,
-                            borderWidth: isSelected ? 0 : 1,
-                            borderColor: isSelected ? 'transparent' : colors.line,
-                          },
-                        ]}
-                      >
-                        <T
-                          bold={isSelected}
-                          size={11}
-                          style={{ color: isSelected ? '#FFFFFF' : colors.muted }}
-                        >
-                          {val}
-                        </T>
-                      </TouchableOpacity>
-                    );
-                  })}
-                </View>
+                <LikertScale value={currentVal} colors={colors} onChange={(value) => onSelectAnswer(q.id, value)} />
               </View>
             </Card>
           );

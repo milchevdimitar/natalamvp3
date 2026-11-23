@@ -155,7 +155,7 @@ const aiAstrologyRoutes = require('./routes/aiAstrology');
 app.use('/api/ai/astrology', aiAstrologyRoutes);
 
 const reportRoutes = require('./routes/report');
-app.use('/api/users/:id/report/pdf', requireAccount, (req, res, next) => {
+app.use(['/api/users/:id/report/pdf', '/api/users/:id/report/reading'], requireAccount, (req, res, next) => {
   if (req.params.id !== req.account.id) return res.sendStatus(403);
   next();
 }, requireFeature('pdf-report'));

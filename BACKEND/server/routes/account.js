@@ -1,3 +1,4 @@
+const { NATAL_SIGNATURE_SUFFIX } = require('../../../SHARED/natalGeometry');
 const { Plan, TIERS, FEATURES, listedPlans, featuresFor } = require('../models/SubscriptionPlan');
 const express = require('express');
 const mongoose = require('mongoose');
@@ -78,10 +79,22 @@ async function requireAccount(req, res, next) {
   }
 }
 
+async function freshProfile(id) {
+  const profile = await User.findById(id);
+  if (!profile?.birthdate || profile.natalChart?.signature?.endsWith(NATAL_SIGNATURE_SUFFIX)) return profile;
+  const { handlers } = require('../calc');
+  const { profilePatch } = await handlers.astrology['natal-chart']({ user: profile.toObject() });
+  if (!profilePatch) return profile;
+  if (!profilePatch.hasExactBirthTime) delete profilePatch.natalChart.ascendant;
+  const updated = await User.findOneAndUpdate({ _id: id, updatedAt: profile.updatedAt },
+    { $set: profilePatch }, { new: true, runValidators: true });
+  return updated || await User.findById(id);
+}
+
 async function signIn(user, res) {
   const token = randomBytes(32).toString('hex');
   await Session.create({ digest: hash(token), user: user._id, expires: new Date(Date.now() + 30 * 86400000) });
-  const profile = await User.findById(user._id);
+  const profile = await freshProfile(user._id);
   return res.json({ token, user: profile, ...await accountDetails(user) });
 }
 
@@ -320,7 +333,7 @@ route('get', '/tab-activity', requireAccount, async (req, res) => {
   });
 });
 
-route('get', '/me', requireAccount, async (req, res) => res.json({ user: await User.findById(req.account.id), ...await accountDetails(req.account) }));
+route('get', '/me', requireAccount, async (req, res) => res.json({ user: await freshProfile(req.account.id), ...await accountDetails(req.account) }));
 route('post', '/logout', requireAccount, async (req, res) => {
   await req.accountSession.deleteOne();
   res.sendStatus(204);

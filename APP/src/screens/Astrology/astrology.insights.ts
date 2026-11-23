@@ -500,7 +500,7 @@ export function buildAstrologyClasses(chart: NatalChartResults): AstrologyClassI
       code: '13.4 · HOUSES & ANGLES',
       level: 'Intermediate',
       duration: '7 min',
-      title: 'The 12 Astrological Houses (Placidus System)',
+      title: `The 12 Astrological Houses (${chart.houseSystem} System)`,
       concept:
         'Houses show the specific life arenas—career, relationships, home, creativity—where planetary energy unfolds.',
       personalExample: `Your Ascendant ruler (${chart.chartRuler.modernRuler}) resides in House ${chart.chartRuler.rulerHouse}.`,

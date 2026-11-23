@@ -369,7 +369,7 @@ export function ChartTechnicalDrawerTrigger({
                 Planets, Houses & Aspects
               </T>
               <T muted size={11}>
-                {results.planetPositions.length} bodies · 12 Placidus houses ·{' '}
+                {results.planetPositions.length} bodies · 12 {results.houseSystem} houses ·{' '}
                 {results.aspects.length} aspects
               </T>
             </View>

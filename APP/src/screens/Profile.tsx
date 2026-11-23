@@ -1,3 +1,4 @@
+import { ProfileReading } from './ProfileReading';
 import React, { useState } from 'react';
 import { ActivityIndicator, Alert, Animated, Platform, Pressable, StyleSheet, View } from 'react-native';
 import { Brain, ChevronRight, Compass, FileDown, Hash, Layers, Leaf, Orbit, QrCode, Settings, Share2, Sparkles, Sun } from 'lucide-react-native';
@@ -33,6 +34,7 @@ export default function Profile({ scrollOffset }: { scrollOffset: Animated.Value
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [qrOpen, setQrOpen] = useState(false);
   const [shareNotice, setShareNotice] = useState('');
+  const [readingOpen, setReadingOpen] = useState(false);
   const [generatingPdf, setGeneratingPdf] = useState(false);
   const activity = useSystemActivity(user?.email);
   const systems = getDashboardSystems(user, activity);
@@ -82,6 +84,7 @@ export default function Profile({ scrollOffset }: { scrollOffset: Animated.Value
         headers: {
           'Content-Type': 'application/json',
         },
+        body: JSON.stringify({ tarot: activity?.tarot }),
       });
 
       if (!response.ok) {
@@ -305,6 +308,18 @@ export default function Profile({ scrollOffset }: { scrollOffset: Animated.Value
         </Card>
       </View>}
 
+      <Card style={styles.reading} onPress={() => {
+        if (!hasFeature(account, 'pdf-report')) { setPage('subscription'); return; }
+        if (publicId) setReadingOpen(true);
+      }}>
+        <View style={styles.readingIcon}><Sparkles size={22} color="#e6ceff" /></View>
+        <View style={{ flex: 1, gap: 4 }}>
+          <T bold size={17}>Your Cosmic Report</T>
+          <T muted size={12}>A personalized AI reading in 12 chapters</T>
+        </View>
+        <ChevronRight size={18} color={colors.muted} />
+      </Card>
+
       <Pressable accessibilityRole="button" onPress={handleGeneratePdf} disabled={generatingPdf} style={({ pressed }) => [styles.report, pressed && { opacity: 0.86 }]}>
         <LinearGradient colors={['#ffe0a5', '#eebd66', '#d49342']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={StyleSheet.absoluteFill} pointerEvents="none" />
         <View style={styles.premium}><T bold size={10} style={styles.reportInk}>Premium</T></View>
@@ -317,6 +332,7 @@ export default function Profile({ scrollOffset }: { scrollOffset: Animated.Value
         </View>
       </Pressable>
     </Animated.ScrollView>
+    {readingOpen && publicId && <ProfileReading userId={publicId} tarot={activity?.tarot} onClose={() => setReadingOpen(false)} />}
     {settingsOpen && <ProfileSettings birthLabel={birthLabel} birthCity={birthCity} onClose={() => setSettingsOpen(false)} />}
     {qrOpen && publicId && <ProfileQrCard id={publicId} name={name || 'Natala profile'} photo={photo} onClose={() => setQrOpen(false)} onShare={share} notice={shareNotice} />}
     </>
@@ -347,6 +363,8 @@ const styles = StyleSheet.create({
   pending: { paddingHorizontal: 15, paddingVertical: 4 },
   copy: { flex: 1, minWidth: 0, gap: 2 },
   next: { minHeight: 57, flexDirection: 'row', alignItems: 'center', gap: 10, paddingVertical: 8 },
+  reading: { minHeight: 87, marginBottom: 11, flexDirection: 'row', alignItems: 'center', gap: 12, padding: 14, backgroundColor: 'rgba(66,58,126,0.43)' },
+  readingIcon: { width: 45, height: 45, borderRadius: 23, alignItems: 'center', justifyContent: 'center', backgroundColor: 'rgba(141,110,194,0.3)' },
   report: { position: 'relative', flexDirection: 'row', alignItems: 'center', minHeight: 96, paddingHorizontal: 13, paddingVertical: 24, gap: 10, borderRadius: 20, overflow: 'hidden', borderWidth: 1, borderColor: '#ffe3a5' },
   reportInk: { color: '#442914' },
   reportIcon: { width: 42, height: 42, borderRadius: 21, alignItems: 'center', justifyContent: 'center', backgroundColor: 'rgba(98,53,19,0.14)' },

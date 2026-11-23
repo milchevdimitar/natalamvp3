@@ -1,8 +1,10 @@
+const path = require('node:path');
 const { getDefaultConfig } = require('expo/metro-config');
 
 module.exports = (() => {
   const config = getDefaultConfig(__dirname);
 
+  config.watchFolders = [...(config.watchFolders ?? []), path.resolve(__dirname, '../SHARED')];
   const { transformer, resolver } = config;
 
   config.transformer = {

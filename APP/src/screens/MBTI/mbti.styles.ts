@@ -44,18 +44,6 @@ export const styles = StyleSheet.create({
     justifyContent: 'space-between',
     paddingHorizontal: 4,
   },
-  scaleButtonsPill: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    borderRadius: 99,
-    paddingVertical: 8,
-    paddingHorizontal: 12,
-  },
-  scaleCircle: {
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
   paginationRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',

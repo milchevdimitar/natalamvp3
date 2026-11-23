@@ -1,9 +1,9 @@
 import * as Astronomy from 'astronomy-engine';
+import { calculateHouses, houseForLongitude, meanLunarApogee, NATAL_SIGNATURE_SUFFIX, normalizeDegrees, resolveCivilTime } from '../../../../SHARED/natalGeometry';
 import {
   ASPECT_DEFINITIONS,
   DEFAULT_LAT,
   DEFAULT_LON,
-  OBLIQUITY_RAD,
   PLANET_BODIES,
   PLANET_DIGNITIES,
   ZODIAC_SIGNS,
@@ -26,46 +26,6 @@ import {
   ZodiacPosition,
 } from './astrology.types';
 
-function getTimezoneOffsetMinutes(utcDate: Date, timezone: string): number | null {
-  try {
-    if (typeof Intl === 'undefined' || typeof Intl.DateTimeFormat !== 'function') {
-      return null;
-    }
-    const formatter = new Intl.DateTimeFormat('en-US', {
-      timeZone: timezone,
-      hour12: false,
-      year: 'numeric',
-      month: '2-digit',
-      day: '2-digit',
-      hour: '2-digit',
-      minute: '2-digit',
-      second: '2-digit',
-    });
-
-    const parts = formatter.formatToParts(utcDate);
-    const map: Record<string, string> = {};
-    for (const part of parts) {
-      map[part.type] = part.value;
-    }
-
-    const y = Number(map.year);
-    const m = Number(map.month);
-    const d = Number(map.day);
-    const h = Number(map.hour) % 24;
-    const min = Number(map.minute);
-    const sec = Number(map.second || '0');
-
-    if ([y, m, d, h, min, sec].some((n) => Number.isNaN(n))) {
-      return null;
-    }
-
-    const targetUtcMs = Date.UTC(y, m - 1, d, h, min, sec);
-    return Math.round((utcDate.getTime() - targetUtcMs) / 60000);
-  } catch {
-    return null;
-  }
-}
-
 export function parseDateTimeToUTC(
   dStr: string,
   tStr: string,
@@ -81,15 +41,9 @@ export function parseDateTimeToUTC(
   const safeHour = Number.isFinite(hour) ? hour : 12;
   const safeMin = Number.isFinite(min) ? min : 0;
 
-  if (timezone && typeof timezone === 'string') {
-    const testDate = new Date(Date.UTC(safeYear, safeMonth - 1, safeDay, safeHour, safeMin));
-    const diffMinutes = getTimezoneOffsetMinutes(testDate, timezone.trim());
-    if (diffMinutes !== null && Number.isFinite(diffMinutes)) {
-      const resolved = new Date(testDate.getTime() + diffMinutes * 60000);
-      if (!Number.isNaN(resolved.getTime())) {
-        return resolved;
-      }
-    }
+  if (timezone?.trim()) {
+    const wallTime = new Date(Date.UTC(safeYear, safeMonth - 1, safeDay, safeHour, safeMin));
+    return resolveCivilTime(wallTime, timezone.trim());
   }
 
   if (Math.abs(lon - DEFAULT_LON) < 6) {
@@ -146,101 +100,24 @@ export function getPlanetDignity(planetName: string, sign: string): DignityType 
   return 'Peregrine';
 }
 
-export function getHouseForPlanet(planetDeg: number, cusps: number[]): number {
-  const deg = ((planetDeg % 360) + 360) % 360;
-  for (let i = 1; i <= 12; i++) {
-    const cCurr = cusps[i];
-    const cNext = i < 12 ? cusps[i + 1] : cusps[1];
-    if (cCurr < cNext) {
-      if (deg >= cCurr && deg < cNext) return i;
-    } else if (deg >= cCurr || deg < cNext) {
-      return i;
-    }
-  }
-  return 1;
-}
+export const getHouseForPlanet = houseForLongitude;
 
-export function calculatePlacidusHouses(
-  date: Date,
-  lat: number = DEFAULT_LAT,
-  lon: number = DEFAULT_LON
-) {
-  const siderealTimeHours = Astronomy.SiderealTime(date);
-  const ramcDeg = (siderealTimeHours * 15 + lon + 360) % 360;
-  const ramcRad = (ramcDeg * Math.PI) / 180;
-  const latRad = (lat * Math.PI) / 180;
-
-  const mcRad = Math.atan2(Math.sin(ramcRad), Math.cos(ramcRad) * Math.cos(OBLIQUITY_RAD));
-  const mc = ((mcRad * 180) / Math.PI + 360) % 360;
-
-  const ascRad = Math.atan2(
-    Math.cos(ramcRad),
-    -Math.sin(ramcRad) * Math.cos(OBLIQUITY_RAD) - Math.tan(latRad) * Math.sin(OBLIQUITY_RAD)
-  );
-  const asc = ((ascRad * 180) / Math.PI + 360) % 360;
-
-  const ic = (mc + 180) % 360;
-  const dsc = (asc + 180) % 360;
-
-  const solvePlacidusCusp = (degreeOffset: number, factor: number, isAbove: boolean) => {
-    let ra = (ramcDeg + degreeOffset) * (Math.PI / 180);
-    for (let i = 0; i < 15; i++) {
-      const sinRA = Math.sin(ra);
-      const decl = Math.asin(Math.sin(OBLIQUITY_RAD) * sinRA);
-      const val = Math.tan(latRad) * Math.tan(decl);
-      const clampedVal = Math.max(-0.9999, Math.min(0.9999, val));
-      const ascDiff = Math.asin(clampedVal);
-      const diurnalArc = isAbove ? Math.PI / 2 + ascDiff : Math.PI / 2 - ascDiff;
-      const targetRA = (ramcDeg * Math.PI) / 180 + factor * diurnalArc;
-      ra = ra + (targetRA - ra) * 0.5;
-    }
-    const lonRad = Math.atan2(
-      Math.sin(ra) * Math.cos(OBLIQUITY_RAD) +
-        Math.tan(Math.asin(Math.sin(OBLIQUITY_RAD) * Math.sin(ra))) * Math.sin(OBLIQUITY_RAD),
-      Math.cos(ra)
-    );
-    return ((lonRad * 180) / Math.PI + 360) % 360;
-  };
-
-  let cusp11 = solvePlacidusCusp(30, 1 / 3, true);
-  let cusp12 = solvePlacidusCusp(60, 2 / 3, true);
-  let cusp2 = solvePlacidusCusp(120, 1 + 1 / 3, false);
-  let cusp3 = solvePlacidusCusp(150, 1 + 2 / 3, false);
-
-  if (isNaN(cusp11)) cusp11 = (mc + 30) % 360;
-  if (isNaN(cusp12)) cusp12 = (mc + 60) % 360;
-  if (isNaN(cusp2)) cusp2 = (asc + 30) % 360;
-  if (isNaN(cusp3)) cusp3 = (asc + 60) % 360;
-
-  const cusps = [
-    0,
-    asc,
-    cusp2,
-    cusp3,
-    ic,
-    (cusp11 + 180) % 360,
-    (cusp12 + 180) % 360,
-    dsc,
-    (cusp2 + 180) % 360,
-    (cusp3 + 180) % 360,
-    mc,
-    cusp11,
-    cusp12,
-  ];
-
-  return { cusps, asc, mc, dsc, ic };
+export function calculatePlacidusHouses(date: Date, lat = DEFAULT_LAT, lon = DEFAULT_LON) {
+  const armc = Astronomy.SiderealTime(date) * 15 + lon;
+  return calculateHouses(armc, lat, Astronomy.e_tilt(Astronomy.MakeTime(date)).tobl);
 }
 
 export function getTrueNorthNodeLongitude(date: Date): number {
-  const jd = date.getTime() / 86400000 + 2440587.5;
-  const d = jd - 2451545.0;
-  return (((125.04452 - 0.0529537617 * d) % 360) + 360) % 360;
+  const moon = Astronomy.RotateState(Astronomy.Rotation_EQJ_ECT(date), Astronomy.GeoMoonState(date));
+  // The ascending node is the intersection of the lunar orbital plane and the ecliptic.
+  const hx = moon.y * moon.vz - moon.z * moon.vy;
+  const hy = moon.z * moon.vx - moon.x * moon.vz;
+  return normalizeDegrees(Math.atan2(hx, -hy) * 180 / Math.PI);
 }
 
 export function getMeanLilithLongitude(date: Date): number {
-  const jd = date.getTime() / 86400000 + 2440587.5;
-  const d = jd - 2451545.0;
-  return (((83.353243 + 0.1114035239 * d) % 360) + 360) % 360;
+  const time = Astronomy.MakeTime(date);
+  return meanLunarApogee(time.tt, Astronomy.e_tilt(time).dpsi / 3600);
 }
 
 function getBodyLongitudeAt(body: Astronomy.Body, dateUtc: Date): number {
@@ -700,12 +577,13 @@ export function computeNatalChart(
     }
 
     const datePlus1Hour = new Date(dateUtc.getTime() + 3600 * 1000);
-    const { cusps, asc, mc, dsc, ic } = calculatePlacidusHouses(dateUtc, safeLat, safeLon);
+    const { cusps, asc, mc, dsc, ic, houseSystem } = calculatePlacidusHouses(dateUtc, safeLat, safeLon);
 
     const sunDeg = getBodyLongitudeAt(Astronomy.Body.Sun, dateUtc);
     const moonDeg = getBodyLongitudeAt(Astronomy.Body.Moon, dateUtc);
-    const sunHouse = getHouseForPlanet(sunDeg, cusps);
-    const isDayChart = sunHouse >= 7 && sunHouse <= 12;
+    const observer = new Astronomy.Observer(safeLat, safeLon, 0);
+    const solarEquator = Astronomy.Equator(Astronomy.Body.Sun, dateUtc, observer, true, true);
+    const isDayChart = Astronomy.Horizon(dateUtc, observer, solarEquator.ra, solarEquator.dec).altitude >= 0;
 
     const planetPositions: PlanetPosition[] = PLANET_BODIES.map((cfg) => {
       let planetLon = 0;
@@ -882,13 +760,13 @@ export function computeNatalChart(
 
     const signature = `${dStr}|${tStr}|${safeLat.toFixed(4)}|${safeLon.toFixed(4)}|${
       timezone || ''
-    }|v2`;
+    }|${hasExactBirthTime ? 'exact' : 'estimated'}${NATAL_SIGNATURE_SUFFIX}`;
 
     return {
       signature,
       calculatedAt: new Date().toISOString(),
       zodiacType: 'Tropical',
-      houseSystem: 'Placidus',
+      houseSystem,
       ephemerisSource: 'astronomy-engine-jpl',
       hasExactBirthTime,
       dateStr: dStr,

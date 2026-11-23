@@ -32,7 +32,7 @@ async function saveBirthProfile(req, res, next) {
       dStr, tStr: time || '12:00', hasExactBirthTime: Boolean(time),
       lat: birthCity.latitude, lon: birthCity.longitude, cityName: birthCity.name, timezone: birthCity.timezone,
     } });
-    if (!profilePatch) return res.status(422).json({ error: 'Could not calculate the natal chart for these details.' });
+    if (!profilePatch) return res.status(422).json({ error: 'Could not calculate the natal chart. Check whether the birth time existed in this time zone on that date.' });
     if (!time) delete profilePatch.natalChart.ascendant;
     const offset = formatter.formatToParts(new Date(chart.birthDateTimeUtc))
       .find(({ type }) => type === 'timeZoneName')?.value.match(/GMT([+-])(\d{2}):(\d{2})/);
