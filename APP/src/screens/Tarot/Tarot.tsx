@@ -1,15 +1,14 @@
 import { ExploreSystemHeader } from '../ExploreSystemHeader';
 import React from 'react';
-import { Pressable, View } from 'react-native';
+import { SegmentedControl } from '../../components/SegmentedControl';
 
 import { useApp } from '../../context/AppContext';
 import { saveSystemActivity } from '../../services/systemActivity';
-import { T, Hero } from '../../components/UI';
+import { Hero } from '../../components/UI';
 import { useTarotReading } from './useTarotReading';
 import { DailyTarotSection } from './DailyTarotSection';
 import { SpreadTarotSection } from './SpreadTarotSection';
 import { TarotAltarStoryCard } from './TarotAltarStoryCard';
-import { styles } from './tarot.styles';
 
 export default function Tarot() {
   const { colors, setPage, addStory, user, setSelectedChat } = useApp();
@@ -50,19 +49,6 @@ export default function Tarot() {
   }, user?.email);
 
   const modes = [{ value: 'daily', label: 'Daily card' }, { value: 'spread', label: 'Custom spread' }] as const;
-  const readingOptions = (
-    <View style={[styles.readingOptions, { marginBottom: 16 }]}>
-      <View accessibilityLabel="Reading mode" style={[styles.optionTrack, { backgroundColor: colors.surfaceAlt, borderColor: colors.line }]}>
-        {modes.map(({ value, label }) => {
-          const selected = mode === value;
-          return <Pressable key={value} accessibilityRole="button" accessibilityState={{ selected }} disabled={isCapturing}
-            onPress={() => setMode(value)} style={[styles.option, { minHeight: 44 }, selected && { backgroundColor: colors.purpleSoft }]}>
-            <T size={14} bold={selected} muted={!selected} style={{ textAlign: 'center' }}>{label}</T>
-          </Pressable>;
-        })}
-      </View>
-    </View>
-  );
 
   return (
     <>
@@ -75,7 +61,7 @@ export default function Tarot() {
         description="Follow a quiet question into the cards. Draw one for a moment of clarity, or lay out a spread to explore what lies beneath."
       />
 
-      {readingOptions}
+      <SegmentedControl label="Reading mode" options={modes} value={mode} onChange={setMode} disabled={isCapturing} />
 
       {mode === 'daily' && (
         <DailyTarotSection

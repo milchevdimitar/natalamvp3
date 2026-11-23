@@ -1,9 +1,6 @@
 import { StyleSheet } from 'react-native';
 
 export const styles = StyleSheet.create({
-  readingOptions: { width: '100%', maxWidth: 336, alignSelf: 'center', gap: 6 },
-  optionTrack: { flexDirection: 'row', gap: 4, padding: 3, borderWidth: 1, borderRadius: 14 },
-  option: { flex: 1, minHeight: 36, paddingHorizontal: 5, paddingVertical: 5, alignItems: 'center', justifyContent: 'center', borderRadius: 10 },
   spreadOptions: { marginBottom: 12, padding: 10 },
 
   /* TarotArtworkCard Styles */
