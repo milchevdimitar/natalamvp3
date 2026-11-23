@@ -1,3 +1,4 @@
+import { BackButton } from '../../components/BackButton';
 import React, { useEffect, useRef, useState } from 'react';
 import { ActivityIndicator, Animated, Platform, Pressable, ScrollView, StyleSheet, TextInput, View } from 'react-native';
 import { Eye, Layers, Plus, Share2 } from 'lucide-react-native';
@@ -119,7 +120,10 @@ export function SpreadTarotSection(props: Props) {
 
   return <View style={ui.screen}>
     {showSetup ? <Card style={ui.setup}>
-      <T bold size={17}>Build your spread</T>
+      <View style={ui.setupHeading}>
+        {spreadDrawn && <BackButton onPress={() => setEditing(false)} label="Back to current spread" />}
+        <T bold size={17}>Build your spread</T>
+      </View>
       <TextInput accessibilityLabel="Your intention" value={question} onChangeText={onChangeQuestion}
         placeholder="Your intention (optional)" placeholderTextColor={colors.muted} maxLength={180}
         style={[ui.input, { color: colors.text, borderColor: colors.line, backgroundColor: colors.surfaceAlt }]} />
@@ -151,7 +155,6 @@ export function SpreadTarotSection(props: Props) {
       </View>
       <Pressable accessibilityRole="button" disabled={isCapturing} onPress={() => { onDrawSpread(); setEditing(false); }}
         style={[ui.primary, { backgroundColor: colors.action }]}><T bold size={14} style={ui.white}>Deal {layout.rows * layout.columns} cards</T></Pressable>
-      {spreadDrawn && <Pressable accessibilityRole="button" onPress={() => setEditing(false)} style={ui.link}><T muted size={13} style={ui.center}>Back to current spread</T></Pressable>}
     </Card> : <>
       <View style={ui.row}>
         <Section>Your spread</Section>
@@ -214,6 +217,7 @@ const ui = StyleSheet.create({
   deckOption: { flex: 1, minHeight: 44, borderWidth: 1, borderRadius: 12, justifyContent: 'center', alignItems: 'center' },
   primary: { minHeight: 48, borderRadius: 14, alignItems: 'center', justifyContent: 'center' },
   white: { color: '#fff' },
+  setupHeading: { flexDirection: 'row', alignItems: 'center', gap: 4 },
   link: { minHeight: 44, justifyContent: 'center' },
   board: { gap: 13, width: '100%', maxWidth: 520, alignSelf: 'center' },
   tile: { flex: 1, minWidth: 0, maxWidth: 190, gap: 5 },

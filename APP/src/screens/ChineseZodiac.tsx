@@ -1,6 +1,7 @@
+import { BackButton } from '../components/BackButton';
 import React, { useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
-import { ArrowLeft, Sparkles } from 'lucide-react-native';
+import { Sparkles } from 'lucide-react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Card, Hero, Section, T } from '../components/UI';
 import { useApp } from '../context/AppContext';
@@ -18,9 +19,7 @@ export default function ChineseZodiac() {
 
   return (
     <>
-      <Pressable accessibilityRole="button" onPress={() => setPage('explore')} style={styles.back}>
-        <ArrowLeft size={17} color={colors.purple} /><T bold size={13} style={{ color: colors.purple }}>Back to Explore</T>
-      </Pressable>
+      <BackButton onPress={() => setPage('explore')} label="Back to Explore" />
       <Hero eyebrow="CHINESE ZODIAC" first="Your birth year," accent="in symbols." description="Explore the twelve animals and the elements of the sixty-year cycle." />
       {animal ? <>
         <Card style={styles.heroCard}>

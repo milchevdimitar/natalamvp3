@@ -1,18 +1,10 @@
+import { BackButton } from '../components/BackButton';
 import { useCalc } from '../services/calcApi';
 import React, { useEffect } from 'react';
 import {
   View,
-  TouchableOpacity,
 } from 'react-native';
-import {
-  ArrowLeft,
-  Sparkles,
-  Hash,
-  Compass,
-  Award,
-  Calendar,
-  User,
-} from 'lucide-react-native';
+import { Sparkles, Hash, Compass, Award, Calendar, User } from 'lucide-react-native';
 import { useApp } from '../context/AppContext';
 import { getBirthParts } from '../services/profileDashboard';
 import { Card, T, Section, Pill, Hero } from '../components/UI';
@@ -245,15 +237,7 @@ export default function Numerology() {
 
   return (
     <>
-      <TouchableOpacity
-        onPress={() => setPage('explore')}
-        style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 12 }}
-      >
-        <ArrowLeft size={18} color={colors.purple} />
-        <T bold size={13} style={{ color: colors.purple }}>
-          Back to Explore
-        </T>
-      </TouchableOpacity>
+      <BackButton onPress={() => setPage('explore')} label="Back to Explore" />
 
       <Hero
         eyebrow="NUMEROLOGY ENGINE · LIFE PATH"

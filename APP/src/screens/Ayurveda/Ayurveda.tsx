@@ -1,6 +1,7 @@
+import { BackButton } from '../../components/BackButton';
 import React, { useState } from 'react';
 import { ActivityIndicator, Pressable, StyleSheet, View } from 'react-native';
-import { ArrowLeft, ChevronLeft, ChevronRight, Leaf } from 'lucide-react-native';
+import { ChevronRight, Leaf } from 'lucide-react-native';
 import { DoshaTriangle } from '../../components/DashboardCharts';
 import { Card, Hero, Progress, Section, T } from '../../components/UI';
 import { useApp } from '../../context/AppContext';
@@ -62,9 +63,7 @@ export default function Ayurveda() {
   };
 
   return <>
-    <Pressable accessibilityRole="button" onPress={() => setPage('explore')} style={[styles.back, { backgroundColor: colors.surfaceAlt }]}>
-      <ArrowLeft color={colors.text} size={16} /><T bold size={12}>Explore</T>
-    </Pressable>
+    <BackButton onPress={() => setPage('explore')} label="Back to Explore" />
     <Hero eyebrow="AYURVEDA" first="Find your" accent="dosha balance." />
 
     <Card style={styles.card}>
@@ -124,9 +123,7 @@ export default function Ayurveda() {
         })}
         {!!error && <View accessibilityRole="alert"><T size={13}>{error}</T></View>}
         <View style={styles.row}>
-          {index > 0 && <Pressable accessibilityRole="button" disabled={saving} onPress={() => setIndex(index - 1)} style={styles.secondary}>
-            <ChevronLeft size={18} color={colors.text} /><T bold size={13}>Back</T>
-          </Pressable>}
+          {index > 0 && <BackButton disabled={saving} onPress={() => setIndex(index - 1)} label="Previous question" />}
           <Pressable accessibilityRole="button" disabled={saving || !answers[question.id] || (done && answered !== questions.length)}
             onPress={done ? finish : () => setIndex(index + 1)} style={[styles.primary, { flex: 1, backgroundColor: colors.action, opacity: answers[question.id] ? 1 : 0.5 }]}>
             {saving ? <ActivityIndicator color="#fff" /> : <T bold size={14} style={styles.primaryText}>{done ? 'Save results' : 'Next'}</T>}
@@ -139,7 +136,6 @@ export default function Ayurveda() {
 }
 
 const styles = StyleSheet.create({
-  back: { alignSelf: 'flex-start', flexDirection: 'row', alignItems: 'center', gap: 6, borderRadius: 18, paddingHorizontal: 12, minHeight: 42, marginBottom: 9 },
   card: { padding: 16, gap: 10 },
   row: { flexDirection: 'row', alignItems: 'center', gap: 10 },
   copy: { flex: 1, gap: 4 },
@@ -149,5 +145,4 @@ const styles = StyleSheet.create({
   body: { lineHeight: 20 },
   quiz: { gap: 12, paddingBottom: 10 },
   option: { minHeight: 50, borderRadius: 13, borderWidth: 1, justifyContent: 'center', padding: 12 },
-  secondary: { minHeight: 44, paddingHorizontal: 7, flexDirection: 'row', alignItems: 'center' },
 });

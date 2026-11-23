@@ -1,3 +1,4 @@
+import { BackButton } from '../../components/BackButton';
 import React, { useMemo, useState } from 'react';
 import {
   View,
@@ -6,18 +7,7 @@ import {
   Share,
   Switch,
 } from 'react-native';
-import {
-  ArrowLeft,
-  CloudUpload,
-  Bell,
-  Crown,
-  Share2,
-  Compass,
-  Orbit,
-  Sparkles,
-  Heart,
-  BookOpen,
-} from 'lucide-react-native';
+import { CloudUpload, Bell, Crown, Share2, Compass, Orbit, Sparkles, Heart, BookOpen } from 'lucide-react-native';
 import { useApp } from '../../context/AppContext';
 import { saveUserProfile } from '../../services/api';
 import { Card, T, Section, Hero } from '../../components/UI';
@@ -235,12 +225,7 @@ export default function Astrology() {
           marginBottom: 4,
         }}
       >
-        <TouchableOpacity onPress={() => setPage('explore')} style={styles.backButton}>
-          <ArrowLeft size={18} color={colors.purple} />
-          <T bold size={13} style={{ color: colors.purple }}>
-            Explore
-          </T>
-        </TouchableOpacity>
+        <BackButton onPress={() => setPage('explore')} label="Back to Explore" />
 
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
           {results && sunData && moonData && ascData && (

@@ -1,13 +1,12 @@
+import { BackButton } from '../../components/BackButton';
 import React from 'react';
-import { TouchableOpacity } from 'react-native';
-import { ArrowLeft } from 'lucide-react-native';
+
 import { useApp } from '../../context/AppContext';
-import { T, Hero } from '../../components/UI';
+import { Hero } from '../../components/UI';
 import { useMbtiTest } from './useMbtiTest';
 import { MbtiQuestionnaireSection } from './MbtiQuestionnaireSection';
 import { MbtiResultSection } from './MbtiResultSection';
 import { MbtiStoryCard } from './MbtiStoryCard';
-import { styles } from './mbti.styles';
 
 export default function MBTI() {
   const { colors, setPage, user, setUser, addStory } = useApp();
@@ -39,15 +38,7 @@ export default function MBTI() {
 
   return (
     <>
-      <TouchableOpacity
-        onPress={() => setPage('explore')}
-        style={styles.backButton}
-      >
-        <ArrowLeft size={18} color={colors.purple} />
-        <T bold size={13} style={{ color: colors.purple }}>
-          Back to Explore
-        </T>
-      </TouchableOpacity>
+      <BackButton onPress={() => setPage('explore')} label="Back to Explore" />
 
       <Hero
         eyebrow="16 ARCHETYPES"

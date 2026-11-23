@@ -1,7 +1,8 @@
+import { BackButton, backHeaderSpacing } from '../../components/BackButton';
 import React, { useEffect, useRef, useState } from 'react';
 import { Animated, Easing, Modal, Platform, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { ChevronLeft, ChevronRight, X } from 'lucide-react-native';
+import { ChevronLeft, ChevronRight } from 'lucide-react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import Svg, { Circle, ClipPath, Defs, Ellipse, G, Path, RadialGradient, Rect, Stop } from 'react-native-svg';
 import { SearchSunLongitude } from 'astronomy-engine';
@@ -80,10 +81,8 @@ export function DetailScreen({ title, onClose, children, offset, reduced, travel
         <CosmicBackground offset={offset} horizontal reduced={reduced} travel={travel} darkBottom={darkBottom} />
         <SafeAreaView style={styles.safeContent}>
         {header ?? <View style={styles.header}>
-          <Text accessibilityRole="header" style={styles.heading}>{title}</Text>
-          <Pressable accessibilityRole="button" accessibilityLabel="Close" onPress={onClose} style={styles.icon}>
-            <X color={cosmic.text} size={22} />
-          </Pressable>
+          <BackButton onPress={onClose} onDark />
+          {!!title && <Text accessibilityRole="header" style={styles.heading}>{title}</Text>}
         </View>}
         {children}
         </SafeAreaView>
@@ -289,9 +288,7 @@ export function CelestialCarousel({ title, kind, slides, onClose, reduced, onRet
   return (
     <DetailScreen title={title} onClose={onClose} offset={offset} reduced={reduced} travel={travel} darkBottom header={
       <View style={[styles.header, styles.carouselHeader]}>
-        <Pressable accessibilityRole="button" accessibilityLabel="Back to Home" onPress={onClose} style={styles.icon}>
-          <ChevronLeft color={cosmic.text} size={23} />
-        </Pressable>
+        <BackButton onPress={onClose} label="Back to Home" onDark />
         <Text accessibilityLabel={title + ', card ' + (index + 1) + ' of ' + slides.length} style={styles.counter}>{formatIndex(index)} / {slides.length}</Text>
         <View style={styles.headerEnd}>
           {onRetrogrades && <Pressable accessibilityRole="button" onPress={onRetrogrades} style={styles.shortcut}><Text style={styles.link}>↺ Retrogrades</Text></Pressable>}
@@ -386,9 +383,9 @@ export function CelestialCarousel({ title, kind, slides, onClose, reduced, onRet
 const styles = StyleSheet.create({
   detail: { flex: 1, backgroundColor: cosmic.bg },
   safeContent: { flex: 1 },
-  header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', width: '100%', maxWidth: 720, alignSelf: 'center', paddingHorizontal: 20, paddingVertical: 12 },
-  carouselHeader: { position: 'relative', maxWidth: 560, paddingVertical: 7 },
-  heading: { color: cosmic.text, fontSize: 18, fontWeight: '700' },
+  header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', width: '100%', maxWidth: 720, alignSelf: 'center', ...backHeaderSpacing, paddingBottom: 8 },
+  carouselHeader: { position: 'relative' },
+  heading: { flex: 1, marginLeft: 8, color: cosmic.text, fontSize: 18, fontWeight: '700' },
   counter: { position: 'absolute', left: '25%', width: '50%', textAlign: 'center', color: cosmic.muted, fontSize: 11, letterSpacing: 1.2, fontWeight: '800', pointerEvents: 'none' },
   headerEnd: { minWidth: 42, alignItems: 'flex-end' },
   shortcut: { minHeight: 40, justifyContent: 'center', paddingHorizontal: 10 },

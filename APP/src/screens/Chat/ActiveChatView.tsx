@@ -1,3 +1,4 @@
+import { BackButton } from '../../components/BackButton';
 import React, { useEffect, useRef } from 'react';
 import {
   View,
@@ -12,7 +13,7 @@ import {
   Pressable,
   StyleSheet,
 } from 'react-native';
-import { ArrowLeft, Forward, Info, Plus, Send, Smile, X, Sparkles } from 'lucide-react-native';
+import { Forward, Info, Plus, Send, Smile, X, Sparkles } from 'lucide-react-native';
 import { Card, Pill, T } from '../../components/UI';
 import { ProfileAvatar } from '../../components/ProfileAvatar';
 import type { AppStory } from '../../context/AppContext';
@@ -95,9 +96,7 @@ export function ActiveChatView({
     >
       {/* Хедър */}
       <View style={[thread.header, { borderBottomColor: colors.line }]}>
-        <Pressable accessibilityRole="button" accessibilityLabel="Back to chats" onPress={onBack} style={thread.circle}>
-          <ArrowLeft size={20} color={colors.purple} />
-        </Pressable>
+        <BackButton onPress={onBack} label="Back to chats" />
 
         <ProfileAvatar name={conversation.partnerName} source={conversation.partnerAvatar} size={40} />
         <T bold size={16} numberOfLines={1} style={thread.partner}>{conversation.partnerName}</T>

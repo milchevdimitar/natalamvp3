@@ -6,7 +6,7 @@ import React, { useCallback, useMemo, useRef, useState } from 'react';
 import { Animated, Platform, Pressable, RefreshControl, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
-import { ChevronLeft, ChevronRight, Flame } from 'lucide-react-native';
+import { ChevronRight, Flame } from 'lucide-react-native';
 import ConfettiCannon from 'react-native-confetti-cannon';
 import { SunPosition } from 'astronomy-engine';
 import { useApp } from '../../context/AppContext';
@@ -216,20 +216,13 @@ export default function Home() {
         onRetrogrades={() => setDetail('retrogrades')}
         reduced={reduced}
       />}
-      {detail === 'moon' && <DetailScreen title="The Moon" onClose={close} offset={still} reduced={reduced} darkBottom>
+      {detail === 'moon' && <DetailScreen title="" onClose={close} offset={still} reduced={reduced} darkBottom>
         <MoonCalendarDetail reduced={reduced} />
       </DetailScreen>}
-      {detail === 'streak' && streak && <DetailScreen title="Discovery streak" onClose={close} offset={still} reduced={reduced} darkBottom header={
-        <View style={[styles.header, styles.streakHeader, { marginTop: Platform.OS === 'web' ? 22 : 12 }]}>
-          <Text style={styles.brand}>Natala</Text>
-          <Pressable accessibilityRole="button" accessibilityLabel="Back to Home" onPress={close} style={styles.profile}>
-            <ChevronLeft color={cosmic.text} size={18} />
-          </Pressable>
-        </View>
-      }>
+      {detail === 'streak' && streak && <DetailScreen title="" onClose={close} offset={still} reduced={reduced} darkBottom>
         <StreakCalendar today={streak.day} days={streak.days} count={streak.count} />
       </DetailScreen>}
-      {detail === 'retrogrades' && <DetailScreen title="Retrogrades" onClose={close} offset={still} reduced={reduced} darkBottom>
+      {detail === 'retrogrades' && <DetailScreen title="" onClose={close} offset={still} reduced={reduced} darkBottom>
         <ScrollView contentContainerStyle={styles.detailBody}>
           {planetaryPositions.some(({ isLiveNASA }) => !isLiveNASA) && <Text style={styles.muted}>Includes locally estimated positions</Text>}
           <RetrogradeSection planetaryPositions={planetaryPositions} />
@@ -247,7 +240,6 @@ const styles = StyleSheet.create({
   root: { flex: 1, backgroundColor: cosmic.bg },
   content: { width: '100%', maxWidth: 480, alignSelf: 'center', paddingHorizontal: 19, gap: 22 },
   header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
-  streakHeader: { width: '100%', maxWidth: 480, alignSelf: 'center', paddingHorizontal: 19, marginBottom: 12 },
   brand: { color: cosmic.text, fontFamily: 'DancingScript_700Bold', fontSize: 40, lineHeight: 49 },
   profile: { width: 36, height: 36, borderRadius: 18, backgroundColor: '#263f77', borderColor: cosmic.line, borderWidth: 1, alignItems: 'center', justifyContent: 'center' },
   stories: { gap: 16 },

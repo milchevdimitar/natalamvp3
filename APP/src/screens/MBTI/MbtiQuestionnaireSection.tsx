@@ -1,3 +1,4 @@
+import { BackButton } from '../../components/BackButton';
 import React from 'react';
 import { View } from 'react-native';
 import { Card, T, Pill, Progress } from '../../components/UI';
@@ -96,7 +97,7 @@ export function MbtiQuestionnaireSection({
 
       <View style={styles.paginationRow}>
         {currentPage > 0 ? (
-          <Pill onPress={onPrevPage}>← Previous</Pill>
+          <BackButton onPress={onPrevPage} label="Previous questions" />
         ) : (
           <View />
         )}

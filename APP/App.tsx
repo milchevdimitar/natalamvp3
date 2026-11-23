@@ -1,3 +1,5 @@
+import { backHeaderSpacing } from './src/components/BackButton';
+import { isExploreRoute } from './src/data/exploreRoutes';
 import { hasFeature, isPlanFeature } from './src/services/account';
 import { ProfileSettings } from './src/screens/ProfileSettings';
 import React, { useCallback, useEffect, useRef, useState } from 'react';
@@ -12,7 +14,7 @@ import {
 } from 'react-native';
 import { StatusBar as ExpoStatusBar } from 'expo-status-bar';
 import { BlurTargetView } from 'expo-blur';
-import { SafeAreaProvider } from 'react-native-safe-area-context';
+import { SafeAreaProvider, useSafeAreaInsets } from 'react-native-safe-area-context';
 import {
   useFonts,
   DancingScript_700Bold,
@@ -43,6 +45,7 @@ import { checkHealth } from './src/services/api';
 import { registerForPushNotificationsAsync } from './src/services/notifications';
 
 function Shell() {
+  const insets = useSafeAreaInsets();
   const { page, setPage, colors, theme, user, hideBottomNav, account, restoring } = useApp();
   const [pendingProfile, setPendingProfile] = useState<string | null>(null);
   const [sharedProfile, setSharedProfile] = useState<string | null>(null);
@@ -132,6 +135,9 @@ function Shell() {
     !user || showSubscription || page === 'login' || page === 'home' || page === 'chat' || page === 'feed' || page === 'profile';
   const topInset = Platform.OS === 'web' ? 30 : Math.max((StatusBar.currentHeight || 0) + 16, 28);
 
+  const alignedHeader = isExploreRoute(page) || (page === 'chat' && hideBottomNav);
+  const screenTop = alignedHeader ? insets.top + backHeaderSpacing.paddingTop : topInset;
+
   return (
     <View style={{ flex: 1, backgroundColor: page === 'feed' ? '#000000' : colors.bg }}>
       <ExpoStatusBar style={!user || cosmicHome || theme === 'dark' ? 'light' : 'dark'} />
@@ -143,8 +149,8 @@ function Shell() {
         key={user ? page : 'login'}
         style={{
           flex: 1,
-          paddingTop: !user || cosmicHome || page === 'profile' || page === 'explore' ? 0 : topInset,
-          paddingHorizontal: !user || cosmicHome || page === 'feed' || page === 'profile' ? 0 : 18,
+          paddingTop: !user || cosmicHome || showSubscription || page === 'profile' || page === 'explore' ? 0 : screenTop,
+          paddingHorizontal: !user || cosmicHome || page === 'feed' || page === 'profile' ? 0 : backHeaderSpacing.paddingHorizontal,
           width: '100%',
           maxWidth: !user || cosmicHome || page === 'feed' ? '100%' : cosmicTab ? 620 : 720,
           alignSelf: 'center',

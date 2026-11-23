@@ -1,6 +1,7 @@
+import { BackButton } from '../../components/BackButton';
 import React from 'react';
-import { Pressable, View, TouchableOpacity } from 'react-native';
-import { ArrowLeft } from 'lucide-react-native';
+import { Pressable, View } from 'react-native';
+
 import { useApp } from '../../context/AppContext';
 import { saveSystemActivity } from '../../services/systemActivity';
 import { T, Hero } from '../../components/UI';
@@ -65,12 +66,7 @@ export default function Tarot() {
 
   return (
     <>
-      <TouchableOpacity onPress={() => setPage('explore')} style={styles.backButton}>
-        <ArrowLeft size={18} color={colors.purple} />
-        <T bold size={13} style={{ color: colors.purple }}>
-          Back to Explore
-        </T>
-      </TouchableOpacity>
+      <BackButton onPress={() => setPage('explore')} label="Back to Explore" />
 
       <Hero
         eyebrow="CARDS OF THE UNSEEN"

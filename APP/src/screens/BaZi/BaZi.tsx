@@ -1,3 +1,4 @@
+import { BackButton } from '../../components/BackButton';
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import {
   View,
@@ -7,18 +8,7 @@ import {
   TextInput,
   ScrollView,
 } from 'react-native';
-import {
-  ArrowLeft,
-  Clock,
-  Sliders,
-  Compass,
-  Activity,
-  Layers,
-  TrendingUp,
-  Heart,
-  MapPin,
-  Check,
-} from 'lucide-react-native';
+import { Clock, Sliders, Compass, Activity, Layers, TrendingUp, Heart, MapPin, Check } from 'lucide-react-native';
 import { Hero, Card, T, Section } from '../../components/UI';
 import { useApp } from '../../context/AppContext';
 import { saveSystemActivity } from '../../services/systemActivity';
@@ -191,15 +181,7 @@ export default function BaZi() {
     <>
       {/* Top Bar: Back + Simple/Pro Toggle */}
       <View style={styles.topNavRow}>
-        <Pressable
-          onPress={() => setPage('explore')}
-          style={[styles.backBtn, { backgroundColor: colors.surfaceAlt }]}
-        >
-          <ArrowLeft size={16} color={colors.text} />
-          <T bold size={12}>
-            Explore
-          </T>
-        </Pressable>
+        <BackButton onPress={() => setPage('explore')} label="Back to Explore" />
 
         <View
           style={{
@@ -576,14 +558,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
     marginBottom: 10,
-  },
-  backBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    borderRadius: 12,
   },
   profileInfoCard: {
     padding: 14,

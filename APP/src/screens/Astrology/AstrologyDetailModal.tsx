@@ -1,3 +1,4 @@
+import { BackButton } from '../../components/BackButton';
 import React from 'react';
 import {
   Modal,
@@ -6,7 +7,7 @@ import {
   ScrollView,
   Pressable,
 } from 'react-native';
-import { X, ChevronRight, Bookmark, Check, Share2 } from 'lucide-react-native';
+import { ChevronRight, Bookmark, Check, Share2 } from 'lucide-react-native';
 import { Card, T } from '../../components/UI';
 
 export function TieredSummaryCard({
@@ -160,11 +161,12 @@ export function DetailSheetModal({
             style={{
               flexDirection: 'row',
               justifyContent: 'space-between',
-              alignItems: 'flex-start',
+              alignItems: 'center',
               gap: 12,
               marginBottom: 12,
             }}
           >
+            <BackButton onPress={onClose} />
             <View style={{ flex: 1 }}>
               {eyebrow && (
                 <T bold size={10} style={{ color: colors.gold, letterSpacing: 0.8 }}>
@@ -207,16 +209,7 @@ export function DetailSheetModal({
                 </TouchableOpacity>
               )}
 
-              <TouchableOpacity
-                onPress={onClose}
-                style={{
-                  padding: 8,
-                  borderRadius: 10,
-                  backgroundColor: colors.surfaceAlt,
-                }}
-              >
-                <X size={16} color={colors.text} />
-              </TouchableOpacity>
+
             </View>
           </View>
 

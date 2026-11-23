@@ -1,9 +1,10 @@
+import { BackButton, backHeaderSpacing } from '../components/BackButton';
 import { SubscriptionDetails } from './SubscriptionDetails';
 import { authorizedFetch, deleteAccount } from '../services/account';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import React, { useRef, useState } from 'react';
 import { ActivityIndicator, Animated, Linking, Modal, Platform, Pressable, ScrollView, StyleSheet, TextInput, View } from 'react-native';
-import { ArrowLeft, Bell, CalendarDays, ChevronRight, Mail, Pencil, UserRound, LogOut, Trash2, CreditCard } from 'lucide-react-native';
+import { Bell, CalendarDays, ChevronRight, Mail, Pencil, UserRound, LogOut, Trash2, CreditCard } from 'lucide-react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Card, Section, T } from '../components/UI';
 import { useApp } from '../context/AppContext';
@@ -182,6 +183,9 @@ export function ProfileSettings({ onClose, birthLabel, birthCity, initialSubscri
     <Modal visible animationType={reduced ? 'none' : 'fade'} onRequestClose={() => { if (!saving) back(); }}>
       <SafeAreaView style={{ flex: 1, backgroundColor: colors.bg }}>
         <CosmicBackground offset={offset} reduced={reduced} light={theme === 'light'} />
+        <View style={styles.header}>
+          <BackButton onPress={back} disabled={saving} />
+        </View>
         <Animated.ScrollView
           key={showSubscription ? 'subscription' : 'settings'}
           keyboardShouldPersistTaps="handled"
@@ -189,12 +193,6 @@ export function ProfileSettings({ onClose, birthLabel, birthCity, initialSubscri
           onScroll={Animated.event([{ nativeEvent: { contentOffset: { y: offset } } }], { useNativeDriver: Platform.OS !== 'web' })}
           contentContainerStyle={styles.content}
         >
-          <View style={styles.header}>
-            <T size={40} style={styles.logo}>Natala</T>
-            <Pressable accessibilityRole="button" accessibilityLabel="Close settings" disabled={saving} onPress={back} style={[styles.close, { backgroundColor: colors.surfaceAlt, borderColor: colors.line }]}>
-              <ArrowLeft size={18} color={colors.text} />
-            </Pressable>
-          </View>
           <T bold size={30} style={styles.title}>{showSubscription ? 'Subscription' : 'Settings'}</T>
           {showSubscription ? <SubscriptionDetails /> : <>
 
@@ -318,11 +316,9 @@ export function ProfileSettings({ onClose, birthLabel, birthCity, initialSubscri
 }
 
 const styles = StyleSheet.create({
-  content: { width: '100%', maxWidth: 480, alignSelf: 'center', padding: 19, paddingTop: 22, paddingBottom: 36 },
-  header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 19 },
-  logo: { fontFamily: 'DancingScript_700Bold', lineHeight: 49 },
+  content: { width: '100%', maxWidth: 480, alignSelf: 'center', paddingHorizontal: backHeaderSpacing.paddingHorizontal, paddingBottom: 36 },
+  header: { width: '100%', maxWidth: 720, alignSelf: 'center', ...backHeaderSpacing, paddingBottom: 8 },
   title: { letterSpacing: -1.2, marginBottom: 4, lineHeight: 38 },
-  close: { width: 36, height: 36, borderRadius: 18, alignItems: 'center', justifyContent: 'center', borderWidth: 1 },
   card: { gap: 10, padding: 13, marginBottom: 10 },
   row: { minHeight: 48, flexDirection: 'row', alignItems: 'center', gap: 12 },
   icon: { width: 44, height: 44, borderRadius: 22, alignItems: 'center', justifyContent: 'center' },

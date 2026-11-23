@@ -1,9 +1,10 @@
+import { BackButton, backHeaderSpacing } from '../components/BackButton';
 import * as FileSystem from 'expo-file-system/legacy';
 import * as IntentLauncher from 'expo-intent-launcher';
 import * as Sharing from 'expo-sharing';
 import React, { useEffect, useRef, useState } from 'react';
 import { ActivityIndicator, Alert, Animated, Platform, Pressable, ScrollView, StyleSheet, View } from 'react-native';
-import { ArrowLeft, ChevronLeft, ChevronRight, Download, Sparkles } from 'lucide-react-native';
+import { ChevronLeft, ChevronRight, Download, Sparkles } from 'lucide-react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { T } from '../components/UI';
 import { API_BASE_URL } from '../services/apiBase';
@@ -182,9 +183,7 @@ export function ProfileReading({ userId, onClose }: {
   return <DetailScreen title="" onClose={onClose} offset={offset} reduced={reduced} darkBottom travel={width * 13} header={
     <View>
       <View style={styles.header}>
-        <Pressable accessibilityRole="button" accessibilityLabel="Go back" onPress={onClose} style={styles.button}>
-          <ArrowLeft color="#efe9ff" size={21} />
-        </Pressable>
+        <BackButton onPress={onClose} onDark />
         <Pressable accessibilityRole="button" accessibilityLabel="Download PDF" accessibilityState={{ busy: generatingPdf }}
           onPress={handleGeneratePdf} disabled={generatingPdf} style={styles.download}>
           <LinearGradient colors={['#ffe0a5', '#eebd66', '#d49342']} style={StyleSheet.absoluteFill} pointerEvents="none" />
@@ -245,7 +244,7 @@ export function ProfileReading({ userId, onClose }: {
 
 const styles = StyleSheet.create({
   body: { flex: 1 },
-  header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 19, paddingVertical: 8 },
+  header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', width: '100%', maxWidth: 720, alignSelf: 'center', ...backHeaderSpacing, paddingBottom: 8 },
   download: { minHeight: 44, minWidth: 112, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 7,
     borderRadius: 22, paddingHorizontal: 13, overflow: 'hidden', backgroundColor: '#eebd66' },
   downloadInk: { color: '#442914' },
