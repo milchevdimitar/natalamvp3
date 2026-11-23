@@ -12,7 +12,7 @@ export interface TarotCardData {
   message: string;
 }
 
-export interface LocalPngTarotCardProps {
+export interface TarotArtworkCardProps {
   card?: TarotCardData;
   isRevealed: boolean;
   cardIndex?: number;

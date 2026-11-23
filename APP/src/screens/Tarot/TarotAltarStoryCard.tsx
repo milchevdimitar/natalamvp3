@@ -3,7 +3,7 @@ import { View } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Sparkles, Flame, Moon } from 'lucide-react-native';
 import { T } from '../../components/UI';
-import { LocalPngTarotCard } from './LocalPngTarotCard';
+import { TarotArtworkCard } from './TarotArtworkCard';
 import { TarotCardData, TarotMode } from './tarot.types';
 import { styles } from './tarot.styles';
 
@@ -97,7 +97,7 @@ export function TarotAltarStoryCard({
               singleCardForStory ? (
                 <View style={{ alignItems: 'center' }}>
                   <View style={styles.storySingleCardFrame}>
-                    <LocalPngTarotCard
+                    <TarotArtworkCard
                       card={singleCardForStory}
                       isRevealed
                       colors={colors}
@@ -157,7 +157,7 @@ export function TarotAltarStoryCard({
                               maxWidth: isLargeSpread ? 80 : 100,
                             }}
                           >
-                            <LocalPngTarotCard
+                            <TarotArtworkCard
                               card={card}
                               isRevealed
                               cardIndex={cardIdx}

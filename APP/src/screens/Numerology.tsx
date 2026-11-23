@@ -14,7 +14,6 @@ import {
   User,
 } from 'lucide-react-native';
 import { useApp } from '../context/AppContext';
-import { BirthDateTag } from '../components/BirthDateTag';
 import { getBirthParts } from '../services/profileDashboard';
 import { Card, T, Section, Pill, Hero } from '../components/UI';
 import { saveUserProfile } from '../services/api';
@@ -32,84 +31,84 @@ const LIFE_PATH_DATA: Record<number, LifePathInfo> = {
   1: {
     title: "The Leader & The Pioneer",
     subtitle: "Independence, innovation, and strong willpower",
-    description: "You are a born pioneer. Your purpose in life is to forge new paths, take initiative, and rely on your own individuality.",
+    description: "Life Path 1 is traditionally associated with initiative and independence. You may feel most engaged when a decision is yours to make or when you can try an approach nobody around you has tested yet. That can look like starting a project, making the first move in a difficult conversation, or choosing a direction before every detail is settled.\n\nThe growth question is how to stay self-directed while letting others contribute. Try sharing an unfinished idea with someone you trust. Hear their perspective, then decide what you want to keep and what you want to change.",
     traits: ["Ambition", "Independence", "Leadership", "Originality"],
     challenge: "Overcoming stubbornness and learning to work in a team.",
   },
   2: {
     title: "The Diplomat & The Peacemaker",
     subtitle: "Harmony, intuition, and cooperation",
-    description: "You are a natural mediator and creator of harmony. You possess extraordinary sensitivity to the emotions of others.",
+    description: "Life Path 2 centers on cooperation and the ability to notice how people are responding to one another. You might recognize a tension before it is named, or find a way to make room for two different points of view. These skills matter in close relationships as much as they do on a team.\n\nHarmony can come at a cost if you routinely hide your own preferences. In your next shared decision, state what you want early and ask what the other person wants too. A good compromise gives both people a voice.",
     traits: ["Empathy", "Diplomacy", "Intuition", "Patience"],
     challenge: "Building self-esteem and establishing healthy personal boundaries.",
   },
   3: {
     title: "The Creator & The Communicator",
     subtitle: "Creativity, self-expression, and optimism",
-    description: "You bring joy and inspiration. Your mission is to express yourself through art, words, ideas, and positive energy.",
+    description: "Life Path 3 is linked with creative expression and the pleasure of making an idea accessible to someone else. That could mean writing, performing, telling a good story, or finding a playful way to explain a hard topic. Creativity can also be private, such as sketching an idea to understand it better.\n\nOne challenge is staying with a project after the excitement of starting fades. Pick a small piece you can finish this week and give it an audience of one. Sharing a finished draft can teach you more than keeping ten perfect ideas in your head.",
     traits: ["Charisma", "Imagination", "Optimism", "Sociability"],
     challenge: "Focusing your energy and avoiding distraction.",
   },
   4: {
     title: "The Builder & The Organizer",
     subtitle: "Stability, hard work, and reliability",
-    description: "You are the foundation of any successful venture. Your number symbolizes order, practicality, security, and building lasting things.",
+    description: "Life Path 4 is associated with structure, patience, and the satisfaction of building something that holds up over time. You might enjoy turning a messy job into a reliable process, looking after a commitment, or mastering a skill through repetition. Progress often becomes visible when you look back over weeks rather than days.\n\nA useful practice is to separate the part of a plan that truly matters from the steps you chose out of habit. Keep the goal steady and change one step if it serves you better. A sound structure can make experimenting easier.",
     traits: ["Discipline", "Loyalty", "Organization", "Realism"],
     challenge: "Overcoming the fear of change and staying flexible in your thinking.",
   },
   5: {
     title: "The Explorer & The Free Spirit",
     subtitle: "Freedom, dynamism, and adventure",
-    description: "You love change and variety. Life for you is an adventure filled with new experiences, travel, and transformation.",
+    description: "Life Path 5 is traditionally linked with freedom, variety, and learning through firsthand experience. You may be drawn to unfamiliar places, different kinds of people, or work that lets you switch approaches when new information appears. The underlying theme is choosing where to direct your curiosity.\n\nWhen novelty wears off, check whether the commitment has stopped serving you or simply reached its less exciting phase. Try giving a new interest a short experiment with a clear end date. That leaves room to explore while giving you something concrete to take away.",
     traits: ["Flexibility", "Love of Freedom", "Adaptability", "Energy"],
     challenge: "Maintaining focus and avoiding impulsive decisions.",
   },
   6: {
     title: "The Nurturer & The Teacher",
     subtitle: "Care, responsibility, and love for family",
-    description: "You are the pillar of support for your loved ones. Your mission centers on care, justice, creating home comfort, and helping the community.",
+    description: "Life Path 6 emphasizes care, responsibility, and creating a sense of belonging. It may show up in the way you welcome people, teach a skill, maintain a home, or notice a practical need before others do. Caring can be as simple as following up after someone has had a difficult day.\n\nBeing helpful is easier to sustain when the people involved can choose what support they want. Next time you see a problem, ask whether the person wants advice, practical help, or someone to listen. Set aside time for something that supports you as well.",
     traits: ["Responsibility", "Kindness", "Harmony", "Protection"],
     challenge: "Avoiding over-control and perfectionism.",
   },
   7: {
     title: "The Truth Seeker & The Sage",
     subtitle: "Analysis, spirituality, and deep knowledge",
-    description: "You seek deep truths behind the surface of things. A seeker of knowledge, a philosopher, and an explorer of life's mysteries.",
+    description: "Life Path 7 is associated with inquiry and the wish to understand how something works beneath the surface. You might need quiet to form your own view, or prefer a conversation that goes into detail rather than one that covers many topics quickly. Research, reflection, and observation are different ways to follow that interest.\n\nSolitude can give you perspective, and speaking your thoughts aloud can reveal what you missed. Bring one question you have been thinking about to a person you trust. See whether talking it through changes your understanding.",
     traits: ["Analytical Mind", "Spirituality", "Wisdom", "Intuition"],
     challenge: "Overcoming the tendency toward isolation and building trust in others.",
   },
   8: {
     title: "The Powerhouse & The Manifestor",
     subtitle: "Success, strength, authority, and abundance",
-    description: "You possess business acumen and the ability to turn ideas into tangible results. You are born for major achievements and management.",
+    description: "Life Path 8 traditionally explores ambition, stewardship, and the use of influence. It can be a useful lens for how you make decisions about work, money, or shared resources. You may enjoy turning a goal into something measurable and organizing the effort needed to reach it.\n\nConsider what your preferred measure of success leaves out. For a project you are working on, name one result you want and one value you want to protect while pursuing it. Review both when you decide whether the work is going well.",
     traits: ["Ambition", "Confidence", "Authority", "Practicality"],
     challenge: "Balancing material success with spiritual values.",
   },
   9: {
     title: "The Humanitarian & The Visionary",
     subtitle: "Universal love, compassion, and wisdom",
-    description: "You possess a broad soul and a vision for a better world. Your number symbolizes completion, altruism, and higher consciousness.",
+    description: "Life Path 9 is associated with compassion, wider perspective, and the ability to bring a chapter to a close. You might be drawn to questions about who benefits from your work, what a community needs, or what a past experience can teach you now. A broad perspective can help you notice possibilities that a narrow goal would miss.\n\nChoose one cause or person you can support in a specific, sustainable way. It can also help to ask which commitments belong to an earlier part of your life. Letting one end can free attention for a contribution you still want to make.",
     traits: ["Compassion", "Altruism", "Visionary Spirit", "Generosity"],
     challenge: "Releasing the past and accepting change without disappointment.",
   },
   11: {
     title: "The Illuminator (Master Number 11)",
     subtitle: "High intuition, inspiration, and spiritual leadership",
-    description: "You are a bridge between the physical and spiritual realms. You possess exceptional intuition and a mission to inspire others.",
+    description: "Master Number 11 is traditionally read alongside the cooperative qualities of 2. Its themes include sensitivity, imagination, and finding words for impressions that can be difficult to explain. That may resonate when an idea arrives suddenly or when you notice an emotional shift in a room.\n\nGive an impression time before acting on it. Write down what you sensed, distinguish the details you observed from your interpretation, and check your understanding when you can. The discipline of testing an insight can make it easier to share in a way others can use.",
     traits: ["Intuition", "Inspiration", "Insight", "Charisma"],
     challenge: "Managing high sensitivity and nervous tension.",
   },
   22: {
     title: "The Master Architect (Master Number 22)",
     subtitle: "Turning the greatest dreams into reality",
-    description: "You possess the power of 4, but on a grand scale. You can build large-scale systems and projects that transform many lives.",
+    description: "Master Number 22 is often called the builder because it combines a broad vision with the practical qualities associated with 4. It invites reflection on what it takes to make an ambitious idea useful beyond your own plans. That might mean building a process that a team can use or giving a long-term project a structure that can survive changes.\n\nStart by identifying the smallest version that would genuinely help someone. Try it, ask the people who use it what works, and revise before expanding. A large vision becomes easier to carry when responsibility is shared.",
     traits: ["Large-scale Thinking", "Practical Visionary", "Inner Strength", "Execution"],
     challenge: "Handling immense responsibility and the fear of failure.",
   },
   33: {
     title: "The Master Teacher (Master Number 33)",
     subtitle: "Selfless love, healing, and spiritual guidance",
-    description: "The highest Master Number. Your mission is dedicated to compassion, healing, and elevating human consciousness.",
+    description: "Master Number 33 extends the traditional themes of care and responsibility associated with 6. It is often read through teaching, encouragement, and the kind of attention that helps someone develop their own confidence. You might find this meaningful in everyday roles, from mentoring a colleague to making a difficult subject less intimidating.\n\nCare is easier to offer over time when you know what you can realistically give. Choose one form of support you can provide consistently, agree on its limits, and make space for the other person to choose their own next step.",
     traits: ["Unconditional Love", "Healing", "Wisdom", "Devotion"],
     challenge: "Balancing your own needs with those of the world.",
   }
@@ -260,17 +259,12 @@ export default function Numerology() {
         eyebrow="NUMEROLOGY ENGINE · LIFE PATH"
         first="Your"
         accent="Life Path Number."
-        description="Discover your birth destiny, core vibrations, and life path code."
       />
 
       {result ? (
         <View style={{ gap: 18, marginBottom: 40 }}>
           {/* Main result card */}
           <Card style={{ alignItems: 'center', paddingVertical: 26, gap: 10 }}>
-            <T muted size={11} style={{ letterSpacing: 2 }}>
-              YOUR LIFE PATH NUMBER ({user?.name || 'User'})
-            </T>
-            <BirthDateTag date={result.dateStr} />
             <View
               style={{
                 width: 84,
@@ -294,6 +288,18 @@ export default function Numerology() {
             </T>
           </Card>
 
+          {/* Life Mission */}
+          <Section>Life Mission</Section>
+          <Card style={{ gap: 10 }}>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+              <Sparkles size={16} color={colors.gold} />
+              <T bold size={15}>Essence & Purpose</T>
+            </View>
+            <T muted size={13} style={{ lineHeight: 20 }}>
+              {LIFE_PATH_DATA[result.lifePathNumber]?.description ?? result.info.description}
+            </T>
+          </Card>
+
           {/* Calculation breakdown */}
           <Section>Mathematical Code</Section>
           <Card style={{ gap: 12 }}>
@@ -314,7 +320,7 @@ export default function Numerology() {
               </View>
 
               <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
-                <T muted size={13}>Year ({result.year}):</T>
+                <T muted size={13}>Reduced year:</T>
                 <T bold size={13} style={{ color: colors.purple }}>{result.yearReduced}</T>
               </View>
 
@@ -327,18 +333,6 @@ export default function Numerology() {
                 </T>
               </View>
             </View>
-          </Card>
-
-          {/* Life Mission */}
-          <Section>Life Mission</Section>
-          <Card style={{ gap: 10 }}>
-            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-              <Sparkles size={16} color={colors.gold} />
-              <T bold size={15}>Essence & Purpose</T>
-            </View>
-            <T muted size={13} style={{ lineHeight: 20 }}>
-              {result.info.description}
-            </T>
           </Card>
 
           {/* Traits */}

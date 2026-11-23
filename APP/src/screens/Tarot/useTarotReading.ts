@@ -1,12 +1,19 @@
 import { useState, useRef, type ComponentRef } from 'react';
 import { View, Alert } from 'react-native';
 import { captureRef } from 'react-native-view-shot';
+import { useDailyTarotCard } from './useDailyTarotCard';
 import { getDeck } from './tarot.data';
 import { TarotCardData, TarotMode } from './tarot.types';
+
+export const SPREAD_MAX_ROWS = 3;
+export const SPREAD_MAX_COLUMNS = 4;
+export const MAX_CLARIFIERS = 3;
+export type SpreadLayout = { rows: number; columns: number };
 
 export function useTarotReading(
   addStory: (base64Image: string) => Promise<void>,
   recordReading: (value: string, detail: string) => void,
+  email?: string,
 ) {
   const [mode, setMode] = useState<TarotMode>('daily');
   const [useFullDeck, setUseFullDeck] = useState(true);
@@ -15,20 +22,22 @@ export function useTarotReading(
   const [isCapturing, setIsCapturing] = useState(false);
   const [shared, setShared] = useState(false);
 
-  // Spread configuration
-  const [rowsInput, setRowsInput] = useState('3');
-  const [colsInput, setColsInput] = useState('3');
+  const [layout, setLayout] = useState<SpreadLayout>({ rows: 1, columns: 3 });
+  const [dealtLayout, setDealtLayout] = useState<SpreadLayout>(layout);
   const [question, setQuestion] = useState('');
+  const [dealtQuestion, setDealtQuestion] = useState('');
 
   const [spreadDrawn, setSpreadDrawn] = useState(false);
   const [drawnCards, setDrawnCards] = useState<TarotCardData[]>([]);
-  const [remainingDeck, setRemainingDeck] = useState<TarotCardData[]>([]);
+  const [remainingCount, setRemainingCount] = useState(0);
+  const remainingDeck = useRef<TarotCardData[]>([]);
+  const clarifierCounts = useRef<Record<number, number>>({});
   const [bottomCard, setBottomCard] = useState<TarotCardData | null>(null);
   const [revealedIndices, setRevealedIndices] = useState<Record<number, boolean>>({});
   const [clarifyingCards, setClarifyingCards] = useState<Record<number, TarotCardData[]>>({});
 
   // Daily card mode
-  const [dailyCard, setDailyCard] = useState<TarotCardData | null>(null);
+  const { card: dailyCard, busy: dailyBusy, error: dailyError, draw } = useDailyTarotCard(email);
 
   const handleShareToStory = async () => {
     if (isCapturing) return;
@@ -57,21 +66,15 @@ export function useTarotReading(
   };
 
   const handleDrawSpread = () => {
-    const rows = parseInt(rowsInput, 10) || 1;
-    const cols = parseInt(colsInput, 10) || 1;
-    const totalNeeded = rows * cols;
-
-    const currentDeck = getDeck(useFullDeck);
-
-    if (totalNeeded < 1 || totalNeeded >= currentDeck.length) {
-      Alert.alert(
-        'Selection Error',
-        `Please enter a card count between 1 and ${currentDeck.length - 1}!`
-      );
-      return;
+    const { rows, columns } = layout;
+    if (!Number.isInteger(rows) || !Number.isInteger(columns) || rows < 1 || rows > SPREAD_MAX_ROWS ||
+        columns < 1 || columns > SPREAD_MAX_COLUMNS || isCapturing) return;
+    const totalNeeded = rows * columns;
+    const shuffled = [...getDeck(useFullDeck)];
+    for (let i = shuffled.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
     }
-
-    const shuffled = [...currentDeck].sort(() => Math.random() - 0.5);
 
     const mainCards = shuffled.slice(0, totalNeeded);
     const bottom = shuffled[totalNeeded];
@@ -79,34 +82,34 @@ export function useTarotReading(
 
     setDrawnCards(mainCards);
     setBottomCard(bottom);
-    setRemainingDeck(rest);
+    remainingDeck.current = rest;
+    setRemainingCount(rest.length);
+    setDealtLayout(layout);
+    setDealtQuestion(question.trim());
+    clarifierCounts.current = {};
+    setShared(false);
     setRevealedIndices({});
     setClarifyingCards({});
     setSpreadDrawn(true);
   };
 
   const handleAddClarification = (cardIdx: number) => {
-    if (remainingDeck.length === 0) {
-      Alert.alert('Empty Deck', 'No more cards available in the deck!');
-      return;
-    }
-
-    const nextCard = remainingDeck[0];
-    const newRest = remainingDeck.slice(1);
-
-    setRemainingDeck(newRest);
-    setClarifyingCards((prev) => ({
-      ...prev,
-      [cardIdx]: [...(prev[cardIdx] || []), nextCard],
-    }));
-
-    setRevealedIndices((prev) => ({ ...prev, [cardIdx]: true }));
+    const count = clarifierCounts.current[cardIdx] ?? 0;
+    if (!drawnCards[cardIdx] || !revealedIndices[cardIdx] || count >= MAX_CLARIFIERS) return null;
+    const nextCard = remainingDeck.current.shift();
+    if (!nextCard) return null;
+    clarifierCounts.current[cardIdx] = count + 1;
+    setRemainingCount(remainingDeck.current.length);
+    setClarifyingCards((prev) => ({ ...prev, [cardIdx]: [...(prev[cardIdx] || []), nextCard] }));
+    setShared(false);
     recordReading('Tarot spread', 'Clarifying card drawn');
+    return count + 1;
   };
 
-  const toggleRevealCard = (idx: number) => {
-    if (!revealedIndices[idx]) recordReading('Tarot spread', 'Card revealed');
-    setRevealedIndices((prev) => ({ ...prev, [idx]: !prev[idx] }));
+  const revealCard = (idx: number) => {
+    if (!drawnCards[idx] || revealedIndices[idx]) return;
+    setRevealedIndices((prev) => ({ ...prev, [idx]: true }));
+    recordReading('Tarot spread', 'Card revealed');
   };
 
   const handleRevealAll = () => {
@@ -118,16 +121,14 @@ export function useTarotReading(
     if (drawnCards.length) recordReading('Tarot spread', drawnCards.length + ' cards revealed');
   };
 
-  const handleDrawDaily = () => {
-    const currentDeck = getDeck(useFullDeck).filter((card) => card.id !== dailyCard?.id);
-    const randomCard = currentDeck[Math.floor(Math.random() * currentDeck.length)];
-    setDailyCard(randomCard);
+  const handleDrawDaily = async () => {
+    const card = await draw();
+    if (!card) return;
     setShared(false);
-    recordReading(randomCard.name, 'Last daily draw');
+    recordReading(card.name, 'Last daily draw');
   };
 
-  const rCount = parseInt(rowsInput, 10) || 1;
-  const cCount = parseInt(colsInput, 10) || 1;
+  const { rows: rCount, columns: cCount } = dealtLayout;
   const singleCardForStory = mode === 'daily' ? dailyCard : drawnCards[0] || dailyCard;
 
   return {
@@ -138,11 +139,11 @@ export function useTarotReading(
     tarotAltarStoryRef,
     isCapturing,
     shared,
-    rowsInput,
-    setRowsInput,
-    colsInput,
-    setColsInput,
+    layout,
+    setLayout,
+    remainingCount,
     question,
+    dealtQuestion,
     setQuestion,
     spreadDrawn,
     drawnCards,
@@ -150,13 +151,15 @@ export function useTarotReading(
     revealedIndices,
     clarifyingCards,
     dailyCard,
+    dailyBusy,
+    dailyError,
     rCount,
     cCount,
     singleCardForStory,
     handleShareToStory,
     handleDrawSpread,
     handleAddClarification,
-    toggleRevealCard,
+    revealCard,
     handleRevealAll,
     handleDrawDaily,
   };

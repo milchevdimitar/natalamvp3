@@ -41,8 +41,8 @@ function pageHtml({ title, number, subtitle, paragraphs }) {
   </section>`;
 }
 
-async function summaryPage(user, extras) {
-  const { systems } = await reportSnapshot(user, extras);
+async function summaryPage(user) {
+  const { systems } = await reportSnapshot(user);
   const details = [
     ['Astrology', systems.astrology?.sunSign],
     ['16 Archetypes', systems.archetypes?.type],
@@ -51,7 +51,6 @@ async function summaryPage(user, extras) {
     ['BaZi', systems.bazi?.dayMaster],
     ['Chinese Zodiac', systems.chineseZodiac?.animal],
     ['Ayurveda', systems.ayurveda?.dominantDosha],
-    ['Tarot', systems.tarot?.result],
   ].filter(([, value]) => value);
   return {
     title: 'Your Natala Profile', number: 0, subtitle: user.name || 'Profile summary',
@@ -89,7 +88,7 @@ router.post('/api/users/:id/report/reading', async (req, res) => {
   try {
     const user = await User.findById(req.params.id).lean();
     if (!user) return res.sendStatus(404);
-    res.set('Cache-Control', 'no-store').json(await getReport(user, req.body));
+    res.set('Cache-Control', 'no-store').json(await getReport(user));
   } catch (error) {
     const status = [422, 503].includes(error?.status) ? error.status : 500;
     res.status(status).json({ error: status === 500 ? 'Could not load your report.' : error.message });
@@ -101,8 +100,8 @@ router.post('/api/users/:id/report/pdf', async (req, res) => {
   try {
     const user = await User.findById(req.params.id).lean();
     if (!user) return res.sendStatus(404);
-    const report = await getReport(user, req.body).catch(() => null);
-    const pages = report?.pages ?? [await summaryPage(user, req.body)];
+    const report = await getReport(user).catch(() => null);
+    const pages = report?.pages ?? [await summaryPage(user)];
     const executablePath = resolveBrowserPath();
     browser = await puppeteer.launch({
       ...(executablePath ? { executablePath } : {}),

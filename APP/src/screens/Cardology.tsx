@@ -1,3 +1,5 @@
+import { Image } from 'expo-image';
+import { cardologyArtwork } from '../data/cardologyArtwork';
 import { useCalc } from '../services/calcApi';
 import React, { useState, useEffect } from 'react';
 import {
@@ -11,12 +13,14 @@ import {
   User,
 } from 'lucide-react-native';
 import { useApp } from '../context/AppContext';
-import { BirthDateTag } from '../components/BirthDateTag';
 import { getBirthParts } from '../services/profileDashboard';
 import { Card, T, Section, Pill, Hero } from '../components/UI';
 import { CARDOLOGY_TABLE } from '../data/cardologyData';
 import { saveUserProfile } from '../services/api';
 import { UserProfile } from '../models/User';
+
+const CARD_WIDTH = 170;
+const CARD_ASPECT_RATIO = 500 / 726;
 
 interface CardItem {
   id: number;
@@ -161,7 +165,6 @@ const getUserDayAndMonth = (user: any): { day: number; month: number; formattedD
 export default function Cardology() {
   const { colors, setPage, user, setUser } = useApp();
   const [selectedCard, setSelectedCard] = useState<CardItem | null>(null);
-  const [userDateStr, setUserDateStr] = useState<string | null>(null);
   const dateStr = getUserDayAndMonth(user)?.formattedDate;
   const remote = useCalc<{ card: CardItem | null; dateStr: string | null }>('cardology/birth-card', dateStr ? { user: { birthdate: dateStr } } : null);
 
@@ -207,11 +210,9 @@ export default function Cardology() {
 
     if (!userDate) {
       setSelectedCard(null);
-      setUserDateStr(null);
       return;
     }
 
-    setUserDateStr(userDate.formattedDate);
 
     // 3. Find birth card
     const foundCard = remote.data?.card ?? loadedDeck.find((card) =>
@@ -243,6 +244,10 @@ export default function Cardology() {
     }
   }, [remote.data, remote.loading, user, setUser]);
 
+  const [failedArtwork, setFailedArtwork] = useState<string>();
+  const cardCode = selectedCard?.code;
+  const artwork = cardCode && cardCode !== failedArtwork ? cardologyArtwork[cardCode] : undefined;
+
   return (
     <>
       <TouchableOpacity
@@ -259,37 +264,31 @@ export default function Cardology() {
         eyebrow="CARDOLOGY"
         first="Your"
         accent="Birth Card."
-        description="Discover the meaning of your solar birth card."
       />
 
       {selectedCard ? (
         <View style={{ gap: 18, marginBottom: 40 }}>
           {/* Birth card display */}
           <Card style={{ alignItems: 'center', paddingVertical: 26, gap: 12 }}>
-            <T muted size={11} style={{ letterSpacing: 1.5 }}>
-              YOUR BIRTH CARD ({user?.name || 'User'})
-            </T>
-            {userDateStr && <BirthDateTag date={userDateStr} />}
 
-            <View
-              style={{
-                width: 90,
-                height: 130,
-                borderRadius: 20,
-                backgroundColor: colors.purpleSoft,
-                alignItems: 'center',
-                justifyContent: 'center',
-                borderWidth: 2,
-                borderColor: colors.purple,
-                marginVertical: 4,
-              }}
-            >
-              <T size={42} style={{ color: colors.purple }}>
-                {selectedCard.symbol}
-              </T>
-              <T bold size={16} style={{ marginTop: 4, color: colors.text }}>
-                {selectedCard.code}
-              </T>
+            <View style={{
+              width: '64%', maxWidth: CARD_WIDTH, aspectRatio: CARD_ASPECT_RATIO,
+              borderRadius: 14, overflow: 'hidden', marginVertical: 4,
+              backgroundColor: colors.purpleSoft, alignItems: 'center', justifyContent: 'center',
+              boxShadow: '0 8px 23px rgba(5, 7, 24, 0.45)',
+            }}>
+              {artwork ? <Image
+                key={cardCode}
+                source={artwork}
+                contentFit="contain"
+                accessibilityLabel={selectedCard.nameBg}
+                accessible
+                style={{ width: '100%', height: '100%' }}
+                onError={() => setFailedArtwork(cardCode)}
+              /> : <>
+                <T size={42} style={{ color: colors.purple }}>{selectedCard.symbol}</T>
+                <T bold size={16} style={{ marginTop: 4, color: colors.text }}>{selectedCard.code}</T>
+              </>}
             </View>
 
             <T bold size={24} style={{ color: colors.purple }}>

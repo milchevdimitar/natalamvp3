@@ -1,6 +1,5 @@
 import { hasFeature } from '../../services/account';
 import { profileId } from '../../services/profileLinks';
-import { useSystemActivity } from '../../services/systemActivity';
 import { ProfileReading } from '../ProfileReading';
 import { ProfileAvatar } from '../../components/ProfileAvatar';
 import React, { useCallback, useMemo, useRef, useState } from 'react';
@@ -74,7 +73,6 @@ export default function Home() {
   const { colors, user, account, setPage, fetchActiveStories, addStory, setSelectedChat } = useApp();
   const palette = { ...colors, ...cosmic, purpleSoft: '#30457a', goldSoft: '#362845' };
   const insets = useSafeAreaInsets();
-  const activity = useSystemActivity(user?.email);
   const reportUserId = profileId(user?._id ?? user?.id);
   const streak = useDiscoveryStreak(user?.email);
   const reduced = useReducedMotion();
@@ -208,7 +206,7 @@ export default function Home() {
         />
       </Animated.ScrollView>
 
-      {detail === 'report' && reportUserId && <ProfileReading userId={reportUserId} tarot={activity?.tarot} onClose={close} />}
+      {detail === 'report' && reportUserId && <ProfileReading userId={reportUserId} onClose={close} />}
       {detail === 'sun' && <CelestialCarousel kind="zodiac" title="The Sun" slides={zodiacSlides(sun.sign, now)} onClose={close} reduced={reduced} />}
       {detail === 'codex' && <CelestialCarousel
         title={PLANET_ATLAS_TITLE}

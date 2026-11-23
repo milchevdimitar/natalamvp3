@@ -183,7 +183,7 @@ export default function Profile({ scrollOffset }: { scrollOffset: Animated.Value
         </View>
       </Pressable>
     </Animated.ScrollView>
-    {readingOpen && publicId && <ProfileReading userId={publicId} tarot={activity?.tarot} onClose={() => setReadingOpen(false)} />}
+    {readingOpen && publicId && <ProfileReading userId={publicId} onClose={() => setReadingOpen(false)} />}
     {settingsOpen && <ProfileSettings birthLabel={birthLabel} birthCity={birthCity} onClose={() => setSettingsOpen(false)} />}
     {qrOpen && publicId && <ProfileQrCard id={publicId} name={name || 'Natala profile'} photo={photo} onClose={() => setQrOpen(false)} onShare={share} notice={shareNotice} />}
     </>

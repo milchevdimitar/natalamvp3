@@ -13,8 +13,8 @@ import { useReducedMotion } from './Home/CosmicBackground';
 
 type ReadingPage = { id: string; number: number; title: string; subtitle: string; paragraphs: string[] };
 
-export function ProfileReading({ userId, tarot, onClose }: {
-  userId: string; tarot?: { value: string; detail: string }; onClose: () => void;
+export function ProfileReading({ userId, onClose }: {
+  userId: string; onClose: () => void;
 }) {
   const reduced = useReducedMotion();
   const offset = useRef(new Animated.Value(0)).current;
@@ -26,8 +26,6 @@ export function ProfileReading({ userId, tarot, onClose }: {
   const [error, setError] = useState('');
   const [generatingPdf, setGeneratingPdf] = useState(false);
   const [downloadError, setDownloadError] = useState('');
-  const tarotValue = tarot?.value;
-  const tarotDetail = tarot?.detail;
 
   useEffect(() => {
     const controller = new AbortController();
@@ -36,7 +34,6 @@ export function ProfileReading({ userId, tarot, onClose }: {
       try {
         const response = await authorizedFetch(`${API_BASE_URL}/users/${encodeURIComponent(userId)}/report/reading`, {
           method: 'POST', headers: { 'Content-Type': 'application/json' }, signal: controller.signal,
-          body: JSON.stringify({ tarot: tarotValue ? { value: tarotValue, detail: tarotDetail } : undefined }),
         });
         const data = await response.json().catch(() => null);
         if (!response.ok || data?.pages?.length !== 13) throw new Error(data?.error || 'Could not load your reading.');
@@ -46,7 +43,7 @@ export function ProfileReading({ userId, tarot, onClose }: {
       }
     })();
     return () => controller.abort();
-  }, [attempt, userId, tarotValue, tarotDetail]);
+  }, [attempt, userId]);
 
   const handleGeneratePdf = async () => {
     if (generatingPdf) return;
@@ -58,7 +55,6 @@ export function ProfileReading({ userId, tarot, onClose }: {
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ tarot }),
       });
 
       if (!response.ok) {

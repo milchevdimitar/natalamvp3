@@ -3,7 +3,7 @@ import { Pressable, View, TouchableOpacity } from 'react-native';
 import { ArrowLeft } from 'lucide-react-native';
 import { useApp } from '../../context/AppContext';
 import { saveSystemActivity } from '../../services/systemActivity';
-import { Card, T, Hero } from '../../components/UI';
+import { T, Hero } from '../../components/UI';
 import { useTarotReading } from './useTarotReading';
 import { DailyTarotSection } from './DailyTarotSection';
 import { SpreadTarotSection } from './SpreadTarotSection';
@@ -21,11 +21,11 @@ export default function Tarot() {
     tarotAltarStoryRef,
     isCapturing,
     shared,
-    rowsInput,
-    setRowsInput,
-    colsInput,
-    setColsInput,
+    layout,
+    setLayout,
+    remainingCount,
     question,
+    dealtQuestion,
     setQuestion,
     spreadDrawn,
     drawnCards,
@@ -33,36 +33,33 @@ export default function Tarot() {
     revealedIndices,
     clarifyingCards,
     dailyCard,
+    dailyBusy,
+    dailyError,
     rCount,
     cCount,
     singleCardForStory,
     handleShareToStory,
     handleDrawSpread,
     handleAddClarification,
-    toggleRevealCard,
+    revealCard,
     handleRevealAll,
     handleDrawDaily,
   } = useTarotReading(addStory, (value, detail) => {
     if (user?.email) void saveSystemActivity(user.email, 'tarot', { value, detail }).catch(console.warn);
-  });
+  }, user?.email);
 
   const modes = [{ value: 'daily', label: 'Daily card' }, { value: 'spread', label: 'Custom spread' }] as const;
-  const decks = [{ value: true, label: 'Full deck (78)' }, { value: false, label: 'Major Arcana (22)' }] as const;
   const readingOptions = (
-    <View style={styles.readingOptions}>
-      {[
-        { label: 'Reading mode', options: modes.map(({ value, label }) => ({ label, selected: mode === value, choose: () => setMode(value) })) },
-        { label: 'Tarot deck', options: decks.map(({ value, label }) => ({ label, selected: useFullDeck === value, choose: () => setUseFullDeck(value) })) },
-      ].map(({ label, options }) => (
-        <View key={label} accessibilityLabel={label} style={[styles.optionTrack, { backgroundColor: colors.surfaceAlt, borderColor: colors.line }]}>
-          {options.map(({ label: option, selected, choose }) => (
-            <Pressable key={option} accessibilityRole="button" accessibilityState={{ selected }} disabled={isCapturing} onPress={choose}
-              style={[styles.option, selected && { backgroundColor: colors.purpleSoft }]}>
-              <T size={12} bold={selected} muted={!selected} style={{ textAlign: 'center' }}>{option}</T>
-            </Pressable>
-          ))}
-        </View>
-      ))}
+    <View style={[styles.readingOptions, { marginBottom: 16 }]}>
+      <View accessibilityLabel="Reading mode" style={[styles.optionTrack, { backgroundColor: colors.surfaceAlt, borderColor: colors.line }]}>
+        {modes.map(({ value, label }) => {
+          const selected = mode === value;
+          return <Pressable key={value} accessibilityRole="button" accessibilityState={{ selected }} disabled={isCapturing}
+            onPress={() => setMode(value)} style={[styles.option, { minHeight: 44 }, selected && { backgroundColor: colors.purpleSoft }]}>
+            <T size={14} bold={selected} muted={!selected} style={{ textAlign: 'center' }}>{label}</T>
+          </Pressable>;
+        })}
+      </View>
     </View>
   );
 
@@ -82,11 +79,14 @@ export default function Tarot() {
         description="Follow a quiet question into the cards. Draw one for a moment of clarity, or lay out a spread to explore what lies beneath."
       />
 
+      {readingOptions}
+
       {mode === 'daily' && (
         <DailyTarotSection
           colors={colors}
           dailyCard={dailyCard}
-          controls={readingOptions}
+          busy={dailyBusy}
+          error={dailyError}
           isCapturing={isCapturing}
           shared={shared}
           onDrawDaily={handleDrawDaily}
@@ -98,18 +98,17 @@ export default function Tarot() {
         />
       )}
 
-      {mode === 'spread' && <Card style={styles.spreadOptions}>{readingOptions}</Card>}
-
       {mode === 'spread' && (
         <SpreadTarotSection
           colors={colors}
           useFullDeck={useFullDeck}
           question={question}
+          dealtQuestion={dealtQuestion}
           onChangeQuestion={setQuestion}
-          rowsInput={rowsInput}
-          onChangeRows={setRowsInput}
-          colsInput={colsInput}
-          onChangeCols={setColsInput}
+          layout={layout}
+          onChangeLayout={setLayout}
+          onChangeDeck={setUseFullDeck}
+          remainingCount={remainingCount}
           rCount={rCount}
           cCount={cCount}
           spreadDrawn={spreadDrawn}
@@ -120,7 +119,7 @@ export default function Tarot() {
           isCapturing={isCapturing}
           shared={shared}
           onDrawSpread={handleDrawSpread}
-          onToggleRevealCard={toggleRevealCard}
+          onRevealCard={revealCard}
           onAddClarification={handleAddClarification}
           onRevealAll={handleRevealAll}
           onShareToStory={handleShareToStory}
@@ -131,7 +130,7 @@ export default function Tarot() {
         storyRef={tarotAltarStoryRef}
         colors={colors}
         mode={mode}
-        question={question}
+        question={dealtQuestion}
         singleCardForStory={singleCardForStory}
         drawnCards={drawnCards}
         bottomCard={bottomCard}

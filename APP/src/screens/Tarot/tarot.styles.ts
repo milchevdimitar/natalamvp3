@@ -12,7 +12,7 @@ export const styles = StyleSheet.create({
   option: { flex: 1, minHeight: 36, paddingHorizontal: 5, paddingVertical: 5, alignItems: 'center', justifyContent: 'center', borderRadius: 10 },
   spreadOptions: { marginBottom: 12, padding: 10 },
 
-  /* LocalPngTarotCard Styles */
+  /* TarotArtworkCard Styles */
   tarotCardFrame: {
     borderRadius: 8,
     backgroundColor: '#161026',
