@@ -1,6 +1,6 @@
 import { useState, useRef, type ComponentRef } from 'react';
 import { View, Alert } from 'react-native';
-import { captureRef } from 'react-native-view-shot';
+import { captureStory } from '../../components/StoryCanvas';
 import { useDailyTarotCard } from './useDailyTarotCard';
 import { getDeck } from './tarot.data';
 import { TarotCardData, TarotMode } from './tarot.types';
@@ -44,11 +44,7 @@ export function useTarotReading(
     try {
       setIsCapturing(true);
 
-      const base64Image = await captureRef(tarotAltarStoryRef, {
-        format: 'png',
-        quality: 1.0,
-        result: 'base64',
-      });
+      const base64Image = await captureStory(tarotAltarStoryRef);
 
       await addStory(base64Image);
 

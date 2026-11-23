@@ -1,6 +1,6 @@
 import { useState, useRef, useMemo } from 'react';
 import { View, Alert } from 'react-native';
-import { captureRef } from 'react-native-view-shot';
+import { captureStory } from '../../components/StoryCanvas';
 import { saveUserProfile } from '../../services/api';
 import { calc } from '../../services/calcApi';
 import { UserProfile } from '../../models/User';
@@ -19,7 +19,7 @@ export function useMbtiTest(
   const [isSyncing, setIsSyncing] = useState(false);
   const [syncStatus, setSyncStatus] = useState<string | null>(null);
 
-  const storyCardRef = useRef<View>(null);
+  const storyCardRef = useRef<React.ComponentRef<typeof View>>(null);
   const [isCapturing, setIsCapturing] = useState(false);
   const [shared, setShared] = useState(false);
 
@@ -104,11 +104,7 @@ export function useMbtiTest(
     try {
       setIsCapturing(true);
 
-      const base64Image = await captureRef(storyCardRef, {
-        format: 'png',
-        quality: 1.0,
-        result: 'base64',
-      });
+      const base64Image = await captureStory(storyCardRef);
 
       await addStory(base64Image);
 

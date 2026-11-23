@@ -25,7 +25,7 @@ export function CognitiveBalance({ ratios, story = false }: { ratios: CognitiveR
         const accent = dark ? darkColor : light;
         return (
           <View key={key} accessible accessibilityLabel={left + ' to ' + right + '. ' + label + ', ' + percent + ' percent'} style={{ gap: story ? 4 : 6 }}>
-            <Text style={[styles.label, { color: dark ? '#f8faff' : colors.text, fontSize: story ? 11 : 15 }]}>
+            <Text allowFontScaling={!story} style={[styles.label, { color: dark ? '#f8faff' : colors.text, fontSize: story ? 11 : 15 }]}>
               {label}{': '}<Text style={{ color: accent, fontWeight: '800' }}>{percent}%</Text>
             </Text>
             <View style={styles.rail}>

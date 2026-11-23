@@ -2,6 +2,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import {
   View,
+  Image,
   Text,
   TouchableOpacity,
   Animated,
@@ -12,7 +13,7 @@ import {
   Platform,
 } from 'react-native';
 import Svg, { Line } from 'react-native-svg';
-import { captureRef } from 'react-native-view-shot';
+import { captureStory, StoryCanvas } from '../../components/StoryCanvas';
 import { LinearGradient } from 'expo-linear-gradient';
 import {
   Sparkles,
@@ -22,7 +23,7 @@ import { Card, T } from '../../components/UI';
 import { shareActionStyles } from '../../components/shareActionStyles';
 import { DAILY_FORTUNES } from './home.constants';
 import { styles } from './home.styles';
-import { glassPanel } from '../../theme/cosmic';
+import { cosmic, glassPanel } from '../../theme/cosmic';
 import { useReducedMotion } from './CosmicBackground';
 
 interface FortuneCookieCardProps {
@@ -230,11 +231,7 @@ export function FortuneCookieCard({
     setIsPostingStory(true);
 
     try {
-      const base64Image = await captureRef(storyRef, {
-        format: 'png',
-        quality: 1,
-        result: 'base64',
-      });
+      const base64Image = await captureStory(storyRef);
 
       await addStory(base64Image);
       setHasPostedToStory(true);
@@ -416,129 +413,14 @@ export function FortuneCookieCard({
         </View>
       </Card>
 
-      {/* Existing offscreen 9:16 Story export */}
-      <View
-        style={styles.offscreenStoryWrapper}
-        pointerEvents="none"
-      >
-        <View
-          ref={storyRef}
-          collapsable={false}
-          style={styles.storyCardCanvas}
-        >
-          <LinearGradient
-            colors={[
-              '#0D0714',
-              '#1A0B2E',
-              '#2D124D',
-              '#0D0714',
-            ]}
-            start={{ x: 0, y: 0 }}
-            end={{ x: 1, y: 1 }}
-            style={styles.storyCardGradient}
-          >
-            <View
-              style={{
-                alignItems: 'center',
-                gap: 5,
-                marginTop: 12,
-              }}
-            >
-              <View style={styles.storyOraclePill}>
-                <Sparkles size={14} color="#EAB308" />
-                <T
-                  bold
-                  size={11}
-                  style={{
-                    color: '#EAB308',
-                    letterSpacing: 2,
-                  }}
-                >
-                  DAILY COSMIC ORACLE
-                </T>
-              </View>
-              <T
-                size={10}
-                style={{
-                  color: 'rgba(255,255,255,0.5)',
-                  letterSpacing: 1.5,
-                }}
-              >
-                NATALA FORTUNE COOKIE
-              </T>
-            </View>
-
-            <View style={styles.storyQuotePaper}>
-              <View style={styles.storyQuoteInnerBorder}>
-                <T
-                  size={34}
-                  style={{ marginBottom: 12 }}
-                >
-                  🥠
-                </T>
-                <T
-                  bold
-                  size={19}
-                  style={{
-                    color: '#2D2140',
-                    textAlign: 'center',
-                    lineHeight: 27,
-                    fontStyle: 'italic',
-                  }}
-                >
-                  "{currentFortune}"
-                </T>
-                <View
-                  style={{
-                    height: 1.5,
-                    width: 60,
-                    backgroundColor: '#D97706',
-                    marginVertical: 16,
-                    opacity: 0.5,
-                  }}
-                />
-                <T
-                  bold
-                  size={10}
-                  style={{
-                    color: '#9333EA',
-                    letterSpacing: 2,
-                  }}
-                >
-                  ✦ NATALA COSMIC WISDOM ✦
-                </T>
-              </View>
-            </View>
-
-            <View
-              style={{
-                alignItems: 'center',
-                marginBottom: 10,
-              }}
-            >
-              <T
-                bold
-                size={12}
-                style={{
-                  color: '#EAB308',
-                  letterSpacing: 1,
-                }}
-              >
-                UNLOCK YOUR DAILY DESTINY
-              </T>
-              <T
-                size={9}
-                style={{
-                  color: 'rgba(255,255,255,0.4)',
-                  letterSpacing: 1,
-                }}
-              >
-                NATALA ASTROLOGY & COSMIC ATLAS
-              </T>
-            </View>
-          </LinearGradient>
+      <StoryCanvas storyRef={storyRef} title="Fortune Cookie">
+        <Image source={CLOSED_COOKIE} style={{ width: 132, height: 118 }} resizeMode="contain" />
+        <View style={{ width: '100%', padding: 18, borderRadius: 18, borderWidth: 1, borderColor: cosmic.line, backgroundColor: 'rgba(255,255,255,0.06)' }}>
+          <Text allowFontScaling={false} style={{ color: cosmic.text, textAlign: 'center', fontSize: 20, lineHeight: 28 }}>
+            “{currentFortune}”
+          </Text>
         </View>
-      </View>
+      </StoryCanvas>
     </>
   );
 }

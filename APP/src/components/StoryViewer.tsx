@@ -8,7 +8,6 @@ import {
   ScrollView,
   Dimensions,
   StyleSheet,
-  SafeAreaView,
   Text,
   TextInput,
   Animated,
@@ -19,8 +18,10 @@ import {
 import { X, Trash2, Heart, Send, ChevronUp, Users } from 'lucide-react-native';
 import { useApp } from '../context/AppContext';
 import { T } from '../components/UI';
+import { SafeAreaView } from 'react-native-safe-area-context';
+import { cosmic } from '../theme/cosmic';
 
-const { width, height } = Dimensions.get('window');
+const { height } = Dimensions.get('window');
 const STORY_DURATION = 5000;
 
 export function StoryViewer({ circular = false, circleSize = 55 }: { circular?: boolean; circleSize?: number } = {}) {
@@ -362,152 +363,149 @@ export function StoryViewer({ circular = false, circleSize = 55 }: { circular?: 
               behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
               style={styles.fullStoryContainer}
             >
-              <Image
-                source={{ uri: activeStory.imageUrl }}
-                style={styles.fullStoryImage}
-                resizeMode="cover"
-              />
+              <View style={isHolding && styles.hiddenChrome} pointerEvents={isHolding ? 'none' : 'auto'}>
+                <View style={styles.progressContainer}>
+                  {activeGroup.stories.map((_, i) => {
+                    let barWidth: any = '0%';
+                    if (i < storyIndex) barWidth = '100%';
+                    else if (i === storyIndex) {
+                      barWidth = progressAnim.interpolate({
+                        inputRange: [0, 1],
+                        outputRange: ['0%', '100%'],
+                      });
+                    }
 
-              {/* Интерфейсните елементи се скриват напълно, когато се задържи пръста */}
-              {!isHolding && (
-                <>
-                  {/* Прогрес барчета */}
-                  <View style={styles.progressContainer}>
-                    {activeGroup.stories.map((_, i) => {
-                      let barWidth: any = '0%';
-                      if (i < storyIndex) barWidth = '100%';
-                      else if (i === storyIndex) {
-                        barWidth = progressAnim.interpolate({
-                          inputRange: [0, 1],
-                          outputRange: ['0%', '100%'],
-                        });
-                      }
-
-                      return (
-                        <View key={i} style={styles.progressBarBackground}>
-                          <Animated.View
-                            style={[styles.progressBarFill, { width: barWidth }]}
-                          />
-                        </View>
-                      );
-                    })}
-                  </View>
-
-                  {/* Хедър с автор и бутон за триене */}
-                  <View style={styles.headerBar}>
-                    <View style={styles.userInfo}>
-                      <View style={styles.smallAvatarBorder}>
-                        <Image
-                          source={{ uri: activeStory.imageUrl }}
-                          style={styles.smallAvatar}
+                    return (
+                      <View key={i} style={styles.progressBarBackground}>
+                        <Animated.View
+                          style={[styles.progressBarFill, { width: barWidth }]}
                         />
                       </View>
-                      <View>
-                        <T bold size={13} style={{ color: '#FFFFFF' }}>
-                          {activeGroup.authorName}
-                        </T>
-                        <T size={10} style={{ color: 'rgba(255, 255, 255, 0.65)' }}>
-                          {storyIndex + 1} of {activeGroup.stories.length} · {formatTime(activeStory.createdAt)}
-                        </T>
-                      </View>
+                    );
+                  })}
+                </View>
+
+                {/* Хедър с автор и бутон за триене */}
+                <View style={styles.headerBar}>
+                  <View style={styles.userInfo}>
+                    <View style={styles.smallAvatarBorder}>
+                      <Image
+                        source={{ uri: activeStory.imageUrl }}
+                        style={styles.smallAvatar}
+                      />
                     </View>
+                    <View>
+                      <T bold size={13} style={{ color: '#FFFFFF' }}>
+                        {activeGroup.authorName}
+                      </T>
+                      <T size={10} style={{ color: 'rgba(255, 255, 255, 0.65)' }}>
+                        {storyIndex + 1} of {activeGroup.stories.length} · {formatTime(activeStory.createdAt)}
+                      </T>
+                    </View>
+                  </View>
 
-                    <View style={styles.headerActions}>
-                      {isMyStory && (
-                        <TouchableOpacity
-                          onPress={() => handleDelete(activeStory._id)}
-                          style={styles.iconButton}
-                          activeOpacity={0.7}
-                        >
-                          <Trash2 color="#FF4D4D" size={20} />
-                        </TouchableOpacity>
-                      )}
-
+                  <View style={styles.headerActions}>
+                    {isMyStory && (
                       <TouchableOpacity
-                        onPress={() => {
-                          setShowLikersSheet(false);
-                          resetProgress();
-                          setUserIndex(null);
-                        }}
+                        onPress={() => handleDelete(activeStory._id)}
                         style={styles.iconButton}
                         activeOpacity={0.7}
                       >
-                        <X color="#FFFFFF" size={22} />
+                        <Trash2 color="#FF4D4D" size={20} />
                       </TouchableOpacity>
-                    </View>
+                    )}
+
+                    <TouchableOpacity
+                      onPress={() => {
+                        setShowLikersSheet(false);
+                        resetProgress();
+                        setUserIndex(null);
+                      }}
+                      style={styles.iconButton}
+                      activeOpacity={0.7}
+                    >
+                      <X color="#FFFFFF" size={22} />
+                    </TouchableOpacity>
+                  </View>
+                </View>
+              </View>
+
+              <View style={styles.storyStage}>
+                <Image
+                  source={{ uri: activeStory.imageUrl }}
+                  style={styles.fullStoryImage}
+                  resizeMode="contain"
+                />
+                <View style={styles.touchOverlay} pointerEvents="box-none">
+                  <Pressable
+                    style={styles.touchLeft}
+                    onPressIn={handleTouchStart}
+                    onPressOut={() => handleTouchEnd('prev')}
+                  />
+                  <Pressable
+                    style={styles.touchRight}
+                    onPressIn={handleTouchStart}
+                    onPressOut={() => handleTouchEnd('next')}
+                  />
+                </View>
+              </View>
+
+              <View style={isHolding && styles.hiddenChrome} pointerEvents={isHolding ? 'none' : 'auto'}>
+                <TouchableOpacity
+                  onPress={() => {
+                    handlePause();
+                    setShowLikersSheet(true);
+                  }}
+                  activeOpacity={0.8}
+                  style={styles.likersPillBadge}
+                >
+                  <ChevronUp size={16} color={colors.gold} />
+                  <T bold size={11} style={{ color: '#FFFFFF' }}>
+                    {likesCount > 0 ? `❤️ ${likesCount} ${likesCount === 1 ? 'like' : 'likes'}` : 'No likes yet · Tap to view'}
+                  </T>
+                </TouchableOpacity>
+
+                {/* Долна лента */}
+                <View style={styles.bottomBar}>
+                  <View style={styles.replyInputContainer}>
+                    <TextInput
+                      value={replyText}
+                      onChangeText={setReplyText}
+                      onFocus={() => setIsInputFocused(true)}
+                      onBlur={() => setIsInputFocused(false)}
+                      placeholder={`Reply to ${activeGroup.authorName}...`}
+                      placeholderTextColor="rgba(255, 255, 255, 0.7)"
+                      style={styles.replyInput}
+                      returnKeyType="send"
+                      onSubmitEditing={handleSendReply}
+                    />
+                    {replyText.trim().length > 0 && (
+                      <TouchableOpacity onPress={handleSendReply} style={{ paddingLeft: 8 }}>
+                        <Send size={18} color={colors.gold} />
+                      </TouchableOpacity>
+                    )}
                   </View>
 
-                  {/* Бутон за преглед на харесалите */}
                   <TouchableOpacity
-                    onPress={() => {
-                      handlePause();
-                      setShowLikersSheet(true);
-                    }}
-                    activeOpacity={0.8}
-                    style={styles.likersPillBadge}
+                    onPress={() => handleToggleLike(activeStory._id)}
+                    style={styles.bottomActionButton}
+                    activeOpacity={0.7}
                   >
-                    <ChevronUp size={16} color={colors.gold} />
-                    <T bold size={11} style={{ color: '#FFFFFF' }}>
-                      {likesCount > 0 ? `❤️ ${likesCount} ${likesCount === 1 ? 'like' : 'likes'}` : 'No likes yet · Tap to view'}
-                    </T>
+                    <Heart
+                      size={26}
+                      color={isCurrentLiked ? '#FF3B30' : '#FFFFFF'}
+                      fill={isCurrentLiked ? '#FF3B30' : 'transparent'}
+                    />
                   </TouchableOpacity>
 
-                  {/* Долна лента */}
-                  <View style={styles.bottomBar}>
-                    <View style={styles.replyInputContainer}>
-                      <TextInput
-                        value={replyText}
-                        onChangeText={setReplyText}
-                        onFocus={() => setIsInputFocused(true)}
-                        onBlur={() => setIsInputFocused(false)}
-                        placeholder={`Reply to ${activeGroup.authorName}...`}
-                        placeholderTextColor="rgba(255, 255, 255, 0.7)"
-                        style={styles.replyInput}
-                        returnKeyType="send"
-                        onSubmitEditing={handleSendReply}
-                      />
-                      {replyText.trim().length > 0 && (
-                        <TouchableOpacity onPress={handleSendReply} style={{ paddingLeft: 8 }}>
-                          <Send size={18} color={colors.gold} />
-                        </TouchableOpacity>
-                      )}
-                    </View>
-
-                    <TouchableOpacity
-                      onPress={() => handleToggleLike(activeStory._id)}
-                      style={styles.bottomActionButton}
-                      activeOpacity={0.7}
-                    >
-                      <Heart
-                        size={26}
-                        color={isCurrentLiked ? '#FF3B30' : '#FFFFFF'}
-                        fill={isCurrentLiked ? '#FF3B30' : 'transparent'}
-                      />
-                    </TouchableOpacity>
-
-                    <TouchableOpacity
-                      onPress={() => handleShareToChat(activeStory)}
-                      style={styles.bottomActionButton}
-                      activeOpacity={0.7}
-                    >
-                      <Send size={24} color="#FFFFFF" />
-                    </TouchableOpacity>
-                  </View>
-                </>
-              )}
-
-              {/* Сензорни зони (Ляво/Дясно) */}
-              <View style={styles.touchOverlay} pointerEvents="box-none">
-                <Pressable
-                  style={styles.touchLeft}
-                  onPressIn={handleTouchStart}
-                  onPressOut={() => handleTouchEnd('prev')}
-                />
-                <Pressable
-                  style={styles.touchRight}
-                  onPressIn={handleTouchStart}
-                  onPressOut={() => handleTouchEnd('next')}
-                />
+                  <TouchableOpacity
+                    onPress={() => handleShareToChat(activeStory)}
+                    style={styles.bottomActionButton}
+                    activeOpacity={0.7}
+                  >
+                    <Send size={24} color="#FFFFFF" />
+                  </TouchableOpacity>
+                </View>
               </View>
 
               {/* Likers Modal Sheet */}
@@ -661,27 +659,31 @@ const styles = StyleSheet.create({
   },
   modalBackground: {
     flex: 1,
-    backgroundColor: '#000000',
+    backgroundColor: cosmic.bg,
   },
   fullStoryContainer: {
     flex: 1,
-    width,
-    height,
-    backgroundColor: '#000000',
-    justifyContent: 'space-between',
+  },
+  hiddenChrome: {
+    opacity: 0,
+  },
+  storyStage: {
+    flex: 1,
+    minHeight: 0,
+    alignItems: 'center',
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    overflow: 'hidden',
   },
   fullStoryImage: {
-    ...StyleSheet.absoluteFill,
     width: '100%',
+    maxWidth: 540,
     height: '100%',
   },
   progressContainer: {
     flexDirection: 'row',
-    position: 'absolute',
-    top: Platform.OS === 'ios' ? 12 : 16,
-    left: 10,
-    right: 10,
-    zIndex: 20,
+    marginTop: 10,
+    marginHorizontal: 12,
     gap: 4,
   },
   progressBarBackground: {
@@ -696,11 +698,8 @@ const styles = StyleSheet.create({
     backgroundColor: '#FFFFFF',
   },
   headerBar: {
-    position: 'absolute',
-    top: Platform.OS === 'ios' ? 24 : 28,
-    left: 12,
-    right: 12,
-    zIndex: 20,
+    marginTop: 8,
+    marginHorizontal: 12,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
@@ -748,10 +747,8 @@ const styles = StyleSheet.create({
     height: '100%',
   },
   likersPillBadge: {
-    position: 'absolute',
-    bottom: Platform.OS === 'ios' ? 76 : 70,
     alignSelf: 'center',
-    zIndex: 25,
+    marginBottom: 8,
     flexDirection: 'row',
     alignItems: 'center',
     gap: 6,
@@ -763,11 +760,11 @@ const styles = StyleSheet.create({
     borderColor: 'rgba(234, 179, 8, 0.4)',
   },
   bottomBar: {
-    position: 'absolute',
-    bottom: Platform.OS === 'ios' ? 20 : 16,
-    left: 12,
-    right: 12,
-    zIndex: 20,
+    width: '100%',
+    maxWidth: 564,
+    alignSelf: 'center',
+    paddingHorizontal: 12,
+    paddingBottom: 12,
     flexDirection: 'row',
     alignItems: 'center',
     gap: 12,

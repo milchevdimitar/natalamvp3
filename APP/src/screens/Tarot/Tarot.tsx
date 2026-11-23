@@ -128,7 +128,6 @@ export default function Tarot() {
 
       <TarotAltarStoryCard
         storyRef={tarotAltarStoryRef}
-        colors={colors}
         mode={mode}
         question={dealtQuestion}
         singleCardForStory={singleCardForStory}
