@@ -5,6 +5,7 @@ import { API_BASE_URL, loadBackendOverride, saveBackendOverride } from './apiBas
 
 const sessionKey = () => 'natala.account.session.' + API_BASE_URL.replace(/[^a-zA-Z0-9_.-]/g, '_');
 let session: string | null = null;
+const OWNER_TEST_LOGIN = false;
 
 export const tiers = ['free', 'plus', 'pro'] as const;
 export type Tier = typeof tiers[number];
@@ -86,6 +87,7 @@ export async function restoreAccount(): Promise<AccountProfile | null> {
 }
 
 export async function authenticate(route: '/email' | '/provider' | '/owner-test', payload: object) {
+  if (route === '/owner-test' && !OWNER_TEST_LOGIN) throw new Error('Owner testing is disabled.');
   const { token, ...result } = await request<SignInResult>(route, 'POST', payload);
   await storeSession(token);
   return result;

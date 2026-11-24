@@ -1,3 +1,4 @@
+import { API_BASE_URL } from './apiBase';
 import * as CSC from 'country-state-city';
 
 export interface CityLocation {
@@ -191,9 +192,9 @@ export async function searchCities(query: string): Promise<CityLocation[]> {
 
   // 2. Fallback to Open-Meteo Geocoding API
   const res = await fetch(
-    `https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(
+    `${API_BASE_URL}/locations/search?name=${encodeURIComponent(
       trimmed
-    )}&count=15&language=en&format=json`
+    )}`
   );
   if (!res.ok) {
     throw new Error(`Geocoding request failed (${res.status})`);

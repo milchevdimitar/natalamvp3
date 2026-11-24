@@ -2,18 +2,16 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Platform } from 'react-native';
 import Constants from 'expo-constants';
 
-const primaryUrl = process.env.EXPO_PUBLIC_API_URL?.trim().replace(/\/+$/, '') || 'https://navarzano.cloud/api';
-const port = process.env.EXPO_PUBLIC_API_PORT || '5000';
+const primaryUrl = 'https://navarzano.cloud/api';
+const localPort = '5000';
+const allowLocalBackend = __DEV__;
 
 function getLocalUrl() {
+  if (!allowLocalBackend) return null;
   const host = Constants.expoConfig?.hostUri?.split(':')[0];
-  if (Platform.OS === 'web') {
-    return __DEV__ || globalThis.location?.hostname === 'localhost' || globalThis.location?.hostname === '127.0.0.1'
-      ? `http://localhost:${port}/api` : null;
-  }
-  if (!__DEV__ && Constants.expoConfig?.extra?.lanTestBuild !== true) return null;
-  if (host) return `http://${host}:${port}/api`;
-  if (Platform.OS === 'ios') return `http://localhost:${port}/api`;
+  if (Platform.OS === 'web') return `http://localhost:${localPort}/api`;
+  if (host) return `http://${host}:${localPort}/api`;
+  if (Platform.OS === 'ios') return `http://localhost:${localPort}/api`;
   return null;
 }
 
@@ -81,13 +79,13 @@ export function parseBackendIp(input: string) {
   const local = a === 10 || a === 127 || (a === 172 && b >= 16 && b <= 31) ||
     (a === 192 && b === 168) || (a === 100 && b >= 64 && b <= 127);
   if (protocol === 'http' && !local) throw new Error('Use HTTPS for a public IP address.');
-  const port = Number(explicitPort || (protocol === 'https' ? '443' : process.env.EXPO_PUBLIC_API_PORT || '5000'));
+  const port = Number(explicitPort || (protocol === 'https' ? '443' : localPort));
   if (!Number.isInteger(port) || port < 1 || port > 65535) throw new Error('Enter a port between 1 and 65535.');
   return `${protocol}://${address}:${port}/api`;
 }
 
 export async function loadBackendOverride() {
-  const stored = await AsyncStorage.getItem(backendKey).catch(() => null);
+  const stored = allowLocalBackend ? await AsyncStorage.getItem(backendKey).catch(() => null) : null;
   if (stored) {
     try {
       const url = parseBackendIp(stored);
@@ -106,6 +104,7 @@ export async function saveBackendOverride(input: string | null) {
     return selectDefaultBackend();
   }
 
+  if (!allowLocalBackend) throw new Error('Custom backends are available in development only.');
   const next = parseBackendIp(input);
   const health = await readHealth(next);
   if (!health) {

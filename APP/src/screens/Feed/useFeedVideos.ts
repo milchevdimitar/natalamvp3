@@ -1,10 +1,9 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { hasFeature, type AccountState } from '../../services/account';
+import { authorizedFetch, hasFeature, type AccountState } from '../../services/account';
 import { API_BASE_URL } from '../../services/apiBase';
 import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { getDashboardSystems } from '../../services/profileDashboard';
 import { useSystemActivity } from '../../services/systemActivity';
-import { YOUTUBE_API_KEY, YOUTUBE_SEARCH_URL } from './feed.constants';
 import type { FeedVideoItem, YouTubeSearchResponse } from './feed.types';
 import { buildFeedTopics, decodeHtmlEntities, normalizeFeedText, scoreFeedVideo, type FeedTopic } from './feed.utils';
 
@@ -13,20 +12,10 @@ type RequestMode = 'initial' | 'refresh' | 'more';
 const titleKey = (title: string) => normalizeFeedText(title).replace(/\b(?:shorts|fyp|viral)\b/g, ' ').replace(/\s+/g, ' ').trim();
 
 async function fetchTopicPage(topic: TopicPage, signal: AbortSignal) {
-  const params = new URLSearchParams({
-    part: 'snippet',
-    type: 'video',
-    videoDuration: 'short',
-    videoEmbeddable: 'true',
-    videoSyndicated: 'true',
-    maxResults: '10',
-    order: 'relevance',
-    q: topic.query,
-    key: YOUTUBE_API_KEY,
-  });
+  const params = new URLSearchParams({ q: topic.query });
   if (topic.pageToken) params.set('pageToken', topic.pageToken);
 
-  const response = await fetch(`${YOUTUBE_SEARCH_URL}?${params.toString()}`, { signal });
+  const response = await authorizedFetch(`${API_BASE_URL}/feed/videos?${params.toString()}`, { signal });
   if (!response.ok) throw new Error('YouTube could not load videos. Try again.');
   const data: YouTubeSearchResponse = await response.json();
   const videos: (FeedVideoItem & { score: number })[] = (data.items ?? []).flatMap(({ id, snippet }) => {
@@ -113,8 +102,7 @@ export function useFeedVideos(user: (NonNullable<Parameters<typeof getDashboardS
       setLoadingMore(true);
     }
 
-    if (!topics.length || !YOUTUBE_API_KEY) {
-      if (topics.length) setErrorMsg('The YouTube API key is missing.');
+    if (!topics.length) {
       setLoading(false);
       setRefreshing(false);
       return;

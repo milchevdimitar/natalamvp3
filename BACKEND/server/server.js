@@ -69,6 +69,9 @@ app.use('/api/calc', calcRoutes);
 // Запис и синхронизация на изчисления профил
 const { router: accountRoutes, requireAccount, requireFeature } = require('./routes/account');
 app.use('/api/account', accountRoutes);
+const { searchVideos, searchCities } = require('./routes/discovery');
+app.get('/api/feed/videos', requireAccount, searchVideos);
+app.get('/api/locations/search', searchCities);
 app.put('/api/users/profile/birth', requireAccount, require('./routes/birthProfile'));
 
 app.post('/api/users/profile', requireAccount, async (req, res) => {
