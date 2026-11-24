@@ -1,3 +1,5 @@
+import { BirthPickerFields } from '../components/BirthPickerFields';
+import type { BirthDate } from '../components/BirthWheelPicker';
 import { BackButton, backHeaderSpacing } from '../components/BackButton';
 import { SubscriptionDetails } from './SubscriptionDetails';
 import { authorizedFetch, deleteAccount } from '../services/account';
@@ -23,9 +25,8 @@ export function ProfileSettings({ onClose, birthLabel, birthCity, initialSubscri
   const [name, setName] = useState(String(user?.name || ''));
   const [editing, setEditing] = useState(false);
   const [editingBirth, setEditingBirth] = useState(false);
-  const [birthDate, setBirthDate] = useState(['', '', '']);
-  const [birthTime, setBirthTime] = useState(['', '']);
-  const [unknownTime, setUnknownTime] = useState(true);
+  const [birthDate, setBirthDate] = useState<BirthDate | null>(null);
+  const [birthTime, setBirthTime] = useState('');
   const [selectedCity, setSelectedCity] = useState<CityLocation | null>(null);
   const [saving, setSaving] = useState(false);
   const [notice, setNotice] = useState('');
@@ -86,10 +87,10 @@ export function ProfileSettings({ onClose, birthLabel, birthCity, initialSubscri
 
   const editBirth = () => {
     const parts = getBirthParts(user);
-    setBirthDate(parts ? [parts.day, parts.month, parts.year].map((part) => String(part).padStart(2, '0')) : ['', '', '']);
+    setBirthDate(parts && parts.year >= 1900 ? { year: parts.year, month: parts.month, day: parts.day } : null);
     const savedTime = user?.hasExactBirthTime === false ? '' : String(user?.birthTime || user?.birthDate?.time || '');
-    setBirthTime(savedTime ? savedTime.split(':').slice(0, 2) : ['', '']);
-    setUnknownTime(!savedTime);
+    const time = /^([01]?\d|2[0-3]):([0-5]\d)(?::[0-5]\d)?$/.exec(savedTime);
+    setBirthTime(time ? time[1].padStart(2, '0') + ':' + time[2] : '');
     const city = user?.birthCity;
     setSelectedCity(city && typeof city !== 'string' && typeof city.latitude === 'number' && typeof city.longitude === 'number' &&
       Number.isFinite(city.latitude) && Number.isFinite(city.longitude) ? {
@@ -101,17 +102,11 @@ export function ProfileSettings({ onClose, birthLabel, birthCity, initialSubscri
 
   const saveBirth = async () => {
     if (!user?.email || saving) return;
-    const [day, month, year] = birthDate.map(Number);
-    const date = getBirthParts({ birthdate: birthDate.map((part) => part.padStart(2, '0')).join('.') });
-    if (!date || year < 1900 || birthDate[2].length !== 4 || new Date(year, month - 1, day) > new Date()) {
-      setBirthNotice('Enter a valid day, month and year.');
+    if (!birthDate) {
+      setBirthNotice('Choose a valid date of birth.');
       return;
     }
-    const [hour, minute] = birthTime.map(Number);
-    if (!unknownTime && (!birthTime.every(Boolean) || hour > 23 || minute > 59)) {
-      setBirthNotice('Enter an hour from 0 to 23 and minutes from 0 to 59, or choose Unknown time.');
-      return;
-    }
+    const { day, month, year } = birthDate;
     if (!selectedCity) {
       setBirthNotice('Choose a city from the search results.');
       return;
@@ -122,7 +117,7 @@ export function ProfileSettings({ onClose, birthLabel, birthCity, initialSubscri
       const response = await authorizedFetch(`${API_BASE_URL}/users/profile/birth`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ day, month, year, time: unknownTime ? '' : [hour, minute].map((part) => String(part).padStart(2, '0')).join(':'),
+        body: JSON.stringify({ day, month, year, time: birthTime,
           city: { name: selectedCity.name, country: selectedCity.country, latitude: selectedCity.lat, longitude: selectedCity.lng, timezone: selectedCity.timezone },
         }),
       });
@@ -154,19 +149,6 @@ export function ProfileSettings({ onClose, birthLabel, birthCity, initialSubscri
       setSaving(false);
     }
   };
-
-  const numberFields = (labels: string[], values: string[], onChange: (values: string[]) => void) => (
-    <View style={styles.actions}>
-      {labels.map((label, index) => <View key={label} style={styles.copy}>
-        <T muted size={12}>{label}</T>
-        <TextInput accessibilityLabel={label} inputMode="numeric" keyboardType="number-pad"
-          value={values[index] ?? ''} maxLength={label === 'Year' ? 4 : 2} editable={!saving}
-          placeholder={label === 'Year' ? 'YYYY' : label.slice(0, 1).repeat(2)} placeholderTextColor={colors.muted}
-          onChangeText={(text) => onChange(values.map((value, i) => i === index ? text.replace(/\D/g, '') : value))}
-          style={[styles.input, { color: colors.text, backgroundColor: colors.surface, borderColor: colors.line }]} />
-      </View>)}
-    </View>
-  );
 
   const accountRow = (title: string, icon: typeof Trash2, action: () => void) => {
     const Icon = icon;
@@ -228,17 +210,9 @@ export function ProfileSettings({ onClose, birthLabel, birthCity, initialSubscri
               </Pressable>}
             </View>
             {editingBirth && <>
-              <T bold size={13}>Birth date</T>
-              {numberFields(['Day', 'Month', 'Year'], birthDate, setBirthDate)}
-              <View style={styles.row}>
-                <View style={styles.copy}><T bold size={13}>Birth time</T><T muted size={12}>24-hour clock</T></View>
-                <Pressable accessibilityRole="checkbox" accessibilityState={{ checked: unknownTime }} disabled={saving}
-                  onPress={() => setUnknownTime(!unknownTime)} style={[styles.edit, { backgroundColor: colors.purpleSoft }]}>
-                  <T size={12}>{unknownTime ? '? ' : ''}Unknown time</T>
-                </Pressable>
-              </View>
-              {!unknownTime && numberFields(['Hour', 'Minute'], birthTime, setBirthTime)}
-              <T bold size={13}>Birth city</T>
+              <BirthPickerFields date={birthDate} time={birthTime} onDateChange={setBirthDate}
+                onTimeChange={setBirthTime} colors={colors} disabled={saving} />
+              <T bold size={13}>Place of birth</T>
               <CitySearchPicker selectedCity={selectedCity} onSelectCity={setSelectedCity} colors={colors} cosmicTheme={theme} />
               {!selectedCity && !!birthCity && <T muted size={12}>Current city · {birthCity}</T>}
               <View style={styles.actions}>

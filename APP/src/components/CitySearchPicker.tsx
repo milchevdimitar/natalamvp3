@@ -1,3 +1,5 @@
+import { SafeAreaView } from 'react-native-safe-area-context';
+import { BirthPickerHeader } from './BirthPickerHeader';
 import { CosmicBackground, useReducedMotion } from '../screens/Home/CosmicBackground';
 import React, { useState, useRef, useEffect } from 'react';
 import {
@@ -10,7 +12,6 @@ import {
   StyleSheet,
   Modal,
   Platform,
-  StatusBar,
 } from 'react-native';
 import { MapPin, Search, X, ChevronDown } from 'lucide-react-native';
 import { T } from './UI';
@@ -35,6 +36,7 @@ export function CitySearchPicker({ selectedCity, onSelectCity, colors, cosmicThe
   const debounceTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const bgColor = colors?.bg || colors?.background || '#0D0B1A';
+  const fieldTint = 'rgba(255,255,255,0.06)';
   const lineColor = colors?.line || colors?.border || 'rgba(255, 255, 255, 0.12)';
 
   useEffect(() => {
@@ -105,19 +107,15 @@ export function CitySearchPicker({ selectedCity, onSelectCity, colors, cosmicThe
 
   return (
     <View style={styles.container}>
-      <T muted size={11} style={{ marginBottom: 6 }}>
-        BIRTH PLACE / CITY
-      </T>
-
       <TouchableOpacity
         activeOpacity={0.8}
         onPress={handleOpen}
         style={[
           styles.inputWrapper,
-          { backgroundColor: colors.surfaceAlt, borderColor: lineColor },
+          { backgroundColor: fieldTint, borderColor: lineColor },
         ]}
       >
-        <MapPin size={18} color={colors.gold} />
+        <MapPin size={18} color={colors.muted} />
         <View style={{ flex: 1 }}>
           {selectedCity ? (
             <T bold size={14} style={{ color: colors.text }} numberOfLines={1}>
@@ -137,41 +135,21 @@ export function CitySearchPicker({ selectedCity, onSelectCity, colors, cosmicThe
         animationType="slide"
         onRequestClose={() => setModalVisible(false)}
       >
-        <View
-          style={[
-            styles.modalContainer,
-            {
-              backgroundColor: bgColor,
-              paddingTop:
-                Platform.OS === 'web'
-                  ? 24
-                  : Math.max((StatusBar.currentHeight || 0) + 12, 44),
-            },
-          ]}
-        >
+        <SafeAreaView style={[styles.modalContainer, { backgroundColor: bgColor }]}>
           {modalVisible && cosmicTheme && <CosmicBackground offset={offset} reduced={reducedMotion} light={cosmicTheme === 'light'} />}
-          <View style={styles.modalHeader}>
-            <T bold size={17} style={{ color: colors.text }}>
-              Place of Birth
-            </T>
-            <TouchableOpacity
-              onPress={() => setModalVisible(false)}
-              style={[styles.closeBtn, { backgroundColor: colors.surfaceAlt }]}
-            >
-              <X size={18} color={colors.text} />
-            </TouchableOpacity>
-          </View>
+          <BirthPickerHeader title="Place of birth" onBack={() => setModalVisible(false)}
+            color={colors.text} onDark={cosmicTheme === 'dark'} />
 
           <View
             style={[
               styles.searchBox,
               {
-                backgroundColor: colors.surfaceAlt,
-                borderColor: colors.purple,
+                backgroundColor: fieldTint,
+                borderColor: lineColor,
               },
             ]}
           >
-            <Search size={18} color={colors.gold} />
+            <Search size={18} color={colors.muted} />
             <TextInput
               autoFocus
               value={query}
@@ -181,7 +159,7 @@ export function CitySearchPicker({ selectedCity, onSelectCity, colors, cosmicThe
               style={[styles.input, { color: colors.text }]}
             />
             {loading ? (
-              <ActivityIndicator size="small" color={colors.gold} />
+              <ActivityIndicator size="small" color={colors.muted} />
             ) : (
               query.length > 0 && (
                 <TouchableOpacity onPress={() => handleQueryChange('')}>
@@ -222,15 +200,9 @@ export function CitySearchPicker({ selectedCity, onSelectCity, colors, cosmicThe
               <TouchableOpacity
                 activeOpacity={0.75}
                 onPress={() => handleSelect(item)}
-                style={[
-                  styles.cityItem,
-                  {
-                    backgroundColor: colors.surface,
-                    borderColor: lineColor,
-                  },
-                ]}
+                style={styles.cityItem}
               >
-                <MapPin size={18} color={colors.purple} />
+                <MapPin size={18} color={colors.muted} />
                 <View style={{ flex: 1 }}>
                   <T bold size={14} style={{ color: colors.text }}>
                     {item.name}
@@ -243,7 +215,7 @@ export function CitySearchPicker({ selectedCity, onSelectCity, colors, cosmicThe
               </TouchableOpacity>
             )}
           />
-        </View>
+        </SafeAreaView>
       </Modal>
     </View>
   );
@@ -264,31 +236,17 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     paddingHorizontal: 14,
   },
-  modalContainer: {
-    flex: 1,
-    paddingHorizontal: 18,
-  },
-  modalHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    marginBottom: 14,
-  },
-  closeBtn: {
-    width: 34,
-    height: 34,
-    borderRadius: 17,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
+  modalContainer: { flex: 1 },
   searchBox: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 10,
     height: 50,
     borderRadius: 14,
-    borderWidth: 1.5,
+    borderWidth: 1,
     paddingHorizontal: 14,
+    marginHorizontal: 18,
+    marginTop: 14,
     marginBottom: 12,
   },
   input: {
@@ -297,7 +255,7 @@ const styles = StyleSheet.create({
     fontWeight: '500',
   },
   listContent: {
-    gap: 8,
+    paddingHorizontal: 18,
     paddingBottom: 260,
   },
   cityItem: {
@@ -306,8 +264,6 @@ const styles = StyleSheet.create({
     gap: 12,
     paddingVertical: 12,
     paddingHorizontal: 14,
-    borderRadius: 14,
-    borderWidth: 1,
   },
   emptyBox: {
     paddingVertical: 28,

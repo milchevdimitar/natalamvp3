@@ -41,7 +41,7 @@ import Ayurveda from './src/screens/Ayurveda';
 import BaZi from './src/screens/BaZi';
 import ChineseZodiac from './src/screens/ChineseZodiac';
 import Login from './src/screens/Login';
-import { checkHealth } from './src/services/api';
+import { BackendStatus, useBackendConnection } from './src/components/BackendStatus';
 import { registerForPushNotificationsAsync } from './src/services/notifications';
 
 function Shell() {
@@ -49,6 +49,7 @@ function Shell() {
   const { page, setPage, colors, theme, user, hideBottomNav, account, restoring } = useApp();
   const [pendingProfile, setPendingProfile] = useState<string | null>(null);
   const [sharedProfile, setSharedProfile] = useState<string | null>(null);
+  const backend = useBackendConnection();
   const [showSplash, setShowSplash] = useState(true);
   const fade = useRef(new Animated.Value(1)).current;
   const navBlurTarget = useRef<React.ComponentRef<typeof BlurTargetView>>(null);
@@ -85,14 +86,10 @@ function Shell() {
     // Регистрация на права за нотификации в Android/iOS
     registerForPushNotificationsAsync();
 
-    checkHealth().then((status) => {
-      if (status.dbConnected) {
-        console.log('🟢 Свързан с MongoDB Atlas! DB:', status.databaseName);
-      } else {
-        console.log('🔴 Офлайн режим: Сървърът не е достъпен.');
-      }
-    });
+  }, []);
 
+  useEffect(() => {
+    if (backend.status === 'checking' || !showSplash) return;
     const timer = setTimeout(
       () =>
         Animated.timing(fade, {
@@ -103,7 +100,7 @@ function Shell() {
       1050
     );
     return () => clearTimeout(timer);
-  }, []);
+  }, [backend.status, fade, showSplash]);
 
   const pages: Record<string, React.ReactNode> = {
     home: <Home />,
@@ -203,6 +200,7 @@ function Shell() {
           >
             Natala
           </Text>
+          <BackendStatus />
         </Animated.View>
       )}
     </View>

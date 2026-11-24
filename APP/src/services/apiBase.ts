@@ -2,32 +2,72 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Platform } from 'react-native';
 import Constants from 'expo-constants';
 
-const getBaseUrl = (): string => {
-  const configured = process.env.EXPO_PUBLIC_API_URL?.trim();
-  if (configured) return configured.replace(/\/$/, '');
-  const port = process.env.EXPO_PUBLIC_API_PORT || '5000';
-  const hostUri = Constants.expoConfig?.hostUri;
-  const hostIp = hostUri ? hostUri.split(':')[0] : null;
+const primaryUrl = process.env.EXPO_PUBLIC_API_URL?.trim().replace(/\/+$/, '') || 'https://navarzano.cloud/api';
+const port = process.env.EXPO_PUBLIC_API_PORT || '5000';
 
-  if (hostIp) {
-    return `http://${hostIp}:${port}/api`;
+function getLocalUrl() {
+  const host = Constants.expoConfig?.hostUri?.split(':')[0];
+  if (Platform.OS === 'web') {
+    return __DEV__ || globalThis.location?.hostname === 'localhost' || globalThis.location?.hostname === '127.0.0.1'
+      ? `http://localhost:${port}/api` : null;
   }
-
-  const FALLBACK_IP = '10.159.206.3';
-
-  return (
-    Platform.select({
-      android: `http://${FALLBACK_IP}:${port}/api`,
-      ios: `http://${FALLBACK_IP}:${port}/api`,
-      default: `http://localhost:${port}/api`,
-    }) || `http://localhost:${port}/api`
-  );
-};
+  if (!__DEV__ && Constants.expoConfig?.extra?.lanTestBuild !== true) return null;
+  if (host) return `http://${host}:${port}/api`;
+  if (Platform.OS === 'ios') return `http://localhost:${port}/api`;
+  return null;
+}
 
 const backendKey = 'natala.backend.override';
-const defaultUrl = getBaseUrl();
-export let API_BASE_URL = defaultUrl;
+export let API_BASE_URL = primaryUrl;
 export { API_BASE_URL as API_URL };
+
+type BackendConnection = {
+  kind: 'VPS' | 'Local' | 'Custom';
+  status: 'checking' | 'connected' | 'database-unavailable' | 'unreachable';
+};
+
+let connection: BackendConnection = { kind: 'VPS', status: 'checking' };
+const listeners = new Set<() => void>();
+
+export const getBackendConnection = () => connection;
+export function subscribeToBackendConnection(listener: () => void) {
+  listeners.add(listener);
+  return () => { listeners.delete(listener); };
+}
+
+function activateBackend(url: string, kind: BackendConnection['kind'], health: { dbConnected: boolean } | null) {
+  API_BASE_URL = url;
+  connection = { kind, status: health ? (health.dbConnected ? 'connected' : 'database-unavailable') : 'unreachable' };
+  listeners.forEach((listener) => listener());
+  return url;
+}
+
+async function readHealth(url: string) {
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), 3500);
+  try {
+    const response = await fetch(`${url}/health`, { signal: controller.signal, redirect: 'error' });
+    if (!response.ok) return null;
+    const health = await response.json();
+    return health?.success === true && typeof health.dbConnected === 'boolean' ? health : null;
+  } catch {
+    return null;
+  } finally {
+    clearTimeout(timeout);
+  }
+}
+
+// Choose a backend before restoring the session. Never replay writes or
+// forward a session token to a different server when a request fails.
+async function selectDefaultBackend() {
+  const fallback = getLocalUrl();
+  const primaryHealth = await readHealth(primaryUrl);
+  if (!primaryHealth?.dbConnected && fallback && fallback !== primaryUrl) {
+    const localHealth = await readHealth(fallback);
+    if (localHealth?.dbConnected) return activateBackend(fallback, 'Local', localHealth);
+  }
+  return activateBackend(primaryUrl, 'VPS', primaryHealth);
+}
 
 export function parseBackendIp(input: string) {
   const match = /^(?:(https?):\/\/)?(\d{1,3}(?:\.\d{1,3}){3})(?::(\d{1,5}))?$/i.exec(input.trim());
@@ -47,25 +87,30 @@ export function parseBackendIp(input: string) {
 }
 
 export async function loadBackendOverride() {
-  const stored = await AsyncStorage.getItem(backendKey);
-  if (stored) API_BASE_URL = parseBackendIp(stored);
+  const stored = await AsyncStorage.getItem(backendKey).catch(() => null);
+  if (stored) {
+    try {
+      const url = parseBackendIp(stored);
+      activateBackend(url, url === getLocalUrl() ? 'Local' : 'Custom', await readHealth(url));
+      return;
+    } catch {
+      // Fall through to the standard addresses for invalid saved overrides.
+    }
+  }
+  await selectDefaultBackend();
 }
 
 export async function saveBackendOverride(input: string | null) {
-  const next = input === null ? defaultUrl : parseBackendIp(input);
-  const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort(), 5500);
-  try {
-    const response = await fetch(`${next}/health`, { signal: controller.signal, redirect: 'error' });
-    const health = await response.json();
-    if (!response.ok || health.success !== true || typeof health.dbConnected !== 'boolean') throw new Error();
-  } catch {
-    throw new Error('Could not reach Natala at that address. Check the IP, port and Wi-Fi.');
-  } finally {
-    clearTimeout(timeout);
+  if (input === null) {
+    await AsyncStorage.removeItem(backendKey);
+    return selectDefaultBackend();
   }
-  if (input === null) await AsyncStorage.removeItem(backendKey);
-  else await AsyncStorage.setItem(backendKey, input.trim());
-  API_BASE_URL = next;
-  return next;
+
+  const next = parseBackendIp(input);
+  const health = await readHealth(next);
+  if (!health) {
+    throw new Error('Could not reach Natala at that address. Check the IP, port and Wi-Fi.');
+  }
+  await AsyncStorage.setItem(backendKey, input.trim());
+  return activateBackend(next, next === getLocalUrl() ? 'Local' : 'Custom', health);
 }

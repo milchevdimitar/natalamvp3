@@ -18,6 +18,8 @@ const testLoginEnabled = () => process.env.NODE_ENV !== 'production' && process.
 const testOwners = () => [process.env.NATALA_ALEX_TEST_EMAIL, process.env.NATALA_DIMITAR_TEST_EMAIL].map(normalizeEmail).filter(validEmail);
 const hashPassword = promisify(scrypt);
 const hash = (value) => createHash('sha256').update(value).digest('hex');
+const DAY_MS = 86400000;
+const SESSION_LIFETIME = 30 * DAY_MS;
 const Session = mongoose.model('AccountSession', new mongoose.Schema({
   digest: { type: String, required: true, unique: true },
   user: { type: mongoose.Schema.Types.ObjectId, required: true, index: true },
@@ -38,7 +40,7 @@ const normalizeTier = (tier) => tier === 'go_deeper_plus' ? 'pro' : TIERS.includ
 
 function state(user) {
   const subscription = user.subscription;
-  const isOwner = (user.verifiedEmail && owners().includes(user.email)) || (testLoginEnabled() && user.ownerTestAccount && testOwners().includes(user.email));
+  const isOwner = user.owner === true || (user.verifiedEmail && owners().includes(user.email)) || (testLoginEnabled() && user.ownerTestAccount && testOwners().includes(user.email));
   const active = subscription && ['active', 'trialing', 'canceled'].includes(subscription.status) &&
     (subscription.expiresAt ? subscription.expiresAt.getTime() > Date.now() : subscription.status !== 'canceled');
   const previewTier = isOwner && user.previewTier ? normalizeTier(user.previewTier) : null;
@@ -69,8 +71,11 @@ async function requireAccount(req, res, next) {
   try {
     const token = /^Bearer ([a-f0-9]{64})$/.exec(req.get('authorization') || '')?.[1];
     const session = token && await Session.findOne({ digest: hash(token), expires: { $gt: new Date() } });
-    const user = session && await User.findById(session.user).select('+verifiedEmail +ownerTestAccount +previewTier');
+    const user = session && await User.findById(session.user).select('+verifiedEmail +owner +ownerTestAccount +previewTier');
     if (!user || (user.ownerTestAccount && !testLoginEnabled())) return res.status(401).json({ error: 'Please sign in again.' });
+    if (session.expires.getTime() < Date.now() + SESSION_LIFETIME - DAY_MS) {
+      await Session.updateOne({ _id: session.id }, { $max: { expires: new Date(Date.now() + SESSION_LIFETIME) } });
+    }
     req.account = user;
     req.accountSession = session;
     next();
@@ -93,7 +98,7 @@ async function freshProfile(id) {
 
 async function signIn(user, res) {
   const token = randomBytes(32).toString('hex');
-  await Session.create({ digest: hash(token), user: user._id, expires: new Date(Date.now() + 30 * 86400000) });
+  await Session.create({ digest: hash(token), user: user._id, expires: new Date(Date.now() + SESSION_LIFETIME) });
   const profile = await freshProfile(user._id);
   return res.json({ token, user: profile, ...await accountDetails(user) });
 }
@@ -150,20 +155,55 @@ async function consumeCode(email, code) {
   return Boolean((await EmailCode.deleteOne({ _id: entry.id, digest: entry.digest })).deletedCount);
 }
 
+const TERMS_VERSION = '2026-11-24';
+
+function registrationProfile(body) {
+  const { name, gender, birth, termsVersion } = body;
+  if (typeof name !== 'string' || !name.trim() || name.length > 80) throw new Error('Enter your full name.');
+  if (!['male', 'female', 'other'].includes(gender)) throw new Error('Select a gender.');
+  if (termsVersion !== TERMS_VERSION) throw new Error('Read and accept the current Terms of Use.');
+  const { year, month, day, city, time = '' } = birth || {};
+  if (typeof time !== 'string' || (time && !/^(?:[01]\d|2[0-3]):[0-5]\d$/.test(time))) {
+    throw new Error('Choose a valid birth time.');
+  }
+  if (![year, month, day].every(Number.isInteger) || year < 1900 || year > new Date().getFullYear()) {
+    throw new Error('Choose a valid birth date.');
+  }
+  const birthdate = new Date(Date.UTC(year, month - 1, day, 12));
+  if (birthdate.getUTCFullYear() !== year || birthdate.getUTCMonth() + 1 !== month ||
+      birthdate.getUTCDate() !== day || Date.UTC(year, month - 1, day) > Date.now()) {
+    throw new Error('Choose a valid birth date.');
+  }
+  if (typeof city?.name !== 'string' || !city.name.trim() || city.name.length > 200 ||
+      !Number.isFinite(city.lat) || Math.abs(city.lat) > 90 || !Number.isFinite(city.lng) || Math.abs(city.lng) > 180 ||
+      typeof city.timezone !== 'string' || !city.timezone || city.timezone.length > 100) {
+    throw new Error('Choose a birth city from the search results.');
+  }
+  try { new Intl.DateTimeFormat('en', { timeZone: city.timezone }); }
+  catch { throw new Error('Choose a birth city with a valid time zone.'); }
+  return { name: name.trim(), gender, birthdate, birthTime: time || undefined, hasExactBirthTime: Boolean(time),
+    birthCity: { name: city.name.trim(), country: typeof city.country === 'string' ? city.country.slice(0, 100) : '',
+      latitude: city.lat, longitude: city.lng, timezone: city.timezone },
+    termsVersion, termsAcceptedAt: new Date() };
+}
+
 route('post', '/email', limitSignIn, async (req, res) => {
   const email = normalizeEmail(req.body?.email);
-  const { password, name, register, recover, code } = req.body || {};
-  if (!validEmail(email) || typeof password !== 'string' || password.length < 10 || password.length > 128) {
-    return res.status(400).json({ error: 'Enter a valid email and a password of 10 to 128 characters.' });
+  const { password, register, recover, code } = req.body || {};
+  if (!validEmail(email) || typeof password !== 'string' || password.length < 8 || password.length > 128) {
+    return res.status(400).json({ error: 'Enter a valid email and a password of 8 to 128 characters.' });
   }
-  const existing = await User.findOne({ email }).select('+passwordHash +verifiedEmail +ownerTestAccount +previewTier +appleSubject +googleSubject');
+  const existing = await User.findOne({ email }).select('+passwordHash +verifiedEmail +owner +ownerTestAccount +previewTier +appleSubject +googleSubject');
   if (register === true || recover === true) {
     if (reservedEmail(email)) return res.status(409).json({ error: 'Use the sign-in method associated with this account.' });
     if (recover === true && (!existing || existing.appleSubject || existing.googleSubject || existing.ownerTestAccount)) {
       return res.status(409).json({ error: 'Could not reset the password. Try the sign-in method associated with this account.' });
     }
-    if (!recover && (typeof name !== 'string' || !name.trim() || name.length > 80 || existing)) {
-      return res.status(409).json({ error: 'Could not register. If you already have a Natala profile, choose Set or reset password.' });
+    let profile;
+    if (!recover) {
+      if (existing) return res.status(409).json({ error: 'This email already has a profile.' });
+      try { profile = registrationProfile(req.body); }
+      catch (error) { return res.status(400).json({ error: error.message }); }
     }
     const needsCode = recover === true || mailReady() || process.env.NODE_ENV === 'production';
     if (needsCode && !await consumeCode(email, code)) return res.status(400).json({ error: 'Enter the verification code sent to your email.' });
@@ -174,12 +214,12 @@ route('post', '/email', limitSignIn, async (req, res) => {
         const updated = await User.findOneAndUpdate(
           { _id: existing.id, appleSubject: null, googleSubject: null, ownerTestAccount: { $ne: true }, passwordHash: existing.passwordHash ?? null },
           { passwordHash, verifiedEmail: true }, { new: true },
-        ).select('+verifiedEmail +previewTier');
+        ).select('+verifiedEmail +owner +previewTier');
         if (!updated) return res.status(409).json({ error: 'Account changed. Request a fresh code.' });
         await Session.deleteMany({ user: updated.id });
         return await signIn(updated, res);
       }
-      return await signIn(await User.create({ email, name: name.trim(), passwordHash, verifiedEmail: needsCode }), res);
+      return await signIn(await User.create({ ...profile, email, passwordHash, verifiedEmail: needsCode }), res);
     } catch (error) {
       if (error.code === 11000) return res.status(409).json({ error: 'This email already has a profile.' });
       throw error;
@@ -193,7 +233,7 @@ route('post', '/email', limitSignIn, async (req, res) => {
   return signIn(existing, res);
 });
 
-route('get', '/methods', (req, res) => res.json({ emailVerification: mailReady() || process.env.NODE_ENV === 'production' }));
+route('get', '/methods', (req, res) => res.json({ emailVerification: mailReady() || process.env.NODE_ENV === 'production', termsVersion: TERMS_VERSION }));
 
 const providers = {
   apple: { issuer: 'https://appleid.apple.com', jwks: 'https://appleid.apple.com/auth/keys', audience: () => process.env.APPLE_CLIENT_ID },
@@ -268,7 +308,7 @@ route('post', '/provider', limitSignIn, async (req, res) => {
     return res.status(401).json({ error: 'Could not verify this sign-in. Check provider setup and try again.' });
   }
   const field = provider === 'apple' ? 'appleSubject' : 'googleSubject';
-  let user = await User.findOne({ [field]: claims.sub }).select('+verifiedEmail +previewTier');
+  let user = await User.findOne({ [field]: claims.sub }).select('+verifiedEmail +owner +previewTier');
   if (user && provider === 'apple') {
     user.appleRefreshToken = providerCredentials.appleRefreshToken;
     await user.save();
@@ -283,7 +323,7 @@ route('post', '/provider', limitSignIn, async (req, res) => {
     }
     try {
       if (existing) {
-        user = await User.findOneAndUpdate({ _id: existing.id, [field]: null, passwordHash: null, ownerTestAccount: { $ne: true } }, { ...providerCredentials, [field]: claims.sub, verifiedEmail: true }, { new: true }).select('+verifiedEmail +previewTier');
+        user = await User.findOneAndUpdate({ _id: existing.id, [field]: null, passwordHash: null, ownerTestAccount: { $ne: true } }, { ...providerCredentials, [field]: claims.sub, verifiedEmail: true }, { new: true }).select('+verifiedEmail +owner +previewTier');
         if (!user) return res.status(409).json({ error: 'Could not link this identity. Try signing in again.' });
       } else {
         const displayName = typeof name === 'string' && name.trim() ? name.trim().slice(0, 80) : email.split('@')[0];

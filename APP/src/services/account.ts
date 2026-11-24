@@ -37,8 +37,9 @@ export async function storeSession(token: string | null) {
   const key = sessionKey();
   session = token;
   if (Platform.OS === 'web') {
-    if (token) globalThis.sessionStorage?.setItem(key, token);
-    else globalThis.sessionStorage?.removeItem(key);
+    if (token) globalThis.localStorage?.setItem(key, token);
+    else globalThis.localStorage?.removeItem(key);
+    globalThis.sessionStorage?.removeItem(key);
   } else if (token) await SecureStore.setItemAsync(key, token);
   else await SecureStore.deleteItemAsync(key);
 }
@@ -67,7 +68,14 @@ async function request<T>(route: string, method = 'GET', payload?: object): Prom
 export async function restoreAccount(): Promise<AccountProfile | null> {
   await loadBackendOverride().catch(() => {});
   const key = sessionKey();
-  session = Platform.OS === 'web' ? globalThis.sessionStorage?.getItem(key) ?? null : await SecureStore.getItemAsync(key);
+  if (Platform.OS === 'web') {
+    const saved = globalThis.localStorage?.getItem(key);
+    const legacy = globalThis.sessionStorage?.getItem(key);
+    if (!saved && legacy) await storeSession(legacy);
+    else session = saved ?? null;
+  } else {
+    session = await SecureStore.getItemAsync(key);
+  }
   if (!session) return null;
   try {
     return await request<AccountProfile>('/me');
@@ -90,7 +98,7 @@ export async function changeBackend(input: string | null) {
   return next;
 }
 
-export const accountMethods = () => request<{ emailVerification: boolean }>('/methods');
+export const accountMethods = () => request<{ emailVerification: boolean; termsVersion?: string }>('/methods');
 export const sendEmailCode = (email: string) => request<void>('/email-code', 'POST', { email });
 export const refreshAccount = () => request<AccountProfile>('/me');
 export const previewTier = (tier: Tier | null) => request<AccountState>('/preview-tier', 'PUT', { tier });
