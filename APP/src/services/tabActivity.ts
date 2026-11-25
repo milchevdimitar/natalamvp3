@@ -6,7 +6,24 @@ import { API_BASE_URL } from './apiBase';
 
 const tabs = ['chat', 'people'] as const;
 type Tab = typeof tabs[number];
-type Activity = Record<Tab, string[]>;
+export type InboxNotification = {
+  id: string;
+  kind: 'chat' | 'request' | 'friend' | 'match';
+  title: string;
+  body: string;
+  date?: string;
+  chatId?: string;
+};
+type Activity = Record<Tab, string[]> & { notifications?: InboxNotification[] };
+
+function legacyNotifications(snapshot: Activity): InboxNotification[] {
+  return [
+    ...snapshot.chat.map((id): InboxNotification => ({ id, kind: 'chat', title: 'Message', body: 'Open Messages to see the conversation.' })),
+    ...snapshot.people.map((id): InboxNotification => id.startsWith('request:')
+      ? { id, kind: 'request', title: 'Connection request', body: 'Someone wants to connect with you.' }
+      : { id, kind: 'friend', title: 'New connection', body: 'View your connections in People.' }),
+  ];
+}
 const empty = (): Activity => ({ chat: [], people: [] });
 
 export function useTabActivity(email: string | undefined, page: string) {
@@ -16,18 +33,37 @@ export function useTabActivity(email: string | undefined, page: string) {
   const refresh = useRef<() => void>(() => {});
   const [unread, setUnread] = useState({ chat: false, people: false });
 
+  const [notifications, setNotifications] = useState<InboxNotification[] | null>(null);
+  const [notificationsUnavailable, setNotificationsUnavailable] = useState(false);
+  const [hasUnreadNotifications, setHasUnreadNotifications] = useState(false);
+
   useEffect(() => {
     setUnread({ chat: false, people: false });
+    setNotifications(null);
+    setNotificationsUnavailable(false);
+    setHasUnreadNotifications(false);
     if (!email) return;
     const storageKey = `natala:tab-activity:${API_BASE_URL}:${email.toLowerCase()}`;
     let active = true;
     let known = empty();
     let latest: Activity | undefined;
+    let seenInbox: string[] = [];
+    const inboxKey = storageKey + ':inbox';
     let controller: AbortController | undefined;
     let ready = false;
     let initialized = false;
     const syncDots = () => {
       if (!active || !latest) return;
+      const inbox = latest.notifications ?? legacyNotifications(latest);
+      setNotifications(inbox);
+      if (openTab.current === 'notifications') {
+        const currentIds = inbox.map(({ id }) => id);
+        if (currentIds.length !== seenInbox.length || currentIds.some((id) => !seenInbox.includes(id))) {
+          seenInbox = currentIds;
+          void AsyncStorage.setItem(inboxKey, JSON.stringify(seenInbox)).catch(() => {});
+        }
+      }
+      setHasUnreadNotifications(inbox.some(({ id }) => !seenInbox.includes(id)));
       const tab = tabs.find((value) => value === openTab.current);
       const nextKnown = {
         chat: tab === 'chat' ? latest.chat : known.chat.filter((id) => latest?.chat.includes(id)),
@@ -50,7 +86,9 @@ export function useTabActivity(email: string | undefined, page: string) {
       const timeout = setTimeout(() => controller?.abort(), 7000);
       try {
         const response = await authorizedFetch(`${API_BASE_URL}/account/tab-activity`, { signal: controller.signal });
-        if (response.ok && active) {
+        if (!response.ok) throw new Error('Could not load activity');
+        if (active) {
+          setNotificationsUnavailable(false);
           const snapshot: Activity = await response.json();
           if (!active) return;
           latest = snapshot;
@@ -62,14 +100,18 @@ export function useTabActivity(email: string | undefined, page: string) {
           syncDots();
         }
       } catch {
-        // Keep the last successful snapshot until the next poll.
+        if (active) setNotificationsUnavailable(true);
       } finally {
         clearTimeout(timeout);
         controller = undefined;
       }
     };
     refresh.current = () => { syncDots(); void poll(); };
-    void AsyncStorage.getItem(storageKey).then((value) => {
+    void Promise.all([AsyncStorage.getItem(storageKey), AsyncStorage.getItem(inboxKey)]).then(([value, savedInbox]) => {
+      if (savedInbox) {
+        const parsed = JSON.parse(savedInbox);
+        if (Array.isArray(parsed)) seenInbox = parsed.filter((id) => typeof id === 'string');
+      }
       if (!value) return;
       const saved = JSON.parse(value) as Activity;
       initialized = tabs.every((tab) => Array.isArray(saved[tab]));
@@ -89,5 +131,5 @@ export function useTabActivity(email: string | undefined, page: string) {
   }, [email]);
 
   useEffect(() => { refresh.current(); }, [currentTab]);
-  return { chat: currentTab !== 'chat' && unread.chat, people: currentTab !== 'people' && unread.people };
+  return { notifications, notificationsUnavailable, hasUnreadNotifications, tabActivity: { chat: currentTab !== 'chat' && unread.chat, people: currentTab !== 'people' && unread.people } };
 }

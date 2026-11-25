@@ -44,5 +44,5 @@ export const cosmicTabColors = {
 };
 
 export function isCosmicPage(page: string) {
-  return page === 'explore' || page === 'chat' || page === 'people' || page === 'profile' || page === 'shared-profile' || isExploreRoute(page);
+  return page === 'explore' || page === 'chat' || page === 'people' || page === 'dating' || page === 'notifications' || page === 'profile' || page === 'shared-profile' || isExploreRoute(page);
 }

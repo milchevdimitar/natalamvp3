@@ -2,17 +2,16 @@ import React, { useLayoutEffect, useRef, useState } from 'react';
 import { Animated, Easing, Platform, Pressable, StyleSheet, Text, View } from 'react-native';
 import { BlurView, type BlurViewProps } from 'expo-blur';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { House, Compass, MessageCircle, UsersRound, Film, UserRound } from 'lucide-react-native';
+import { House, Compass, UsersRound, Heart, Film } from 'lucide-react-native';
 import { useApp } from '../context/AppContext';
 import { useReducedMotion } from '../screens/Home/CosmicBackground';
 
 const items = [
   ['home', 'Home', House],
   ['explore', 'Explore', Compass],
-  ['chat', 'Chat', MessageCircle],
   ['people', 'People', UsersRound],
+  ['dating', 'Dating', Heart],
   ['feed', 'Feed', Film],
-  ['profile', 'Profile', UserRound],
 ] as const;
 
 export default function BottomNav({ blurTarget }: Pick<BlurViewProps, 'blurTarget'>) {
@@ -21,7 +20,7 @@ export default function BottomNav({ blurTarget }: Pick<BlurViewProps, 'blurTarge
   const reduced = useReducedMotion();
   const [rowWidth, setRowWidth] = useState(0);
   const slot = rowWidth / items.length;
-  const currentTab = page === 'shared-profile' ? 'people' : page;
+  const currentTab = page === 'chat' || page === 'shared-profile' ? 'people' : page;
   const index = items.findIndex(([id]) => id === currentTab);
   const offset = useRef(new Animated.Value(0)).current;
   const lastSlot = useRef(0);
@@ -66,7 +65,7 @@ export default function BottomNav({ blurTarget }: Pick<BlurViewProps, 'blurTarge
             />
           )}
           {items.map(([id, label, Icon]) => {
-            const hasActivity = (id === 'chat' || id === 'people') && tabActivity[id];
+            const hasActivity = id === 'people' && (tabActivity.people || tabActivity.chat);
             const selected = currentTab === id;
             return (
               <Pressable key={id} onPress={() => setPage(id)} accessibilityRole="tab" accessibilityLabel={hasActivity ? label + ', new activity' : label} accessibilityState={{ selected }} aria-selected={selected} style={styles.tab}>

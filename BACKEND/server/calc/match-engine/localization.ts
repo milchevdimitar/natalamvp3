@@ -8,7 +8,7 @@ export const MATCH_I18N_BG = {
   'match.friction': 'Динамика и напрежение',
   'match.complementaryElements': 'Допълване на елементите',
   'match.polarityBalance': 'Ин/Ян енергиен баланс',
-  'match.mbtiSynergy': 'MBTI когнитивна динамика',
+  'match.mbtiSynergy': '16 Archetypes когнитивна динамика',
   'match.baziHarmony': 'Ба Дзъ (Четири стълба)',
   'match.goodAspects': 'Подкрепящи фактори',
   'match.growthAreas': 'Зони за осъзнаване',

@@ -25,6 +25,8 @@ import {
   DancingScript_700Bold,
 } from '@expo-google-fonts/dancing-script';
 import { AppProvider, useApp } from './src/context/AppContext';
+import NotificationsScreen from './src/screens/NotificationsScreen';
+import DatingScreen from './src/screens/DatingScreen';
 import BottomNav from './src/components/BottomNav';
 import { ShootingStar } from './src/components/ShootingStar';
 import Home from './src/screens/Home';
@@ -123,8 +125,10 @@ function Shell() {
     ayurveda: <Ayurveda />,
     bazi: <BaZi />,
     'chinese-zodiac': <ChineseZodiac />,
-    chat: <Chat initialChatId={resumeChatId} onOpenProfile={(id, chatId) => setPage('shared-profile', id, chatId)} />,
+    chat: <Chat onScanProfile={openSharedProfile} initialChatId={resumeChatId} onOpenProfile={(id, chatId) => setPage('shared-profile', id, chatId)} />,
     people: <People onOpenProfile={openSharedProfile} />,
+    notifications: <NotificationsScreen />,
+    dating: <DatingScreen />,
     feed: <Feed />,
     profile: <Profile scrollOffset={tabScroll} onOpenProfile={openSharedProfile} />,
     'shared-profile': sharedProfileId ? <SharedProfile key={sharedProfileId} id={sharedProfileId} /> : <People onOpenProfile={openSharedProfile} />,
@@ -139,7 +143,7 @@ function Shell() {
 
   // Страниците Login, Home, Chat и Feed управляват сами своя скрол и клавиатура
   const isFullHeightPage =
-    !user || showSubscription || page === 'login' || page === 'home' || page === 'chat' || page === 'feed' || page === 'profile';
+    !user || showSubscription || page === 'login' || page === 'home' || page === 'chat' || page === 'feed' || page === 'profile' || page === 'notifications';
   const topInset = Platform.OS === 'web' ? 30 : Math.max((StatusBar.currentHeight || 0) + 16, 28);
 
   const alignedHeader = isExploreRoute(page) || (page === 'chat' && hideBottomNav);
@@ -160,7 +164,7 @@ function Shell() {
         style={{
           flex: 1,
           paddingTop: user && isFullHeightPage && page === 'chat' ? screenTop : 0,
-          paddingHorizontal: !user || cosmicHome || page === 'feed' || page === 'profile' ? 0 : backHeaderSpacing.paddingHorizontal,
+          paddingHorizontal: !user || cosmicHome || page === 'feed' || page === 'profile' || page === 'notifications' ? 0 : backHeaderSpacing.paddingHorizontal,
           width: '100%',
           maxWidth: !user || cosmicHome || page === 'feed' ? '100%' : cosmicTab ? 620 : 720,
           alignSelf: 'center',
@@ -187,7 +191,7 @@ function Shell() {
       </BlurTargetView>
 
       {/* Навигацията отдолу е видима само след успешен вход и когато hideBottomNav не е активен */}
-      {user && !hideBottomNav && <BottomNav blurTarget={navBlurTarget} />}
+      {user && !hideBottomNav && page !== 'notifications' && <BottomNav blurTarget={navBlurTarget} />}
 
       {showSplash && (
         <Animated.View

@@ -6,6 +6,7 @@ const { annotatePerson, enrichPeopleHub } = require('../calc');
 
 const router = express.Router();
 router.use(require('./account').requireAccount);
+router.use('/dating', require('./dating'));
 
 router.get('/shared/:profileId', async (req, res) => {
   const { profileId } = req.params;

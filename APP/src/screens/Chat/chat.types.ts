@@ -26,6 +26,7 @@ export interface Conversation {
   partnerEmail: string;
   partnerName: string;
   partnerId?: string;
+  datingMatch?: boolean;
   partnerAvatar?: string;
   lastMessage: string;
   lastMessageTime: string;

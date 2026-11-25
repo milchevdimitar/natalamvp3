@@ -11,7 +11,7 @@ import {
   MessageSquare,
   X,
 } from 'lucide-react-native';
-import { Card, T, Section, Hero, SearchBar } from '../../components/UI';
+import { Card, T, Section } from '../../components/UI';
 import { Conversation, PendingStory } from './chat.types';
 import { styles } from './chat.styles';
 
@@ -19,8 +19,7 @@ interface ConversationsListViewProps {
   colors: any;
   conversations: Conversation[];
   isLoading: boolean;
-  searchQuery: string;
-  onChangeSearchQuery: (q: string) => void;
+  header: React.ReactNode;
   pendingStory: PendingStory | null;
   onDismissPendingStory: () => void;
   onSelectConversation: (id: string) => void;
@@ -30,8 +29,7 @@ export function ConversationsListView({
   colors,
   conversations,
   isLoading,
-  searchQuery,
-  onChangeSearchQuery,
+  header,
   pendingStory,
   onDismissPendingStory,
   onSelectConversation,
@@ -41,14 +39,7 @@ export function ConversationsListView({
       showsVerticalScrollIndicator={false}
       contentContainerStyle={styles.listScrollContent}
     >
-      <Hero
-        eyebrow="COSMIC MESSAGES"
-        first="Your"
-        accent="Conversations"
-        description="Connect with friends and astrological soulmates by email."
-      />
-
-      <SearchBar value={searchQuery} onChange={onChangeSearchQuery} placeholder="Search chat" />
+      {header}
 
       {pendingStory && (
         <View
@@ -104,7 +95,7 @@ export function ConversationsListView({
                   <ProfileAvatar name={conv.partnerName} source={conv.partnerAvatar} size={40} />
                   <View style={{ flex: 1 }}>
                     <T bold size={14}>
-                      {conv.partnerName}
+                      {conv.partnerName}{conv.datingMatch ? ' · Match' : ''}
                     </T>
                     <T muted size={12} numberOfLines={1}>
                       {conv.lastMessage}

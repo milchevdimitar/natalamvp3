@@ -28,6 +28,7 @@ const messageSchema = new mongoose.Schema({
 
 const chatSchema = new mongoose.Schema(
   {
+    datingPair: { type: String, unique: true, sparse: true },
     participants: [{ type: String, required: true }],
     lastMessage: { type: String, default: '' },
     lastMessageTime: { type: String, default: '' },

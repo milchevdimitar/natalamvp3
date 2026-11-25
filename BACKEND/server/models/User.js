@@ -422,6 +422,16 @@ const UserSchema = new mongoose.Schema(
     sentRequests: [{ type: mongoose.Schema.Types.ObjectId, ref: 'User' }],
     receivedRequests: [{ type: mongoose.Schema.Types.ObjectId, ref: 'User' }],
     skippedUsers: [{ type: mongoose.Schema.Types.ObjectId, ref: 'User' }],
+    dating: {
+      enabled: { type: Boolean, default: false },
+      bio: String,
+      prompt: String,
+      city: String,
+      interests: [String],
+      preference: { type: String, default: 'any' },
+      minAge: { type: Number, default: 18 },
+      maxAge: { type: Number, default: 65 },
+    },
     blockedUsers: [{ type: mongoose.Schema.Types.ObjectId, ref: 'User' }],
     reportedUsers: [{ type: mongoose.Schema.Types.ObjectId, ref: 'User' }],
 

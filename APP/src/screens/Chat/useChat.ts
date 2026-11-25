@@ -45,6 +45,12 @@ export function useChat({
   useEffect(() => {
     if (!selectedChat || !currentUserEmail || isLoading) return;
 
+    if (selectedChat.chatId) {
+      setActiveChatId(selectedChat.chatId);
+      setSelectedChat?.(null);
+      return;
+    }
+
     if (selectedChat.draftMessage) {
       setMessageInput(selectedChat.draftMessage);
       setActiveChatId(null);
@@ -310,6 +316,10 @@ export function useChat({
     forwardMessage,
     filteredConversations,
     setActiveChatId,
+    removeConversation: (id: string) => {
+      setActiveChatId(null);
+      setConversations((previous) => previous.filter((item) => item.id !== id));
+    },
     searchQuery,
     setSearchQuery,
     messageInput,

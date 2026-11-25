@@ -1,192 +1,70 @@
-import React from 'react';
-import { ScrollView, View, ActivityIndicator, Pressable } from 'react-native';
-import { RefreshCw } from 'lucide-react-native';
-import { Hero, SearchBar, Section, Pill, T } from '../../components/UI';
-import { useApp } from '../../context/AppContext';
-import { PEOPLE_FILTERS } from './people.types';
-import { usePeople } from './usePeople';
-import { PotentialMatchCard } from './PotentialMatchCard';
-import { FriendListSection } from './FriendListSection';
-import { DiscoverGridSection } from './DiscoverGridSection';
-import { ResonanceDetailModal } from './ResonanceDetailModal';
+import React, { useState } from 'react';
+import { StyleSheet, View } from 'react-native';
+import { Card, Pill, T } from '../../components/UI';
+import { ProfileAvatar } from '../../components/ProfileAvatar';
 import { ProfileQrScreen } from '../../components/ProfileQrScreen';
-import { styles } from './people.styles';
+import { useApp } from '../../context/AppContext';
+import { DiscoverGridSection } from './DiscoverGridSection';
+import { FriendListSection } from './FriendListSection';
+import { ResonanceDetailModal } from './ResonanceDetailModal';
+import { PeopleHeader } from './PeopleHeader';
+import { usePeople } from './usePeople';
+
+
+function Friends({ people }: { people: ReturnType<typeof usePeople> }) {
+  const { colors, user } = useApp();
+  const [connections, setConnections] = useState(false);
+  const [passed, setPassed] = useState<string[]>([]);
+  const person = people.filteredDiscover.find((item) => !passed.includes(item.id) && !people.requestedIds.includes(item.id));
+  return <View style={styles.stack}>
+    <View style={styles.actions}>
+      <Pill selected={!connections} onPress={() => setConnections(false)}>Suggested</Pill>
+      <Pill selected={connections} onPress={() => setConnections(true)}>Connections{people.incomingRequests.length ? ` (${people.incomingRequests.length})` : ''}</Pill>
+      <Pill onPress={people.onRefresh} disabled={people.refreshing}>Refresh</Pill>
+    </View>
+    {people.loading ? <T muted>Finding people…</T> : connections ? <FriendListSection
+      colors={colors} user={user} incomingRequests={people.incomingRequests} friends={people.filteredFriends}
+      onAcceptRequest={people.handleAcceptRequest} onDeclineRequest={people.handleDeclineRequest}
+      onInspectPerson={people.setInspectedPerson} onOpenChat={people.handleOpenChatWith}
+    /> : people.search.trim() ? <DiscoverGridSection colors={colors} user={user} peopleList={people.filteredDiscover}
+      requestedIds={people.requestedIds} onInspectPerson={people.setInspectedPerson} onToggleConnect={people.handleToggleDiscoverConnect} />
+      : person ? <Card style={styles.featured}>
+        <ProfileAvatar name={person.name} source={person.avatarUrl} size={80} />
+        <T bold size={23}>{person.name}</T>
+        {!!person.bio && <T muted style={styles.center}>{person.bio}</T>}
+        <T muted size={13} style={styles.center}>{person.interests.join(' · ')}</T>
+        <View style={styles.actions}>
+          <Pill onPress={() => setPassed((previous) => [...previous, person.id])}>Next</Pill>
+          <Pill onPress={() => people.setInspectedPerson(person)}>View profile</Pill>
+          <Pill selected onPress={() => people.handleToggleDiscoverConnect(person)}>Connect</Pill>
+        </View>
+      </Card> : <Card style={styles.stack}><T muted>You’re caught up for now.</T>
+        {passed.length > 0 && <Pill onPress={() => setPassed([])}>See skipped profiles</Pill>}
+      </Card>}
+    {people.inspectedPerson && <ResonanceDetailModal
+      colors={colors} user={user} person={people.inspectedPerson}
+      isFriend={people.friendIds.has(people.inspectedPerson.id)}
+      isRequested={people.requestedIds.includes(people.inspectedPerson.id)}
+      onClose={() => people.setInspectedPerson(null)} onConnect={people.handleToggleDiscoverConnect}
+      onOpenChat={people.handleOpenChatWith} onRemoveFriend={people.handleRemoveFriend}
+    />}
+  </View>;
+}
 
 export default function People({ onOpenProfile }: { onOpenProfile: (id: string) => void }) {
-  const { colors, setPage, user } = useApp();
-
-  const {
-    loading,
-    refreshing,
-    onRefresh,
-    search,
-    setSearch,
-    activeFilter,
-    setActiveFilter,
-    currentMatch,
-    currentMatchCompatibility,
-    canRewind,
-    filteredFriends,
-    incomingRequests,
-    filteredDiscover,
-    requestedIds,
-    friendIds,
-    inspectedPerson,
-    setInspectedPerson,
-    matchedPerson,
-    setMatchedPerson,
-    inviteModalVisible,
-    setInviteModalVisible,
-    handleSkipMatch,
-    handleRewindMatch,
-    handleLikeMatch,
-    handleToggleDiscoverConnect,
-    handleAcceptRequest,
-    handleDeclineRequest,
-    handleRemoveFriend,
-    handleOpenChatWith,
-  } = usePeople(user, setPage);
-
-  return (
-    <>
-      <Hero
-        eyebrow="YOUR CIRCLE · DISCOVER & CONNECT"
-        first="People who"
-        accent="resonate"
-        description="Discover real connections, compare natal charts & MBTI, and grow your circle."
-      />
-
-      <SearchBar
-        value={search}
-        onChange={setSearch}
-        placeholder="Search people"
-        qr={() => setInviteModalVisible(true)}
-      />
-
-      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-        <ScrollView horizontal
-          showsHorizontalScrollIndicator={false}
-          contentContainerStyle={styles.filtersRow}
-        >
-          {PEOPLE_FILTERS.map((f) => (
-            <Pill
-              key={f.id}
-              selected={activeFilter === f.id}
-              onPress={() => setActiveFilter(f.id)}
-            >
-              {f.label}
-            </Pill>
-          ))}
-        </ScrollView>
-
-        <Pressable
-          accessibilityLabel="Refresh people"
-          onPress={onRefresh}
-          style={{
-            padding: 10,
-            borderRadius: 12,
-            backgroundColor: colors.surfaceAlt,
-            borderWidth: 1,
-            borderColor: colors.line,
-          }}
-        >
-          {refreshing ? (
-            <ActivityIndicator size="small" color={colors.purple} />
-          ) : (
-            <RefreshCw size={16} color={colors.purple} />
-          )}
-        </Pressable>
-      </View>
-
-      {loading ? (
-        <View style={{ paddingVertical: 40, alignItems: 'center', gap: 10 }}>
-          <ActivityIndicator size="large" color={colors.purple} />
-          <T muted size={13}>
-            Loading real profiles from your orbit...
-          </T>
-        </View>
-      ) : (
-        <>
-          {!search && activeFilter === 'all' && (
-            <>
-              <Section>Potential matches</Section>
-              <PotentialMatchCard
-                colors={colors}
-                person={currentMatch}
-                compatibility={currentMatchCompatibility}
-                canRewind={canRewind}
-                onSkip={handleSkipMatch}
-                onRewind={handleRewindMatch}
-                onInspect={setInspectedPerson}
-                onLike={handleLikeMatch}
-              />
-            </>
-          )}
-
-          <FriendListSection
-            colors={colors}
-            user={user}
-            incomingRequests={incomingRequests}
-            friends={filteredFriends}
-            onAcceptRequest={handleAcceptRequest}
-            onDeclineRequest={handleDeclineRequest}
-            onInspectPerson={setInspectedPerson}
-            onOpenChat={handleOpenChatWith}
-          />
-
-          <DiscoverGridSection
-            colors={colors}
-            user={user}
-            peopleList={filteredDiscover}
-            requestedIds={requestedIds}
-            onInspectPerson={setInspectedPerson}
-            onToggleConnect={handleToggleDiscoverConnect}
-          />
-        </>
-      )}
-
-      {Boolean(inspectedPerson) && (
-        <ResonanceDetailModal
-          colors={colors}
-          user={user}
-          person={inspectedPerson}
-          isFriend={inspectedPerson ? friendIds.has(inspectedPerson.id) : false}
-          isRequested={inspectedPerson ? requestedIds.includes(inspectedPerson.id) : false}
-          onClose={() => setInspectedPerson(null)}
-          onConnect={(p) => {
-            if (p.category === 'match') {
-              handleLikeMatch(p);
-            } else {
-              handleToggleDiscoverConnect(p);
-            }
-          }}
-          onOpenChat={handleOpenChatWith}
-          onRemoveFriend={handleRemoveFriend}
-        />
-      )}
-
-      {Boolean(matchedPerson) && (
-        <ResonanceDetailModal
-          colors={colors}
-          user={user}
-          person={matchedPerson}
-          isCelebration
-          isFriend
-          isRequested={false}
-          onClose={() => setMatchedPerson(null)}
-          onConnect={() => {}}
-          onOpenChat={handleOpenChatWith}
-          onRemoveFriend={handleRemoveFriend}
-        />
-      )}
-
-      {inviteModalVisible && (
-        <ProfileQrScreen
-          initialMode="scan"
-          onClose={() => setInviteModalVisible(false)}
-          onOpenProfile={onOpenProfile}
-        />
-      )}
-    </>
-  );
+  const { user, setPage } = useApp();
+  const people = usePeople(user, setPage);
+  return <>
+    <PeopleHeader view="people" search={people.search} onSearch={people.setSearch} onScan={() => people.setInviteModalVisible(true)} />
+    <Friends people={people} />
+    {people.inviteModalVisible && <ProfileQrScreen initialMode="scan"
+      onClose={() => people.setInviteModalVisible(false)} onOpenProfile={onOpenProfile} />}
+  </>;
 }
+
+const styles = StyleSheet.create({
+  stack: { gap: 10 },
+  actions: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'center', gap: 8 },
+  featured: { alignItems: 'center', gap: 9, padding: 18 },
+  center: { textAlign: 'center' },
+});

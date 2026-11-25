@@ -1,5 +1,5 @@
 export const systems=[
- {name:'MBTI',icon:'◈',description:'Personality preferences, communication and decision-making.',status:'READY'},
+ {name:'16 Archetypes',icon:'◈',description:'Personality preferences, communication and decision-making.',status:'READY'},
  {name:'Astrology',icon:'☉',description:'Birth chart patterns, archetypes and life themes.',status:'READY'},
  {name:'Numerology',icon:'⑦',description:'Number symbolism and recurring personal themes.',status:'READY'},
  {name:'Cardology',icon:'◇',description:'Card-based reflection and archetypal exploration.',status:'SOON'},
@@ -15,7 +15,7 @@ export const people=[
  {name:'Alex Rivera',initial:'A',subtitle:'Our life paths are both 7!',time:'Yesterday',online:false,unread:0,interest:'Tarot · Numerology'},
  {name:'Sofia Ivanova',initial:'S',subtitle:'Look at my element chart 🌊',time:'Mon',online:true,unread:1,interest:'Elements · Ayurveda'},
  {name:'Daniel Kim',initial:'D',subtitle:'Thanks for sharing your reading!',time:'Sun',online:false,unread:0,interest:'Life Path 7 · Astrology'},
- {name:'Elena Rose',initial:'E',subtitle:"Let's compare our birth charts",time:'Fri',online:false,unread:0,interest:'Astrology · MBTI'}
+ {name:'Elena Rose',initial:'E',subtitle:"Let's compare our birth charts",time:'Fri',online:false,unread:0,interest:'Astrology · 16 Archetypes'}
 ];
 export const stories=[
  {name:'Me',title:'Your sky today',icon:'☾',type:'Cosmic weather',detail:'What the heavens inspire.'},

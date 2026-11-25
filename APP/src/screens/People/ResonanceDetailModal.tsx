@@ -179,7 +179,7 @@ export function ResonanceDetailModal({
             <View style={{ gap: 10 }}>
               <View style={styles.breakdownRow}>
                 <View style={styles.breakdownLabelRow}>
-                  <T bold size={12}>MBTI Cognitive Synergy</T>
+                  <T bold size={12}>16 Archetypes Cognitive Synergy</T>
                   <T bold size={12} style={{ color: colors.purple }}>
                     {comp.mbtiScore}%
                   </T>

@@ -6,7 +6,7 @@ import React, { useCallback, useMemo, useRef, useState } from 'react';
 import { Animated, Platform, Pressable, RefreshControl, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
-import { ChevronRight, Flame } from 'lucide-react-native';
+import { Bell, ChevronRight, Flame } from 'lucide-react-native';
 import ConfettiCannon from 'react-native-confetti-cannon';
 import { SunPosition } from 'astronomy-engine';
 import { useApp } from '../../context/AppContext';
@@ -70,7 +70,7 @@ function SkyCard({ title, subtitle, hint, artwork, onPress, disabled, premium }:
 }
 
 export default function Home() {
-  const { colors, user, account, setPage, fetchActiveStories, addStory, setSelectedChat } = useApp();
+  const { colors, user, account, setPage, hasUnreadNotifications, fetchActiveStories, addStory, setSelectedChat } = useApp();
   const palette = { ...colors, ...cosmic, purpleSoft: '#30457a', goldSoft: '#362845' };
   const insets = useSafeAreaInsets();
   const reportUserId = profileId(user?._id ?? user?.id);
@@ -157,9 +157,16 @@ export default function Home() {
       >
         <View style={styles.header}>
           <Text style={styles.brand}>Natala</Text>
-          <Pressable accessibilityRole="button" accessibilityLabel="Open profile" onPress={() => setPage('profile')}>
-            <ProfileAvatar name={user?.name || ''} size={36} source={typeof user?.avatarUrl === 'string' ? user.avatarUrl : typeof user?.photoUrl === 'string' ? user.photoUrl : undefined} showInitials={false} />
-          </Pressable>
+          <View style={styles.headerActions}>
+            <Pressable accessibilityRole="button" accessibilityLabel={hasUnreadNotifications ? 'Notifications, new activity' : 'Notifications'}
+              onPress={() => setPage('notifications')} style={styles.profile}>
+              <Bell size={18} color={cosmic.text} />
+              {hasUnreadNotifications && <View style={styles.notificationDot} />}
+            </Pressable>
+            <Pressable accessibilityRole="button" accessibilityLabel="Open profile" onPress={() => setPage('profile')}>
+              <ProfileAvatar name={user?.name || ''} size={36} source={typeof user?.avatarUrl === 'string' ? user.avatarUrl : typeof user?.photoUrl === 'string' ? user.photoUrl : undefined} showInitials={false} />
+            </Pressable>
+          </View>
         </View>
 
         <View style={styles.stories}>
@@ -240,6 +247,8 @@ const styles = StyleSheet.create({
   root: { flex: 1, backgroundColor: cosmic.bg },
   content: { width: '100%', maxWidth: 480, alignSelf: 'center', paddingHorizontal: 19, gap: 22 },
   header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
+  headerActions: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  notificationDot: { position: 'absolute', top: 4, right: 5, width: 7, height: 7, borderRadius: 4, backgroundColor: '#e65b63' },
   brand: { color: cosmic.text, fontFamily: 'DancingScript_700Bold', fontSize: 40, lineHeight: 49 },
   profile: { width: 36, height: 36, borderRadius: 18, backgroundColor: '#263f77', borderColor: cosmic.line, borderWidth: 1, alignItems: 'center', justifyContent: 'center' },
   stories: { gap: 16 },

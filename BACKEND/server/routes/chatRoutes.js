@@ -3,6 +3,22 @@ const router = express.Router();
 router.use(require('./account').requireAccount);
 const Chat = require('../models/Chat');
 const User = require('../models/User');
+const DatingPair = require('../models/DatingPair');
+
+function isBlocked(viewer, partner) {
+  return Boolean(partner && (
+    viewer.blockedUsers?.some((id) => String(id) === partner.id) ||
+    partner.blockedUsers?.some((id) => String(id) === viewer.id)
+  ));
+}
+
+async function canReadChat(chat, viewer, partner) {
+  if (!chat || !chat.participants.includes(viewer.email)) return false;
+  const other = partner || await User.findOne({ email: chat.participants.find((email) => email !== viewer.email) || viewer.email });
+  if (isBlocked(viewer, other)) return false;
+  if (!chat.datingPair) return true;
+  return Boolean(await DatingPair.exists({ _id: chat.datingPair, closed: { $ne: true }, firstAction: 'like', secondAction: 'like' }));
+}
 
 // 1. Извличане на всички чатове за даден потребител
 router.get('/', async (req, res) => {
@@ -14,11 +30,13 @@ router.get('/', async (req, res) => {
       chats.map(async (chat) => {
         const partnerEmail = chat.participants.find((p) => p !== userEmail) || userEmail;
         const partnerUser = await User.findOne({ email: partnerEmail });
+        if (!await canReadChat(chat, req.account, partnerUser)) return null;
         const partnerName = partnerUser?.name || partnerEmail.split('@')[0];
 
         return {
           id: chat._id.toString(),
           partnerEmail,
+          datingMatch: Boolean(chat.datingPair),
           partnerName,
           partnerId: partnerUser?._id.toString(),
           partnerAvatar: partnerUser?.avatarUrl || partnerUser?.photoUrl,
@@ -37,7 +55,7 @@ router.get('/', async (req, res) => {
       })
     );
 
-    res.json(formattedChats);
+    res.json(formattedChats.filter(Boolean));
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
@@ -58,7 +76,9 @@ router.post('/start', async (req, res) => {
       return res.status(404).json({ message: 'Потребителят с този имейл не съществува.' });
     }
 
+    if (isBlocked(req.account, partnerUser)) return res.status(404).json({ message: 'Chat unavailable.' });
     let chat = await Chat.findOne({
+      datingPair: { $exists: false },
       participants: { $all: [uEmail, pEmail] },
     });
 
@@ -108,7 +128,7 @@ router.post('/:chatId/messages', async (req, res) => {
     ).padStart(2, '0')}`;
 
     const chat = await Chat.findById(chatId);
-    if (!chat || !chat.participants.includes(req.account.email)) return res.status(404).json({ message: 'Чаталнята не е намерена' });
+    if (!await canReadChat(chat, req.account)) return res.status(404).json({ message: 'Чаталнята не е намерена' });
 
     const msgType = type || 'text';
     const msgText = text || (msgType === 'story_reply' ? '💬 Отговор на стори' : msgType === 'story_share' ? '📷 Споделено стори' : '');
@@ -150,7 +170,7 @@ router.post('/:chatId/messages', async (req, res) => {
 router.get('/:chatId/messages', async (req, res) => {
   try {
     const chat = await Chat.findById(req.params.chatId);
-    if (!chat || !chat.participants.includes(req.account.email)) return res.status(404).json({ message: 'Чаталнята не е намерена' });
+    if (!await canReadChat(chat, req.account)) return res.status(404).json({ message: 'Чаталнята не е намерена' });
 
     const formattedMessages = chat.messages.map((m) => ({
       id: m._id.toString(),

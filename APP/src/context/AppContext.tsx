@@ -1,4 +1,4 @@
-import { useTabActivity } from '../services/tabActivity';
+import { useTabActivity, type InboxNotification } from '../services/tabActivity';
 import React, { createContext, useContext, useState, useEffect, useCallback, useRef } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { UserProfile } from '../models/User';
@@ -26,6 +26,7 @@ export interface SharedStoryData {
 }
 
 export interface SelectedChatData {
+  chatId?: string;
   targetUser?: string;
   targetUserId?: string;
   sharedStory?: SharedStoryData;
@@ -35,6 +36,9 @@ export interface SelectedChatData {
 interface AppContextType {
   page: string;
   tabActivity: { chat: boolean; people: boolean };
+  notifications: InboxNotification[] | null;
+  hasUnreadNotifications: boolean;
+  notificationsUnavailable: boolean;
   setPage: (page: string, profileId?: string, returnChatId?: string) => void;
   sharedProfileId?: string;
   resumeChatId?: string;
@@ -116,7 +120,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const [user, setUserState] = useState<UserProfile | null>(null);
   const [account, setAccount] = useState<AccountState | null>(null);
   const [restoring, setRestoring] = useState(true);
-  const tabActivity = useTabActivity(user?.email, page);
+  const { tabActivity, notifications, notificationsUnavailable, hasUnreadNotifications } = useTabActivity(user?.email, page);
   const [stories, setStories] = useState<AppStory[]>([]);
   const [hideBottomNav, setHideBottomNav] = useState(false);
   const [selectedChat, setSelectedChat] = useState<SelectedChatData | null>(null);
@@ -352,6 +356,9 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         handleLocalBack,
         registerBack,
         tabActivity,
+        notifications,
+        notificationsUnavailable,
+        hasUnreadNotifications,
         theme,
         toggleTheme,
         colors,

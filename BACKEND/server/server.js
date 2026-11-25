@@ -98,7 +98,7 @@ app.post('/api/users/profile', requireAccount, async (req, res) => {
 
     // Премахваме системните/непроменяеми полета на MongoDB преди $set
     const protectedFields = new Set(['_id', 'id', '__v', 'email', 'createdAt', 'updatedAt', 'subscription',
-      'passwordHash', 'verifiedEmail', 'owner', 'termsAcceptedAt', 'termsVersion', 'googleSubject', 'appleSubject', 'ownerTestAccount', 'previewTier', 'appleRefreshToken']);
+      'passwordHash', 'verifiedEmail', 'owner', 'termsAcceptedAt', 'termsVersion', 'googleSubject', 'appleSubject', 'ownerTestAccount', 'previewTier', 'appleRefreshToken', 'dating', 'blockedUsers', 'reportedUsers']);
     const safeUpdateFields = Object.fromEntries(Object.entries(userData)
       .filter(([key]) => !key.startsWith('$') && !key.includes('.') && !protectedFields.has(key)));
     // Full profile saves can echo the current avatar path. Only a fresh upload or deletion can replace it.

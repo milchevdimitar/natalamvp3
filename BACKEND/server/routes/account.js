@@ -9,6 +9,7 @@ const path = require('node:path');
 const User = require('../models/User');
 const Story = require('../models/Story');
 const Chat = require('../models/Chat');
+const DatingPair = require('../models/DatingPair');
 const { ProfileSnapshotCache, PairMatchCache } = require('../models/MatchCache');
 
 const router = express.Router();
@@ -357,21 +358,66 @@ route('post', '/owner-test', limitSignIn, async (req, res) => {
 });
 
 route('get', '/tab-activity', requireAccount, async (req, res) => {
-  const { email, friends, receivedRequests } = req.account;
-  const conversations = await Chat.aggregate([
-    { $match: { participants: email } },
-    { $project: { incoming: { $arrayElemAt: [{ $filter: {
-      input: '$messages', as: 'message', cond: { $ne: ['$$message.senderEmail', email] },
-    } }, -1] } } },
+  const { email, friends, receivedRequests, blockedUsers } = req.account;
+  const socialIds = [...(receivedRequests || []), ...(friends || [])];
+  const [conversations, pairs] = await Promise.all([
+    Chat.aggregate([
+      { $match: { participants: email } },
+      { $project: { participants: 1, datingPair: 1, incoming: { $slice: [{ $filter: {
+        input: '$messages', as: 'message', cond: { $ne: ['$$message.senderEmail', email] },
+      } }, -12] } } },
+    ]),
+    DatingPair.find({ members: req.account.id, closed: { $ne: true }, firstAction: 'like', secondAction: 'like' })
+      .select('members updatedAt').lean(),
   ]);
-  res.json({
-    chat: conversations.flatMap(({ incoming }) => incoming?._id ? [String(incoming._id)] : []),
-    people: [
-      ...(receivedRequests || []).map((id) => 'request:' + id),
-      ...(friends || []).map((id) => 'friend:' + id),
-    ],
-  });
+  const matchIds = pairs.map((pair) => pair.members.find((id) => id !== req.account.id));
+  const partnerEmails = conversations.flatMap(({ participants }) => participants.filter((value) => value !== email));
+  const people = await User.find({
+    $or: [{ _id: { $in: [...socialIds, ...matchIds] } }, { email: { $in: partnerEmails } }],
+    isActive: { $ne: false }, blockedUsers: { $ne: req.account._id },
+    _id: { $nin: blockedUsers || [] },
+  }).select('name email').lean();
+  const byEmail = new Map(people.map((person) => [person.email, person]));
+  const byId = new Map(people.map((person) => [String(person._id), person]));
+  const activePairs = new Set(pairs.map(({ _id }) => String(_id)));
+  const chat = [];
+  const notifications = [];
+  for (const conversation of conversations) {
+    const partnerEmail = conversation.participants.find((value) => value !== email);
+    const partner = partnerEmail ? byEmail.get(partnerEmail) : req.account;
+    if (!partner || (conversation.datingPair && !activePairs.has(conversation.datingPair))) continue;
+    const latest = conversation.incoming.at(-1);
+    if (latest?._id) chat.push(String(latest._id));
+    for (const message of conversation.incoming) {
+      if (!message._id) continue;
+      notifications.push({
+        id: String(message._id), kind: 'chat', title: partner.name || 'New message',
+        body: typeof message.text === 'string' && message.text ? message.text.slice(0, 140) : 'Sent you a message.',
+        chatId: String(conversation._id), date: message._id.getTimestamp(),
+      });
+    }
+  }
+  const social = [];
+  for (const [kind, ids] of [['request', receivedRequests], ['friend', friends]]) {
+    for (const value of ids || []) {
+      const person = byId.get(String(value));
+      if (!person) continue;
+      const id = kind + ':' + value;
+      social.push(id);
+      notifications.push({
+        id, kind, title: kind === 'request' ? 'Connection request' : 'New connection',
+        body: kind === 'request' ? person.name + ' wants to connect.' : 'You’re connected with ' + person.name + '.',
+      });
+    }
+  }
+  for (const pair of pairs) {
+    const person = byId.get(pair.members.find((id) => id !== req.account.id));
+    if (person) notifications.push({ id: 'match:' + pair._id, kind: 'match', title: 'It’s a match', body: 'You and ' + person.name + ' liked each other.', date: pair.updatedAt });
+  }
+  const dated = notifications.filter(({ date }) => date).sort((a, b) => b.date - a.date);
+  res.json({ chat, people: social, notifications: [...notifications.filter(({ kind }) => kind === 'request'), ...dated, ...notifications.filter(({ kind }) => kind === 'friend')].slice(0, 80) });
 });
+
 
 route('get', '/me', requireAccount, async (req, res) => res.json({ user: await freshProfile(req.account.id), ...await accountDetails(req.account) }));
 route('post', '/logout', requireAccount, async (req, res) => {
@@ -427,6 +473,7 @@ route('delete', '/me', requireAccount, async (req, res) => {
     Story.deleteMany({ userId: { $in: ids } }),
     Story.updateMany({ likes: { $in: ids } }, { $pull: { likes: { $in: ids } } }),
     Chat.deleteMany({ participants: user.email }),
+    DatingPair.deleteMany({ members: user.id }),
     User.updateMany({}, { $pull: Object.fromEntries(
       ['friends', 'sentRequests', 'receivedRequests', 'skippedUsers', 'blockedUsers', 'reportedUsers'].map((field) => [field, user._id])
     ) }),
