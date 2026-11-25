@@ -40,7 +40,7 @@ function StarLayer({ layer, depth, offset, horizontal, travel, still, light, sub
 }) {
   const motion = useTiltParallax();
   const strength = still ? 0 : (motion?.level ?? 0) * 0.25;
-  const tiltDepth = motion?.locked ? 13 : depth;
+  const tiltDepth = 13;
   const motionX = motion?.x;
   const motionY = motion?.y;
   const transform = useMemo(() => {

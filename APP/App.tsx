@@ -1,3 +1,4 @@
+import { BackgroundToneProvider } from './src/components/BackgroundTone';
 import { TiltParallaxProvider } from './src/components/TiltParallax';
 import { StarField } from './src/components/StarField';
 import { useEdgeBack } from './src/components/NavigationBack';
@@ -231,9 +232,9 @@ export default function App() {
   return (
     <SafeAreaProvider>
       <AppProvider>
-        <TiltParallaxProvider>
-          <Shell />
-        </TiltParallaxProvider>
+        <BackgroundToneProvider>
+          <TiltParallaxProvider><Shell /></TiltParallaxProvider>
+        </BackgroundToneProvider>
       </AppProvider>
     </SafeAreaProvider>
   );

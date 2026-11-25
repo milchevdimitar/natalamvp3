@@ -5,7 +5,6 @@ import { Accelerometer } from 'expo-sensors';
 import { useReducedMotion } from './useReducedMotion';
 
 export const maxParallaxLevel = 8;
-const lockKey = 'natala.appearance.lock-tilt-layers';
 const preferenceKey = 'natala.appearance.star-parallax';
 
 type Parallax = {
@@ -14,8 +13,6 @@ type Parallax = {
   level: number;
   setLevel: (level: number) => void;
   reduced: boolean;
-  locked: boolean;
-  setLocked: (locked: boolean) => void;
 };
 const ParallaxContext = createContext<Parallax | null>(null);
 export const useTiltParallax = () => useContext(ParallaxContext);
@@ -23,16 +20,14 @@ export const useTiltParallax = () => useContext(ParallaxContext);
 export function TiltParallaxProvider({ children }: React.PropsWithChildren) {
   const x = useRef(new Animated.Value(0)).current;
   const y = useRef(new Animated.Value(0)).current;
-  const [level, updateLevel] = useState(2);
-  const [locked, setLocked] = useState(true);
+  const [level, updateLevel] = useState(3);
   const [loaded, setLoaded] = useState(false);
   const [active, setActive] = useState(() => AppState.currentState !== 'background' && AppState.currentState !== 'inactive');
   const reduced = useReducedMotion();
 
   useEffect(() => {
     let mounted = true;
-    void Promise.all([AsyncStorage.getItem(preferenceKey), AsyncStorage.getItem(lockKey)]).then(([value, savedLock]) => {
-      if (mounted && savedLock !== null) setLocked(savedLock === 'true');
+    void AsyncStorage.getItem(preferenceKey).then((value) => {
       const saved = value === null ? NaN : Number(value);
       if (mounted && Number.isInteger(saved) && saved >= 0) updateLevel(Math.min(saved, maxParallaxLevel));
     }).catch(() => {}).finally(() => { if (mounted) setLoaded(true); });
@@ -41,8 +36,8 @@ export function TiltParallaxProvider({ children }: React.PropsWithChildren) {
   }, []);
 
   useEffect(() => {
-    if (loaded) void AsyncStorage.multiSet([[preferenceKey, String(level)], [lockKey, String(locked)]]).catch(() => {});
-  }, [loaded, level, locked]);
+    if (loaded) void AsyncStorage.setItem(preferenceKey, String(level)).catch(() => {});
+  }, [loaded, level]);
 
   const enabled = loaded && level > 0 && active && !reduced && Platform.OS !== 'web';
   useEffect(() => {
@@ -74,6 +69,6 @@ export function TiltParallaxProvider({ children }: React.PropsWithChildren) {
     };
   }, [enabled, x, y]);
 
-  const value = useMemo(() => ({ x, y, level, setLevel: updateLevel, reduced, locked, setLocked }), [x, y, level, reduced, locked]);
+  const value = useMemo(() => ({ x, y, level, setLevel: updateLevel, reduced }), [x, y, level, reduced]);
   return <ParallaxContext.Provider value={value}>{children}</ParallaxContext.Provider>;
 }
