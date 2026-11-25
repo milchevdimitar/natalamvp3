@@ -21,7 +21,8 @@ export interface PersonProfile {
   cosmicId?: string;
   name: string;
   email: string;
-  birthdate: string;
+  birthdate?: string;
+  derived?: { age?: number | null };
   birthCity: {
     name: string;
     country?: string;

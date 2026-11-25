@@ -9,6 +9,10 @@ const path = require('node:path');
 const User = require('../models/User');
 const Story = require('../models/Story');
 const Chat = require('../models/Chat');
+const CircleMemory = require('../models/CircleMemory');
+const AtlasProgress = require('../models/AtlasProgress');
+const MirrorSession = require('../models/MirrorSession');
+const DailyEntry = require('../models/DailyEntry');
 const DatingPair = require('../models/DatingPair');
 const { ProfileSnapshotCache, PairMatchCache } = require('../models/MatchCache');
 
@@ -360,7 +364,7 @@ route('post', '/owner-test', limitSignIn, async (req, res) => {
 route('get', '/tab-activity', requireAccount, async (req, res) => {
   const { email, friends, receivedRequests, blockedUsers } = req.account;
   const socialIds = [...(receivedRequests || []), ...(friends || [])];
-  const [conversations, pairs] = await Promise.all([
+  const [conversations, pairs, mirrors, memories] = await Promise.all([
     Chat.aggregate([
       { $match: { participants: email } },
       { $project: { participants: 1, datingPair: 1, incoming: { $slice: [{ $filter: {
@@ -369,6 +373,14 @@ route('get', '/tab-activity', requireAccount, async (req, res) => {
     ]),
     DatingPair.find({ members: req.account.id, closed: { $ne: true }, firstAction: 'like', secondAction: 'like' })
       .select('members updatedAt').lean(),
+    MirrorSession.find({ $or: [
+      { recipient: req.account._id, status: 'pending' },
+      { initiator: req.account._id, status: 'revealed' },
+    ] }).select('initiator recipient status createdAt revealedAt').sort({ updatedAt: -1 }).limit(40).lean(),
+    CircleMemory.find({ $or: [
+      { recipient: req.account._id, status: 'pending' },
+      { proposer: req.account._id, status: 'saved' },
+    ] }).select('proposer recipient status updatedAt createdAt').sort({ createdAt: -1 }).limit(30).lean(),
   ]);
   const matchIds = pairs.map((pair) => pair.members.find((id) => id !== req.account.id));
   const partnerEmails = conversations.flatMap(({ participants }) => participants.filter((value) => value !== email));
@@ -376,7 +388,7 @@ route('get', '/tab-activity', requireAccount, async (req, res) => {
     $or: [{ _id: { $in: [...socialIds, ...matchIds] } }, { email: { $in: partnerEmails } }],
     isActive: { $ne: false }, blockedUsers: { $ne: req.account._id },
     _id: { $nin: blockedUsers || [] },
-  }).select('name email').lean();
+  }).select('name email friends').lean();
   const byEmail = new Map(people.map((person) => [person.email, person]));
   const byId = new Map(people.map((person) => [String(person._id), person]));
   const activePairs = new Set(pairs.map(({ _id }) => String(_id)));
@@ -413,6 +425,33 @@ route('get', '/tab-activity', requireAccount, async (req, res) => {
   for (const pair of pairs) {
     const person = byId.get(pair.members.find((id) => id !== req.account.id));
     if (person) notifications.push({ id: 'match:' + pair._id, kind: 'match', title: 'It’s a match', body: 'You and ' + person.name + ' liked each other.', date: pair.updatedAt });
+  }
+  const currentFriends = new Set((friends || []).map(String));
+  for (const session of mirrors) {
+    const pending = session.status === 'pending';
+    const other = String(pending ? session.initiator : session.recipient);
+    const person = byId.get(other);
+    if (!person || !currentFriends.has(other) || !person.friends?.some((id) => String(id) === req.account.id)) continue;
+    const kind = pending ? 'mirror_invited' : 'mirror_revealed';
+    notifications.push({
+      id: kind + ':' + session._id, kind, mirrorId: String(session._id),
+      title: pending ? 'Mirror invitation' : 'Your Mirror is ready',
+      body: pending ? person.name + ' invited you to guess their answer.' : person.name + ' answered your Mirror question.',
+      date: pending ? session.createdAt : session.revealedAt,
+    });
+  }
+  for (const memory of memories) {
+    const pending = memory.status === 'pending';
+    const other = String(pending ? memory.proposer : memory.recipient);
+    const person = byId.get(other);
+    if (!person || !currentFriends.has(other) || !person.friends?.some((id) => String(id) === req.account.id)) continue;
+    const kind = pending ? 'memory_proposed' : 'memory_saved';
+    notifications.push({
+      id: kind + ':' + memory._id, kind, friendId: other,
+      title: pending ? 'A memory to keep' : 'A new shared star',
+      body: pending ? person.name + ' proposed a memory.' : person.name + ' saved your memory.',
+      date: pending ? memory.createdAt : memory.updatedAt,
+    });
   }
   const dated = notifications.filter(({ date }) => date).sort((a, b) => b.date - a.date);
   res.json({ chat, people: social, notifications: [...notifications.filter(({ kind }) => kind === 'request'), ...dated, ...notifications.filter(({ kind }) => kind === 'friend')].slice(0, 80) });
@@ -473,6 +512,10 @@ route('delete', '/me', requireAccount, async (req, res) => {
     Story.deleteMany({ userId: { $in: ids } }),
     Story.updateMany({ likes: { $in: ids } }, { $pull: { likes: { $in: ids } } }),
     Chat.deleteMany({ participants: user.email }),
+    CircleMemory.deleteMany({ $or: [{ proposer: user._id }, { recipient: user._id }] }),
+    AtlasProgress.deleteMany({ owner: user._id }),
+    MirrorSession.deleteMany({ $or: [{ initiator: user._id }, { recipient: user._id }] }),
+    DailyEntry.deleteMany({ owner: user._id }),
     DatingPair.deleteMany({ members: user.id }),
     User.updateMany({}, { $pull: Object.fromEntries(
       ['friends', 'sentRequests', 'receivedRequests', 'skippedUsers', 'blockedUsers', 'reportedUsers'].map((field) => [field, user._id])

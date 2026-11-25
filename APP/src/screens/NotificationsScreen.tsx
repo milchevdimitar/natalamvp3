@@ -1,7 +1,7 @@
 import React from 'react';
 import { ScrollView, StyleSheet, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { Bell, ChevronRight, Heart, MessageCircle, UserRoundPlus } from 'lucide-react-native';
+import { Bell, ChevronRight, Heart, MessageCircle, Sparkles, UserRoundPlus } from 'lucide-react-native';
 import { BackButton, backHeaderSpacing } from '../components/BackButton';
 import { Card, Section, T } from '../components/UI';
 import { useApp } from '../context/AppContext';
@@ -23,9 +23,11 @@ export default function NotificationsScreen() {
         </Card>
         : <>
           <Section>Activity</Section>
-          {notifications.map(({ id, kind, title, body, date, chatId }) => {
-            const Icon = kind === 'chat' ? MessageCircle : kind === 'match' ? Heart : UserRoundPlus;
+          {notifications.map(({ id, kind, title, body, date, chatId, mirrorId, friendId }) => {
+            const Icon = mirrorId || friendId ? Sparkles : kind === 'chat' ? MessageCircle : kind === 'match' ? Heart : UserRoundPlus;
             return <Card key={id} style={styles.row} onPress={() => {
+              if (friendId) { setPage('constellation', friendId); return; }
+              if (mirrorId) { setPage('mirror-session', mirrorId); return; }
               if (kind === 'chat' && chatId) setSelectedChat({ chatId });
               setPage(kind === 'chat' ? 'chat' : kind === 'match' ? 'dating' : 'people');
             }}>

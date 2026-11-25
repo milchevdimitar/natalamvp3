@@ -39,6 +39,8 @@ interface AppContextType {
   notifications: InboxNotification[] | null;
   hasUnreadNotifications: boolean;
   notificationsUnavailable: boolean;
+  datingTabVisible: boolean;
+  setDatingTabVisible: (value: boolean) => void;
   setPage: (page: string, profileId?: string, returnChatId?: string) => void;
   sharedProfileId?: string;
   resumeChatId?: string;
@@ -120,6 +122,22 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const [user, setUserState] = useState<UserProfile | null>(null);
   const [account, setAccount] = useState<AccountState | null>(null);
   const [restoring, setRestoring] = useState(true);
+  const datingTabKey = user?.email ? 'natala:dating-tab:' + API_BASE_URL + ':' + user.email.toLowerCase() : '';
+  const [datingTab, setDatingTab] = useState<{ key: string; visible: boolean }>();
+  const datingTabVisible = !datingTab || datingTab.key !== datingTabKey || datingTab.visible;
+  useEffect(() => {
+    if (!datingTabKey) return;
+    let active = true;
+    void AsyncStorage.getItem(datingTabKey).then((saved) => {
+      if (active) setDatingTab((previous) => previous?.key === datingTabKey ? previous : { key: datingTabKey, visible: saved !== 'false' });
+    }).catch(() => {});
+    return () => { active = false; };
+  }, [datingTabKey]);
+  const setDatingTabVisible = (visible: boolean) => {
+    if (!datingTabKey) return;
+    setDatingTab({ key: datingTabKey, visible });
+    void AsyncStorage.setItem(datingTabKey, String(visible)).catch(() => {});
+  };
   const { tabActivity, notifications, notificationsUnavailable, hasUnreadNotifications } = useTabActivity(user?.email, page);
   const [stories, setStories] = useState<AppStory[]>([]);
   const [hideBottomNav, setHideBottomNav] = useState(false);
@@ -199,37 +217,15 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   };
 
   const addStory = async (imageBase64: string) => {
-    try {
-      if (!imageBase64) {
-        console.error('Грешка: Липсват base64 данни за снимката.');
-        return;
-      }
-
-      const userIdVal = String(user?.email || user?.name || 'guest_id').toLowerCase().trim();
-      const authorNameVal = String(user?.name || user?.email || 'Stargazer');
-
-      const response = await authorizedFetch(`${API_BASE_URL}/stories/upload-base64`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          imageBase64,
-          userId: userIdVal,
-          authorName: authorNameVal,
-        }),
-      });
-
-      if (response.ok) {
-        const savedStory: AppStory = await response.json();
-        setStories((prev) => [savedStory, ...prev]);
-      } else {
-        const errText = await response.text();
-        console.error('Грешка от сървъра при качване на стори:', response.status, errText);
-      }
-    } catch (error) {
-      console.error('Грешка при запис в MongoDB:', error);
-    }
+    if (!imageBase64) throw new Error('The story image is empty.');
+    const response = await authorizedFetch(API_BASE_URL + '/stories/upload-base64', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ imageBase64 }),
+    });
+    if (!response.ok) throw new Error('The story could not be published.');
+    const savedStory: AppStory = await response.json();
+    setStories((previous) => [savedStory, ...previous]);
   };
 
   const deleteStory = async (id: string) => {
@@ -358,6 +354,8 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         tabActivity,
         notifications,
         notificationsUnavailable,
+        datingTabVisible,
+        setDatingTabVisible,
         hasUnreadNotifications,
         theme,
         toggleTheme,

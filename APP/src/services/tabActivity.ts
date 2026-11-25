@@ -8,11 +8,13 @@ const tabs = ['chat', 'people'] as const;
 type Tab = typeof tabs[number];
 export type InboxNotification = {
   id: string;
-  kind: 'chat' | 'request' | 'friend' | 'match';
+  kind: 'chat' | 'request' | 'friend' | 'match' | 'mirror_invited' | 'mirror_revealed' | 'memory_proposed' | 'memory_saved';
   title: string;
   body: string;
   date?: string;
   chatId?: string;
+  mirrorId?: string;
+  friendId?: string;
 };
 type Activity = Record<Tab, string[]> & { notifications?: InboxNotification[] };
 

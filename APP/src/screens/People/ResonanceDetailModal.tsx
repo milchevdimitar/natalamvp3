@@ -73,7 +73,7 @@ export function ResonanceDetailModal({
   if (!person) return null;
 
   const comp = calculateCompatibility(user, person);
-  const age = getAgeFromBirthdate(person.birthdate);
+  const age = person.derived?.age ?? getAgeFromBirthdate(person.birthdate);
   const mbtiType = resolveMbtiType(person);
   const sunSign = resolveSunSign(person);
   const moonSign = person.natalChart?.moonSign;

@@ -1,7 +1,7 @@
 import { ProfileReading } from './ProfileReading';
 import React, { useState } from 'react';
 import { Animated, Platform, Pressable, StyleSheet, View } from 'react-native';
-import { Brain, ChevronRight, Compass, Hash, Layers, Leaf, Orbit, QrCode, Settings, Share2, Sparkles, Sun } from 'lucide-react-native';
+import { BookOpen, Brain, ChevronRight, PanelsTopLeft, Compass, Hash, Layers, Leaf, Orbit, QrCode, Settings, Share2, Sparkles, Sun } from 'lucide-react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Card, Section, T } from '../components/UI';
@@ -94,6 +94,17 @@ export default function Profile({ scrollOffset, onOpenProfile }: { scrollOffset:
         </View>
         {!!shareNotice && !qrOpen && <T muted size={12}>{shareNotice}</T>}
       </View>
+
+      <Card style={styles.profileLink} onPress={() => setPage('profile-showcase')}>
+        <PanelsTopLeft size={18} color={colors.purple} />
+        <View style={{ flex: 1 }}><T bold>Profile showcase</T><T muted size={12}>Choose what others see</T></View>
+        <ChevronRight size={16} color={colors.muted} />
+      </Card>
+      <Card style={styles.profileLink} onPress={() => setPage('reflections')}>
+        <BookOpen size={18} color={colors.purple} />
+        <View style={{ flex: 1 }}><T bold>My reflections</T><T muted size={12}>Your private journal</T></View>
+        <ChevronRight size={16} color={colors.muted} />
+      </Card>
 
       <View style={styles.metricsGroup} onLayout={visibility.section('metrics')}>
         <View style={styles.metrics}>
@@ -214,6 +225,7 @@ const styles = StyleSheet.create({
   pending: { paddingHorizontal: 15, paddingVertical: 4 },
   copy: { flex: 1, minWidth: 0, gap: 2 },
   next: { minHeight: 57, flexDirection: 'row', alignItems: 'center', gap: 10, paddingVertical: 8 },
+  profileLink: { flexDirection: 'row', alignItems: 'center', gap: 10 },
   report: { position: 'relative', flexDirection: 'row', alignItems: 'center', minHeight: 96, paddingHorizontal: 13, paddingVertical: 24, gap: 10, borderRadius: 20, overflow: 'hidden', borderWidth: 1, borderColor: '#ffe3a5' },
   reportInk: { color: '#442914' },
   reportIcon: { width: 42, height: 42, borderRadius: 21, alignItems: 'center', justifyContent: 'center', backgroundColor: 'rgba(98,53,19,0.14)' },

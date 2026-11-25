@@ -31,7 +31,7 @@ export interface PersonProfile {
   cosmicId?: string;
   name: string;
   email: string;
-  birthdate: string;
+  birthdate?: string;
   birthTime?: string | null;
   hasExactBirthTime?: boolean;
   birthCity: {

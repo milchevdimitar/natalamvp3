@@ -2,25 +2,25 @@ import React, { useLayoutEffect, useRef, useState } from 'react';
 import { Animated, Easing, Platform, Pressable, StyleSheet, Text, View } from 'react-native';
 import { BlurView, type BlurViewProps } from 'expo-blur';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { House, Compass, UsersRound, Heart, Film } from 'lucide-react-native';
+import { House, Compass, UsersRound, Heart } from 'lucide-react-native';
 import { useApp } from '../context/AppContext';
 import { useReducedMotion } from '../screens/Home/CosmicBackground';
 
-const items = [
-  ['home', 'Home', House],
-  ['explore', 'Explore', Compass],
-  ['people', 'People', UsersRound],
+const allItems = [
+  ['home', 'Today', House],
+  ['explore', 'Atlas', Compass],
+  ['people', 'Circle', UsersRound],
   ['dating', 'Dating', Heart],
-  ['feed', 'Feed', Film],
 ] as const;
 
 export default function BottomNav({ blurTarget }: Pick<BlurViewProps, 'blurTarget'>) {
-  const { page, setPage, tabActivity } = useApp();
+  const { page, setPage, tabActivity, datingTabVisible } = useApp();
   const insets = useSafeAreaInsets();
   const reduced = useReducedMotion();
   const [rowWidth, setRowWidth] = useState(0);
+  const items = datingTabVisible ? allItems : allItems.filter(([id]) => id !== 'dating');
   const slot = rowWidth / items.length;
-  const currentTab = page === 'chat' || page === 'shared-profile' ? 'people' : page;
+  const currentTab = page === 'feed' || page === 'atlas-step' ? 'explore' : page === 'chat' || page === 'shared-profile' || page === 'constellation' || (page === 'dating' && !datingTabVisible) || page === 'mirror' || page === 'mirror-session' || page === 'mirror-invite' ? 'people' : page;
   const index = items.findIndex(([id]) => id === currentTab);
   const offset = useRef(new Animated.Value(0)).current;
   const lastSlot = useRef(0);

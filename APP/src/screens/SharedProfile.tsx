@@ -1,3 +1,4 @@
+import { ShowcaseCards } from './ProfileShowcase';
 import { StarField } from '../components/StarField';
 import { BackButton } from '../components/BackButton';
 import React, { useCallback, useEffect, useState } from 'react';
@@ -6,7 +7,7 @@ import { MessageCircle, UserPlus, X } from 'lucide-react-native';
 import { Card, Pill, Section, T } from '../components/UI';
 import { ProfileAvatar } from '../components/ProfileAvatar';
 import { useApp } from '../context/AppContext';
-import { fetchSharedProfile, likeOrRequestPerson, type SharedProfile as SharedProfileData } from '../services/peopleService';
+import { cancelConnectionRequest, fetchSharedProfile, likeOrRequestPerson, removeFriendPerson, type SharedProfile as SharedProfileData } from '../services/peopleService';
 
 export default function SharedProfile({ id }: { id: string }) {
   const { colors, user, setPage, goBack, setSelectedChat } = useApp();
@@ -14,20 +15,24 @@ export default function SharedProfile({ id }: { id: string }) {
   const [loading, setLoading] = useState(true);
   const [sending, setSending] = useState(false);
   const [notice, setNotice] = useState('');
+  const [confirmRemove, setConfirmRemove] = useState(false);
   const [story, setStory] = useState<SharedProfileData['stories'][number] | null>(null);
 
   const load = useCallback(async (attempt: { cancelled: boolean }) => {
     setLoading(true);
     setNotice('');
     try {
-      const result = await fetchSharedProfile(user, id);
+      const result = await fetchSharedProfile(id);
       if (!attempt.cancelled) setProfile(result);
     } catch (error) {
-      if (!attempt.cancelled) setNotice(error instanceof Error ? error.message : 'Could not load this profile.');
+      if (!attempt.cancelled) {
+        setProfile(null);
+        setNotice(error instanceof Error ? error.message : 'Could not load this profile.');
+      }
     } finally {
       if (!attempt.cancelled) setLoading(false);
     }
-  }, [id, user]);
+  }, [id]);
 
   useEffect(() => {
     const attempt = { cancelled: false };
@@ -50,6 +55,22 @@ export default function SharedProfile({ id }: { id: string }) {
     }
   };
 
+  const changeConnection = async (remove: boolean) => {
+    if (!profile || sending) return;
+    setSending(true);
+    setNotice('');
+    try {
+      if (remove) await removeFriendPerson(user, profile.id);
+      else await cancelConnectionRequest(user, profile.id);
+      setConfirmRemove(false);
+      await load({ cancelled: false });
+    } catch (failure) {
+      setNotice(failure instanceof Error ? failure.message : 'Could not update this connection.');
+    } finally {
+      setSending(false);
+    }
+  };
+
   return (
     <>
       <BackButton onPress={() => goBack('people')} />
@@ -62,13 +83,20 @@ export default function SharedProfile({ id }: { id: string }) {
           {!!profile.bio && <T muted size={13} style={{ textAlign: 'center' }}>{profile.bio}</T>}
           {!!profile.interests?.length && <T muted size={12} style={{ textAlign: 'center' }}>{profile.interests.join(' · ')}</T>}
           {profile.relationship === 'available' && <Pill selected disabled={sending} onPress={add}><UserPlus size={14} color={colors.purple} /> {sending ? 'Sending…' : 'Add connection'}</Pill>}
-          {profile.relationship === 'pending' && <T muted size={12}>Connection request sent</T>}
+          {profile.relationship === 'pending' && <Pill disabled={sending} onPress={() => void changeConnection(false)}>Cancel request</Pill>}
           {profile.relationship === 'friend' && profile.chatEmail && <Pill selected onPress={() => {
             setSelectedChat({ targetUser: profile.chatEmail });
             setPage('chat');
           }}><MessageCircle size={15} color={colors.purple} />  Chat</Pill>}
+          {profile.relationship === 'friend' && <Pill onPress={() => setPage('constellation', profile.id)}>Shared constellation</Pill>}
+          {profile.relationship === 'friend' && <Pill onPress={() => setPage('mirror', profile.id)}>Invite to Mirror</Pill>}
+          {profile.relationship === 'friend' && <Pill disabled={sending}
+            onPress={() => confirmRemove ? void changeConnection(true) : setConfirmRemove(true)}>
+            {confirmRemove ? 'Confirm remove friend' : 'Remove friend'}
+          </Pill>}
           {profile.relationship === 'self' && <Pill onPress={() => setPage('profile')}>My profile</Pill>}
         </Card>
+        {!!profile.showcase?.length && <View style={{ marginTop: 12 }}><ShowcaseCards cards={profile.showcase} /></View>}
         <Section>Stories</Section>
         {profile.stories.length ? <View style={styles.stories}>
           {profile.stories.map((entry, index) => (

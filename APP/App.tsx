@@ -2,7 +2,7 @@ import { BackgroundToneProvider } from './src/components/BackgroundTone';
 import { TiltParallaxProvider } from './src/components/TiltParallax';
 import { StarField } from './src/components/StarField';
 import { useEdgeBack } from './src/components/NavigationBack';
-import { backHeaderSpacing } from './src/components/BackButton';
+import { BackButton, backHeaderSpacing } from './src/components/BackButton';
 import { isExploreRoute } from './src/data/exploreRoutes';
 import { hasFeature, isPlanFeature } from './src/services/account';
 import { ProfileSettings } from './src/screens/ProfileSettings';
@@ -25,6 +25,12 @@ import {
   DancingScript_700Bold,
 } from '@expo-google-fonts/dancing-script';
 import { AppProvider, useApp } from './src/context/AppContext';
+import ProfileShowcase from './src/screens/ProfileShowcase';
+import ReflectionJournal from './src/screens/ReflectionJournal';
+import { atlasChapters } from '../SHARED/atlasSteps';
+import CircleConstellation from './src/screens/CircleConstellation';
+import AtlasStation from './src/screens/AtlasPath';
+import MirrorScreen from './src/screens/MirrorScreen';
 import NotificationsScreen from './src/screens/NotificationsScreen';
 import DatingScreen from './src/screens/DatingScreen';
 import BottomNav from './src/components/BottomNav';
@@ -38,6 +44,7 @@ import People from './src/screens/People';
 import Feed from './src/screens/Feed';
 import Profile from './src/screens/Profile';
 import SharedProfile from './src/screens/SharedProfile';
+import { mirrorFromLink } from './src/services/mirrorLinks';
 import { profileFromLink } from './src/services/profileLinks';
 import Astrology from './src/screens/Astrology';
 import MBTI from './src/screens/MBTI';
@@ -54,6 +61,7 @@ import { registerForPushNotificationsAsync } from './src/services/notifications'
 function Shell() {
   const insets = useSafeAreaInsets();
   const { page, setPage, goBack, handleBack, sharedProfileId, resumeChatId, colors, theme, user, hideBottomNav, account, restoring } = useApp();
+  const [pendingMirror, setPendingMirror] = useState<string | null>(null);
   const [pendingProfile, setPendingProfile] = useState<string | null>(null);
   const edgeBack = useEdgeBack(handleBack, !restoring);
   const backend = useBackendConnection();
@@ -70,19 +78,29 @@ function Shell() {
     let mounted = true;
     const handle = (url: string | null | undefined) => {
       if (!url || !mounted) return;
-      const id = profileFromLink(url, Platform.OS === 'web' ? window.location.origin : undefined);
+      const origin = Platform.OS === 'web' ? window.location.origin : undefined;
+      const mirror = mirrorFromLink(url, origin);
+      if (mirror) { setPendingMirror(mirror); return; }
+      const id = profileFromLink(url, origin);
       if (id) openSharedProfile(id);
     };
-    void Linking.getInitialURL().then(handle).catch(() => undefined);
+    if (Platform.OS === 'web') handle(window.location.href);
+    else void Linking.getInitialURL().then(handle).catch(() => undefined);
     const subscription = Linking.addEventListener('url', ({ url }) => handle(url));
     return () => { mounted = false; subscription.remove(); };
   }, [openSharedProfile]);
 
   useEffect(() => {
-    if (!user || !pendingProfile) return;
+    if (!user || !pendingMirror) return;
+    setPage('mirror-invite', pendingMirror);
+    setPendingMirror(null);
+  }, [pendingMirror, setPage, user]);
+
+  useEffect(() => {
+    if (!user || !pendingProfile || pendingMirror) return;
     setPage('shared-profile', pendingProfile);
     setPendingProfile(null);
-  }, [pendingProfile, setPage, user]);
+  }, [pendingProfile, pendingMirror, setPage, user]);
 
   useEffect(() => {
     if (Platform.OS !== 'android') return;
@@ -114,10 +132,12 @@ function Shell() {
     return () => clearTimeout(timer);
   }, [backend.status, fade, showSplash]);
 
+  const atlasChapter = atlasChapters.find(({ id }) => id === sharedProfileId)?.id;
   const pages: Record<string, React.ReactNode> = {
-    home: <Home />,
-    explore: <Explore />,
-    astrology: <Astrology />,
+    home: <Home key={sharedProfileId} openTransitAtlas={sharedProfileId === 'atlas-transits'} />,
+    explore: <Explore key={sharedProfileId} initialChapter={atlasChapter} initialView={atlasChapter || sharedProfileId === 'path' ? 'path' : sharedProfileId === 'library' ? 'library' : undefined} />,
+    'atlas-step': <AtlasStation key={sharedProfileId} id={sharedProfileId || ''} />,
+    astrology: <Astrology key={sharedProfileId} initialFocus={sharedProfileId === 'venus' || sharedProfileId === 'mercury' ? sharedProfileId : undefined} />,
     mbti: <MBTI />,
     tarot: <Tarot />,
     numerology: <Numerology />,
@@ -128,16 +148,27 @@ function Shell() {
     chat: <Chat onScanProfile={openSharedProfile} initialChatId={resumeChatId} onOpenProfile={(id, chatId) => setPage('shared-profile', id, chatId)} />,
     people: <People onOpenProfile={openSharedProfile} />,
     notifications: <NotificationsScreen />,
+    mirror: <MirrorScreen key={'list:' + sharedProfileId} friendId={sharedProfileId} />,
+    'mirror-invite': sharedProfileId ? <MirrorScreen key={'invite:' + sharedProfileId} inviteToken={sharedProfileId} /> : <MirrorScreen />,
+    'mirror-session': sharedProfileId ? <MirrorScreen key={sharedProfileId} sessionId={sharedProfileId} /> : <MirrorScreen />,
     dating: <DatingScreen />,
-    feed: <Feed />,
+    feed: <>
+      <View pointerEvents="box-none" style={{ position: 'absolute', zIndex: 2, top: insets.top + backHeaderSpacing.paddingTop, left: backHeaderSpacing.paddingHorizontal }}>
+        <BackButton onDark onPress={() => goBack('explore')} />
+      </View>
+      <Feed />
+    </>,
+    'profile-showcase': <ProfileShowcase />,
+    reflections: <ReflectionJournal />,
     profile: <Profile scrollOffset={tabScroll} onOpenProfile={openSharedProfile} />,
+    constellation: <CircleConstellation key={sharedProfileId} friendId={sharedProfileId ?? ''} />,
     'shared-profile': sharedProfileId ? <SharedProfile key={sharedProfileId} id={sharedProfileId} /> : <People onOpenProfile={openSharedProfile} />,
     login: <Login />,
   };
 
   const gated = isPlanFeature(page) && !hasFeature(account, page);
   const showSubscription = page === 'subscription' || gated;
-  const activePageNode = restoring ? null : !user ? <Login /> : showSubscription
+  const activePageNode = restoring ? null : !user ? <Login mirrorToken={pendingMirror ?? undefined} /> : showSubscription
     ? <ProfileSettings initialSubscription onClose={() => goBack(gated ? 'explore' : 'profile')} />
     : pages[page] || <Home />;
 
@@ -146,7 +177,7 @@ function Shell() {
     !user || showSubscription || page === 'login' || page === 'home' || page === 'chat' || page === 'feed' || page === 'profile' || page === 'notifications';
   const topInset = Platform.OS === 'web' ? 30 : Math.max((StatusBar.currentHeight || 0) + 16, 28);
 
-  const alignedHeader = isExploreRoute(page) || (page === 'chat' && hideBottomNav);
+  const alignedHeader = isExploreRoute(page) || page === 'atlas-step' || page === 'constellation' || page === 'profile-showcase' || page === 'reflections' || page === 'mirror' || page === 'mirror-session' || page === 'mirror-invite' || (page === 'chat' && hideBottomNav);
   const screenTop = alignedHeader ? insets.top + backHeaderSpacing.paddingTop : topInset;
 
   return (

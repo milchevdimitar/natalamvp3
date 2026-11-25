@@ -1,4 +1,8 @@
 const mongoose = require('mongoose');
+const showcaseCard = new mongoose.Schema({
+  text: { type: String, trim: true, maxlength: 120 },
+  visible: { type: Boolean, default: false },
+}, { _id: false });
 
 const ZodiacPositionSchema = new mongoose.Schema(
   {
@@ -400,6 +404,11 @@ const UserSchema = new mongoose.Schema(
       },
     },
 
+    showcase: {
+      signature: showcaseCard,
+      exploring: showcaseCard,
+      ask: showcaseCard,
+    },
     bio: { type: String, default: '' },
     interests: {
       type: [String],

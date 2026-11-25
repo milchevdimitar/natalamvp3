@@ -44,5 +44,5 @@ export const cosmicTabColors = {
 };
 
 export function isCosmicPage(page: string) {
-  return page === 'explore' || page === 'chat' || page === 'people' || page === 'dating' || page === 'notifications' || page === 'profile' || page === 'shared-profile' || isExploreRoute(page);
+  return page === 'explore' || page === 'atlas-step' || page === 'chat' || page === 'people' || page === 'constellation' || page === 'dating' || page === 'notifications' || page === 'mirror' || page === 'mirror-session' || page === 'mirror-invite' || page === 'profile' || page === 'profile-showcase' || page === 'reflections' || page === 'shared-profile' || isExploreRoute(page);
 }

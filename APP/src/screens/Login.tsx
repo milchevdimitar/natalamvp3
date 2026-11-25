@@ -3,7 +3,7 @@ import { BirthPickerFields } from '../components/BirthPickerFields';
 import type { BirthDate } from '../components/BirthWheelPicker';
 import React, { useEffect, useRef, useState } from 'react';
 import {
-  ActivityIndicator, Animated, KeyboardAvoidingView, Modal, Platform, Pressable,
+  ActivityIndicator, Animated, KeyboardAvoidingView, Linking, Modal, Platform, Pressable,
   ScrollView, StyleSheet, Text, TextInput, View,
 } from 'react-native';
 import { Check, Eye, EyeOff } from 'lucide-react-native';
@@ -15,6 +15,7 @@ import { useApp } from '../context/AppContext';
 import { accountMethods, authenticate, sendEmailCode } from '../services/account';
 import type { CityLocation } from '../services/locationService';
 import { cosmic } from '../theme/cosmic';
+import { nativeMirrorLink } from '../services/mirrorLinks';
 import { CosmicBackground, useReducedMotion } from './Home/CosmicBackground';
 
 const TERMS_VERSION = '2026-11-24';
@@ -27,7 +28,7 @@ const terms = [
   ['Plans and subscriptions', 'If you choose a paid plan, review its price, billing period and renewal terms before confirming. Manage or cancel the plan through the billing provider used to purchase it. Your applicable consumer rights still apply.'],
 ];
 
-export default function Login() {
+export default function Login({ mirrorToken }: { mirrorToken?: string }) {
   const { setUser, setPage, setAccount } = useApp();
   const reduced = useReducedMotion();
   const offset = useRef(new Animated.Value(0)).current;
@@ -108,6 +109,12 @@ export default function Login() {
           <View style={styles.content}>
             <Text style={styles.logo}>Natala</Text>
             <BackendStatus />
+            {!!mirrorToken && <View style={{ gap: 8 }}>
+              <Text style={styles.label}>Sign in with the account your friend invited to Mirror.</Text>
+              {Platform.OS === 'web' && <Pressable accessibilityRole="link" onPress={() => void Linking.openURL(nativeMirrorLink(mirrorToken)).catch(() => {})}>
+                <Text style={{ color: cosmic.purple, textAlign: 'center' }}>Open in Natala</Text>
+              </Pressable>}
+            </View>}
             <View style={styles.form}>
               {register && field('Name', name, setName, { autoComplete: 'name', autoCapitalize: 'words', maxLength: 80 })}
               {field('Email', email, (value) => { setEmail(value); setSentTo(''); setCode(''); }, {

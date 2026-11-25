@@ -20,6 +20,8 @@ interface FriendListSectionProps {
   onDeclineRequest: (personId: string) => void;
   onInspectPerson: (person: PersonProfile) => void;
   onOpenChat: (person: PersonProfile) => void;
+  beforeFriends?: React.ReactNode;
+  emptyFriends?: React.ReactNode;
 }
 
 export function FriendListSection({
@@ -31,12 +33,14 @@ export function FriendListSection({
   onDeclineRequest,
   onInspectPerson,
   onOpenChat,
+  beforeFriends,
+  emptyFriends,
 }: FriendListSectionProps) {
   return (
     <>
       {incomingRequests.length > 0 && (
         <>
-          <Section>Connection requests ({incomingRequests.length})</Section>
+          <Section>{'Connection requests (' + incomingRequests.length + ')'}</Section>
           <View style={styles.listStack}>
             {incomingRequests.map((req) => {
               const comp = calculateCompatibility(user, req);
@@ -78,6 +82,8 @@ export function FriendListSection({
 
                     <View style={styles.requestActionsRow}>
                       <Pressable
+                        accessibilityRole="button"
+                        accessibilityLabel={"Decline request from " + req.name}
                         onPress={() => onDeclineRequest(req.id)}
                         style={[
                           styles.iconSquareBtn,
@@ -87,6 +93,8 @@ export function FriendListSection({
                         <X size={18} color={colors.muted} />
                       </Pressable>
                       <Pressable
+                        accessibilityRole="button"
+                        accessibilityLabel={"Accept request from " + req.name}
                         onPress={() => onAcceptRequest(req)}
                         style={[
                           styles.iconSquareBtn,
@@ -104,12 +112,13 @@ export function FriendListSection({
         </>
       )}
 
-      <Section>Your friends ({friends.length})</Section>
+      {beforeFriends}
+      <Section>{'Your friends (' + friends.length + ')'}</Section>
       {friends.length === 0 ? (
         <Card>
-          <T muted size={13} style={{ textAlign: 'center' }}>
+          {emptyFriends ?? <T muted size={13} style={{ textAlign: 'center' }}>
             Your circle is empty yet. Connect with people below or share your Cosmic ID.
-          </T>
+          </T>}
         </Card>
       ) : (
         <View style={styles.listStack}>

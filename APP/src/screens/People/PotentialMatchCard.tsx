@@ -46,7 +46,7 @@ export function PotentialMatchCard({
     );
   }
 
-  const age = getAgeFromBirthdate(person.birthdate);
+  const age = person.derived?.age ?? getAgeFromBirthdate(person.birthdate);
   const sunSign = resolveSunSign(person);
   const mbtiType = resolveMbtiType(person);
   const lifePath = resolveLifePath(person);

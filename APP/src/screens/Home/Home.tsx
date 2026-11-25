@@ -1,12 +1,13 @@
 import { hasFeature } from '../../services/account';
-import { profileId } from '../../services/profileLinks';
-import { ProfileReading } from '../ProfileReading';
+import { atlasSteps } from '../../../../SHARED/atlasSteps';
+import { useAtlasProgress } from '../../services/atlasProgress';
+import { DailyMoment } from './DailyMoment';
 import { ProfileAvatar } from '../../components/ProfileAvatar';
 import React, { useCallback, useMemo, useRef, useState } from 'react';
 import { Animated, Platform, Pressable, RefreshControl, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
-import { Bell, ChevronRight, Flame } from 'lucide-react-native';
+import { Bell, ChevronRight, Compass, Flame, Layers, MessageCircle, Moon, Sparkles } from 'lucide-react-native';
 import ConfettiCannon from 'react-native-confetti-cannon';
 import { SunPosition } from 'astronomy-engine';
 import { useApp } from '../../context/AppContext';
@@ -31,7 +32,7 @@ import { styles as existing } from './home.styles';
 import { useDiscoveryStreak } from './useDiscoveryStreak';
 import { usePlanetaryData } from './usePlanetaryData';
 
-type Detail = 'sun' | 'moon' | 'codex' | 'retrogrades' | 'streak' | 'report';
+type Detail = 'sun' | 'moon' | 'codex' | 'retrogrades' | 'streak';
 const PLANET_ATLAS_TITLE = 'Your planets';
 const lunarPoints: Record<string, Pick<CelestialSlide, 'tagline' | 'summary' | 'description'>> = {
   northNode: {
@@ -69,16 +70,17 @@ function SkyCard({ title, subtitle, hint, artwork, onPress, disabled, premium }:
   );
 }
 
-export default function Home() {
-  const { colors, user, account, setPage, hasUnreadNotifications, fetchActiveStories, addStory, setSelectedChat } = useApp();
+export default function Home({ openTransitAtlas = false }: { openTransitAtlas?: boolean }) {
+  const { colors, user, account, setPage, goBack, stories, hasUnreadNotifications, fetchActiveStories, addStory, setSelectedChat } = useApp();
   const palette = { ...colors, ...cosmic, purpleSoft: '#30457a', goldSoft: '#362845' };
   const insets = useSafeAreaInsets();
-  const reportUserId = profileId(user?._id ?? user?.id);
+  const { progress } = useAtlasProgress();
+  const nextStep = atlasSteps.find(({ id }) => id === progress?.nextStepId);
   const streak = useDiscoveryStreak(user?.email);
   const reduced = useReducedMotion();
   const scroll = useRef(new Animated.Value(0)).current;
   const still = useRef(new Animated.Value(0)).current;
-  const [detail, setDetail] = useState<Detail | null>(null);
+  const [detail, setDetail] = useState<Detail | null>(openTransitAtlas ? 'codex' : null);
   const [refreshing, setRefreshing] = useState(false);
   const [confetti, setConfetti] = useState<number | null>(null);
   const [now, setNow] = useState(() => new Date());
@@ -129,7 +131,11 @@ export default function Home() {
   }, [codexOpen, planetaryPositions, user, atlasDay, remoteAtlas]);
   const retrogradeCount = planetaryPositions.filter(({ isRetrograde }) => isRetrograde).length;
   const [atlasReturnIndex, setAtlasReturnIndex] = useState<number | undefined>(undefined);
-  const close = () => { setAtlasReturnIndex(undefined); setDetail(null); };
+  const close = () => {
+    setAtlasReturnIndex(undefined);
+    setDetail(null);
+    if (openTransitAtlas) goBack('explore');
+  };
   const refresh = useCallback(async () => {
     setRefreshing(true);
     setNow(new Date());
@@ -169,21 +175,43 @@ export default function Home() {
           </View>
         </View>
 
-        <View style={styles.stories}>
-          <Text accessibilityRole="header" style={styles.section}>Stories & inspiration</Text>
-          <StoryViewer circular circleSize={SKY_ARTWORK_SIZE} />
-        </View>
-
         <View style={styles.greeting}>
           <Text style={styles.date}>{now.toLocaleDateString(undefined, { weekday: 'long', month: 'long', day: 'numeric' })}</Text>
           <View style={styles.greetingRow}>
-            <Text accessibilityRole="header" style={styles.hero}>Your daily <Text style={styles.heroAccent}>cosmic moment</Text></Text>
+            <Text accessibilityRole="header" style={styles.hero}>Today</Text>
             {streak !== null && <Pressable accessibilityRole="button" accessibilityLabel="Open discovery streak calendar" onPress={() => setDetail('streak')} style={styles.streak}>
               <Flame size={13} color="#ff963f" fill="#ff963f" />
               <Text style={styles.streakText}>{streak.count + (streak.count === 1 ? ' day' : ' days')}</Text>
             </Pressable>}
           </View>
         </View>
+
+        {!!user?.email && <DailyMoment key={user.email} accountId={user.email} refreshedAt={now.getTime()} />}
+
+        <View style={styles.shortcuts}>
+          <Pressable accessibilityRole="button" style={styles.shortcut} onPress={() => setDetail('moon')}>
+            <Moon size={20} color={cosmic.purple} /><Text style={styles.shortcutLabel}>Moon</Text><Text style={styles.shortcutDetail}>{moon.phaseName}</Text>
+          </Pressable>
+          <Pressable accessibilityRole="button" style={styles.shortcut} onPress={() => setPage(hasFeature(account, 'tarot') ? 'tarot' : 'subscription')}>
+            <Layers size={20} color={cosmic.purple} /><Text style={styles.shortcutLabel}>Daily Tarot</Text><Text style={styles.shortcutDetail}>{hasFeature(account, 'tarot') ? 'Your card' : 'Plus'}</Text>
+          </Pressable>
+          <Pressable accessibilityRole="button" style={styles.shortcut} onPress={() => setPage(hasUnreadNotifications ? 'notifications' : 'mirror')}>
+            {hasUnreadNotifications ? <MessageCircle size={20} color={cosmic.purple} /> : <Sparkles size={20} color={cosmic.purple} />}
+            <Text style={styles.shortcutLabel}>{hasUnreadNotifications ? 'Activity' : 'Mirror'}</Text>
+            <Text style={styles.shortcutDetail}>{hasUnreadNotifications ? 'See what’s new' : 'Invite a friend'}</Text>
+          </Pressable>
+        </View>
+
+        <Pressable accessibilityRole="button" onPress={() => nextStep ? setPage('atlas-step', nextStep.id) : setPage('explore', 'path')} style={styles.atlasLink}>
+          <Compass size={21} color={cosmic.purple} />
+          <View style={{ flex: 1 }}><Text style={styles.shortcutLabel}>Continue your Atlas</Text><Text style={styles.shortcutDetail}>{nextStep?.title ?? (progress ? 'See your constellation' : 'Explore your personal systems')}</Text></View>
+          <ChevronRight size={18} color={cosmic.muted} />
+        </Pressable>
+
+        {stories.length > 0 && <View style={styles.stories}>
+          <Text accessibilityRole="header" style={styles.section}>Stories & inspiration</Text>
+          <StoryViewer circular circleSize={SKY_ARTWORK_SIZE} />
+        </View>}
 
         <View style={styles.group}>
           <Text accessibilityRole="header" style={styles.section}>The sky right now</Text>
@@ -194,12 +222,6 @@ export default function Home() {
             ? (retrogradeCount === 1 ? '1 planet in retrograde' : retrogradeCount + ' planets in retrograde')
             : loadingNASA ? 'Checking planetary motion…' : 'Planetary motion unavailable'}
             hint="See which planets are retrograde and when they turn direct" artwork={<SkyArtwork kind="retro" />} onPress={() => { setAtlasReturnIndex(undefined); setDetail('retrogrades'); }} disabled={!planetaryPositions.length} />
-          <SkyCard title="Your Cosmic Report" subtitle="A personalized reading" hint="Explore 12 chapters about your life"
-            artwork={<SkyArtwork kind="report" />} premium onPress={() => {
-              if (!hasFeature(account, 'pdf-report')) { setPage('subscription'); return; }
-              if (reportUserId) setDetail('report');
-            }} />
-
           <FortuneCookieCard
             colors={palette}
             addStory={addStory}
@@ -212,7 +234,6 @@ export default function Home() {
         </View>
       </Animated.ScrollView>
 
-      {detail === 'report' && reportUserId && <ProfileReading userId={reportUserId} onClose={close} />}
       {detail === 'sun' && <CelestialCarousel kind="zodiac" title="The Sun" slides={zodiacSlides(sun.sign, now)} onClose={close} reduced={reduced} />}
       {detail === 'codex' && <CelestialCarousel
         title={PLANET_ATLAS_TITLE}
@@ -252,11 +273,15 @@ const styles = StyleSheet.create({
   brand: { color: cosmic.text, fontFamily: 'DancingScript_700Bold', fontSize: 40, lineHeight: 49 },
   profile: { width: 36, height: 36, borderRadius: 18, backgroundColor: '#263f77', borderColor: cosmic.line, borderWidth: 1, alignItems: 'center', justifyContent: 'center' },
   stories: { gap: 16 },
+  shortcuts: { flexDirection: 'row', gap: 8 },
+  shortcut: { flex: 1, minWidth: 0, minHeight: 88, padding: 9, gap: 4, borderWidth: 1, borderColor: glassPanel.border, backgroundColor: glassPanel.background, borderRadius: 18 },
+  shortcutLabel: { color: cosmic.text, fontSize: 13, fontWeight: '700' },
+  shortcutDetail: { color: cosmic.muted, fontSize: 11 },
+  atlasLink: { flexDirection: 'row', alignItems: 'center', gap: 11, padding: 13, borderWidth: 1, borderColor: glassPanel.border, backgroundColor: glassPanel.background, borderRadius: 18 },
   greeting: { gap: 8 },
   greetingRow: { flexDirection: 'row', alignItems: 'flex-start', justifyContent: 'space-between', gap: 10 },
   date: { color: '#a9bceb', fontSize: 10, fontWeight: '800', letterSpacing: 1.1, textTransform: 'uppercase' },
   hero: { flexShrink: 1, maxWidth: 260, fontSize: 29, lineHeight: 33, fontWeight: '800', letterSpacing: -1.25, color: cosmic.text },
-  heroAccent: { color: '#b7b4ff' },
   streak: { flexDirection: 'row', gap: 4, alignItems: 'center', flexShrink: 0, marginTop: 5, backgroundColor: 'rgba(24,53,121,0.44)', borderRadius: 16, paddingHorizontal: 10, paddingVertical: 8, borderColor: cosmic.line, borderWidth: 1 },
   streakText: { color: cosmic.gold, fontWeight: '800', fontSize: 12 },
   group: { gap: 11 },

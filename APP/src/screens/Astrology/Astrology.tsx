@@ -147,12 +147,12 @@ function AspectList({ chart, onChoose }: { chart: NatalChartResults; onChoose: (
   </Card>;
 }
 
-export default function Astrology() {
+export default function Astrology({ initialFocus }: { initialFocus?: 'venus' | 'mercury' }) {
   const { colors, user, setUser, setPage } = useApp();
   const { results, isInitializing } = useAstrologyChart(user, setUser);
-  const [mode, setMode] = useBacktrackedSelection<(typeof modes)[number]['value']>('overview');
+  const [mode, setMode] = useBacktrackedSelection<(typeof modes)[number]['value']>(initialFocus ? 'lab' : 'overview');
   const [lab, setLab] = useBacktrackedSelection<LabView>('chart');
-  const [focus, setFocus] = useState<string[]>([]);
+  const [focus, setFocus] = useState<string[]>(() => initialFocus ? [initialFocus] : []);
   const openChart = (keys: string[]) => {
     setFocus(keys);
     setLab('chart');

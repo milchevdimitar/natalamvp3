@@ -17,7 +17,7 @@ router.get('/shared/:profileId', async (req, res) => {
     const viewer = req.account;
     if (!viewer) return res.status(401).json({ success: false, message: 'Sign in to view this profile.' });
     const target = await User.findById(profileId)
-      .select('name email bio interests isActive isDiscoverable blockedUsers avatarUrl')
+      .select('name email bio interests isActive isDiscoverable blockedUsers avatarUrl showcase')
       .lean();
     const same = String(viewer._id) === profileId.toLowerCase();
     const contains = (values, id) => (values || []).some((value) => String(value) === String(id));
@@ -36,6 +36,10 @@ router.get('/shared/:profileId', async (req, res) => {
       success: true,
       profile: {
         id: String(target._id), name: target.name, bio: target.bio, interests: target.interests, avatarUrl: target.avatarUrl,
+        showcase: ['signature', 'exploring', 'ask'].flatMap((slot) => {
+          const card = target.showcase?.[slot];
+          return card?.visible === true && card.text ? [{ slot, text: card.text }] : [];
+        }),
         relationship: same ? 'self' : isFriend ? 'friend' : contains(viewer.sentRequests, target._id) ? 'pending' : 'available',
         ...(isFriend ? { chatEmail: target.email } : {}),
         stories: stories.map((story) => ({ id: String(story._id), imageUrl: story.imageUrl, createdAt: story.createdAt })),
@@ -61,6 +65,23 @@ async function resolveCurrentUser(userId, email) {
 }
 
 // Форматира реален MongoDB User документ за мобилното приложение
+function publicPerson(person) {
+  const { birthdate, birthCity, natalChart, mbti, ayurveda, ...summary } = person;
+  return {
+    ...summary,
+    birthCity: birthCity ? { name: birthCity.name, country: birthCity.country } : undefined,
+    natalChart: { sunSign: natalChart?.sunSign, moonSign: natalChart?.moonSign, ascendant: natalChart?.ascendant },
+    mbti: mbti ? { type: mbti.type } : undefined,
+    ayurveda: ayurveda ? { dominantDosha: ayurveda.dominantDosha } : undefined,
+  };
+}
+function canConnect(me, target) {
+  if (!target || target.isActive === false || me.id === target.id) return false;
+  const includes = (ids, id) => (ids || []).some((value) => String(value) === id);
+  return !includes(me.blockedUsers, target.id) && !includes(target.blockedUsers, me.id)
+    && (target.isDiscoverable !== false || includes(me.friends, target.id) || includes(me.receivedRequests, target.id));
+}
+
 function serializePerson(doc, extra = {}) {
   const idStr = String(doc._id);
   const tenMinutesAgo = Date.now() - 10 * 60 * 1000;
@@ -138,6 +159,7 @@ router.get('/hub', async (req, res) => {
       }
 
       // В Discover влизат всички потребители, които още не са приятели
+      if (person.isDiscoverable === false) continue;
       discover.push(
         serializePerson(person, {
           category: 'discover',
@@ -156,11 +178,12 @@ router.get('/hub', async (req, res) => {
       }
     }
 
+    const hub = enrichPeopleHub(me.toObject(), { friends, incomingRequests, potentialMatches, discover },
+      new Map(allOthers.map((person) => [String(person._id), person])));
     return res.json({
       success: true,
       myCosmicId: `NTL-${String(me._id).slice(-6).toUpperCase()}`,
-      ...enrichPeopleHub(me.toObject(), { friends, incomingRequests, potentialMatches, discover },
-        new Map(allOthers.map((person) => [String(person._id), person]))),
+      ...Object.fromEntries(Object.entries(hub).map(([key, list]) => [key, list.map(publicPerson)])),
       requestedIds: Array.from(sentSet),
       rankedOnServer: true,
     });
@@ -182,7 +205,7 @@ router.post('/like', async (req, res) => {
     }
 
     const target = await User.findById(targetId);
-    if (!target) {
+    if (!canConnect(me, target)) {
       return res.status(404).json({ success: false, message: 'Потребителят не съществува.' });
     }
 
@@ -194,7 +217,7 @@ router.post('/like', async (req, res) => {
       return res.json({
         success: true,
         matched: true,
-        person: annotatePerson(me, serializePerson(target, { category: 'friend' })),
+        person: publicPerson(annotatePerson(me, serializePerson(target, { category: 'friend' }))),
       });
     }
 
@@ -216,7 +239,7 @@ router.post('/like', async (req, res) => {
       return res.json({
         success: true,
         matched: true,
-        person: annotatePerson(me, serializePerson(target, { category: 'friend' })),
+        person: publicPerson(annotatePerson(me, serializePerson(target, { category: 'friend' }))),
       });
     }
 
@@ -277,7 +300,7 @@ router.post('/accept', async (req, res) => {
     }
 
     const target = await User.findById(targetId);
-    if (!target) {
+    if (!canConnect(me, target)) {
       return res.status(404).json({ success: false, message: 'Потребителят не е намерен.' });
     }
 
@@ -294,7 +317,7 @@ router.post('/accept', async (req, res) => {
 
     return res.json({
       success: true,
-      person: annotatePerson(me, serializePerson(target, { category: 'friend' })),
+      person: publicPerson(annotatePerson(me, serializePerson(target, { category: 'friend' }))),
     });
   } catch (err) {
     console.error('POST /api/people/accept error:', err);
@@ -399,7 +422,7 @@ router.post('/connect-by-code', async (req, res) => {
         null;
     }
 
-    if (!target) {
+    if (!canConnect(me, target)) {
       return res.status(404).json({
         success: false,
         message: 'Не е намерен регистриран потребител с този Cosmic ID или имейл.',
@@ -412,7 +435,7 @@ router.post('/connect-by-code', async (req, res) => {
         success: true,
         alreadyFriend: true,
         matched: true,
-        person: annotatePerson(me, serializePerson(target, { category: 'friend' })),
+        person: publicPerson(annotatePerson(me, serializePerson(target, { category: 'friend' }))),
       });
     }
 
@@ -433,7 +456,7 @@ router.post('/connect-by-code', async (req, res) => {
       return res.json({
         success: true,
         matched: true,
-        person: annotatePerson(me, serializePerson(target, { category: 'friend' })),
+        person: publicPerson(annotatePerson(me, serializePerson(target, { category: 'friend' }))),
       });
     }
 
@@ -445,7 +468,7 @@ router.post('/connect-by-code', async (req, res) => {
     return res.json({
       success: true,
       matched: false,
-      person: annotatePerson(me, serializePerson(target, { category: 'discover' })),
+      person: publicPerson(annotatePerson(me, serializePerson(target, { category: 'discover' }))),
     });
   } catch (err) {
     console.error('POST /api/people/connect-by-code error:', err);

@@ -17,7 +17,7 @@ import {
   Alert,
 } from 'react-native';
 import { X, Trash2, Heart, Send, ChevronUp, Users } from 'lucide-react-native';
-import { useApp } from '../context/AppContext';
+import { useApp, type AppStory } from '../context/AppContext';
 import { T } from '../components/UI';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { cosmic } from '../theme/cosmic';
@@ -25,9 +25,9 @@ import { cosmic } from '../theme/cosmic';
 const { height } = Dimensions.get('window');
 const STORY_DURATION = 5000;
 
-export function StoryViewer({ circular = false, circleSize = 55 }: { circular?: boolean; circleSize?: number } = {}) {
+export function StoryViewer({ circular = false, circleSize = 55, visibleStories }: { circular?: boolean; circleSize?: number; visibleStories?: AppStory[] } = {}) {
   const {
-    stories,
+    stories: allStories,
     colors,
     deleteStory,
     user,
@@ -37,6 +37,7 @@ export function StoryViewer({ circular = false, circleSize = 55 }: { circular?: 
     setSelectedChat,
   } = useApp();
 
+  const stories = visibleStories ?? allStories;
   const [userIndex, setUserIndex] = useState<number | null>(null);
   const [storyIndex, setStoryIndex] = useState<number>(0);
 

@@ -1,3 +1,4 @@
+import type { PublicShowcaseCard } from '../screens/ProfileShowcase';
 import { authorizedFetch } from './account';
 import { API_BASE_URL } from './api';
 import { PersonProfile } from '../screens/People/people.types';
@@ -12,13 +13,12 @@ export type SharedProfile = {
   interests?: string[];
   relationship: 'self' | 'friend' | 'pending' | 'available';
   chatEmail?: string;
+  showcase?: PublicShowcaseCard[];
   stories: { id: string; imageUrl: string; createdAt: string }[];
 };
 
-export async function fetchSharedProfile(user: any, id: string): Promise<SharedProfile> {
-  const { userId, email } = getAuthPayload(user);
-  const query = new URLSearchParams({ userId: String(userId), email: String(email) });
-  const response = await authorizedFetch(`${API_BASE_URL}/people/shared/${encodeURIComponent(id)}?${query}`);
+export async function fetchSharedProfile(id: string): Promise<SharedProfile> {
+  const response = await authorizedFetch(API_BASE_URL + '/people/shared/' + encodeURIComponent(id));
   const result = await response.json().catch(() => null);
   if (!response.ok || !result?.success) throw new Error(result?.message || 'Could not load this profile.');
   return result.profile;

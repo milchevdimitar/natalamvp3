@@ -5,6 +5,7 @@ import Constants from 'expo-constants';
 const primaryUrl = 'https://navarzano.cloud/api';
 const localPort = '5000';
 const allowLocalBackend = __DEV__;
+const localOnly = __DEV__ && process.env.EXPO_PUBLIC_NATALA_LOCAL_ONLY === '1';
 
 function getLocalUrl() {
   if (!allowLocalBackend) return null;
@@ -15,8 +16,14 @@ function getLocalUrl() {
   return null;
 }
 
+function localOnlyUrl() {
+  const address = process.env.EXPO_PUBLIC_NATALA_LOCAL_IP;
+  if (address) return parseBackendIp('http://' + address);
+  return getLocalUrl() ?? 'http://127.0.0.1:5000/api';
+}
+
 const backendKey = 'natala.backend.override';
-export let API_BASE_URL = primaryUrl;
+export let API_BASE_URL = localOnly ? localOnlyUrl() : primaryUrl;
 export { API_BASE_URL as API_URL };
 
 type BackendConnection = {
@@ -24,7 +31,7 @@ type BackendConnection = {
   status: 'checking' | 'connected' | 'database-unavailable' | 'unreachable';
 };
 
-let connection: BackendConnection = { kind: 'VPS', status: 'checking' };
+let connection: BackendConnection = { kind: localOnly ? 'Local' : 'VPS', status: 'checking' };
 const listeners = new Set<() => void>();
 
 export const getBackendConnection = () => connection;
@@ -85,6 +92,11 @@ export function parseBackendIp(input: string) {
 }
 
 export async function loadBackendOverride() {
+  if (localOnly) {
+    const url = localOnlyUrl();
+    activateBackend(url, 'Local', await readHealth(url));
+    return;
+  }
   const stored = allowLocalBackend ? await AsyncStorage.getItem(backendKey).catch(() => null) : null;
   if (stored) {
     try {
@@ -99,6 +111,7 @@ export async function loadBackendOverride() {
 }
 
 export async function saveBackendOverride(input: string | null) {
+  if (localOnly) throw new Error('This development build uses the local backend.');
   if (input === null) {
     await AsyncStorage.removeItem(backendKey);
     return selectDefaultBackend();

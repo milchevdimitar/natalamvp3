@@ -7,8 +7,8 @@ import { SubscriptionDetails } from './SubscriptionDetails';
 import { authorizedFetch, deleteAccount } from '../services/account';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import React, { useRef, useState } from 'react';
-import { ActivityIndicator, Animated, Linking, Modal, Platform, Pressable, StyleSheet, TextInput, View } from 'react-native';
-import { Bell, Sparkles, CalendarDays, ChevronRight, Mail, Pencil, UserRound, LogOut, Trash2, CreditCard } from 'lucide-react-native';
+import { ActivityIndicator, Animated, Linking, Modal, Platform, Pressable, StyleSheet, Switch, TextInput, View } from 'react-native';
+import { Bell, Sparkles, CalendarDays, ChevronRight, Mail, Pencil, UserRound, LogOut, Trash2, CreditCard, Heart } from 'lucide-react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Card, Section, T } from '../components/UI';
 import { useApp } from '../context/AppContext';
@@ -21,7 +21,7 @@ import { CosmicBackground, useReducedMotion } from './Home/CosmicBackground';
 export function ProfileSettings({ onClose, birthLabel, birthCity, initialSubscription = false }: {
   onClose: () => void; birthLabel?: string; birthCity?: string; initialSubscription?: boolean;
 }) {
-  const { handleLocalBack, user, setUser, colors, theme, logout } = useApp();
+  const { handleLocalBack, user, setUser, colors, theme, logout, datingTabVisible, setDatingTabVisible } = useApp();
   const insets = useSafeAreaInsets();
   const offset = useRef(new Animated.Value(0)).current;
   const reduced = useReducedMotion();
@@ -287,6 +287,16 @@ export function ProfileSettings({ onClose, birthLabel, birthCity, initialSubscri
           </>}
 
           {accountRow('Appearance', Sparkles, () => { offset.setValue(0); setShowAppearance(true); })}
+          <Card style={styles.card}>
+            <View style={styles.row}>
+              <View style={[styles.icon, { backgroundColor: colors.purpleSoft }]}><Heart size={19} color={colors.purple} /></View>
+              <View style={styles.copy}>
+                <T bold size={15}>Show Dating tab</T>
+                <T muted size={12}>Controls the bottom navigation on this device.</T>
+              </View>
+              <Switch value={datingTabVisible} onValueChange={setDatingTabVisible} accessibilityLabel="Show Dating tab" />
+            </View>
+          </Card>
           {accountRow('Manage subscriptions', CreditCard, () => { offset.setValue(0); setShowSubscription(true); })}
 
           {confirm ? <Card style={styles.card}>
