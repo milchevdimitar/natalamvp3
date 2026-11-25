@@ -1,3 +1,4 @@
+import { StarField } from '../../components/StarField';
 import React, { useState, useEffect, useRef, useMemo } from 'react';
 import {
   View,
@@ -212,6 +213,7 @@ export const ReelPlayerItem = React.memo(function ReelPlayerItem({
       )}
 
       {isActive && <View style={styles.shootingStarLayer} pointerEvents="none">
+        <StarField subtle reduced={reducedMotion} />
         <ShootingStar reduced={reducedMotion} />
       </View>}
 

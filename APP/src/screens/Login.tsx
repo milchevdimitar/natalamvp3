@@ -1,3 +1,4 @@
+import { useLocalBack } from '../components/NavigationBack';
 import { BirthPickerFields } from '../components/BirthPickerFields';
 import type { BirthDate } from '../components/BirthWheelPicker';
 import React, { useEffect, useRef, useState } from 'react';
@@ -47,6 +48,7 @@ export default function Login() {
   const [code, setCode] = useState('');
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
+  useLocalBack(register, () => { if (!busy) { setRegister(false); setError(''); setShowPassword(false); } });
 
   useEffect(() => { void accountMethods().then((methods) => setNeedsCode(methods.emailVerification)).catch(() => {}); }, []);
 

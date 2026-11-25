@@ -1,5 +1,5 @@
 import React, { useMemo, useState } from 'react';
-import { View, TouchableOpacity, TextInput, ScrollView } from 'react-native';
+import { ScrollView, View, TouchableOpacity, TextInput } from 'react-native';
 import { Heart, Briefcase, Smile, Users, Check } from 'lucide-react-native';
 import { Card, T, Section } from '../../components/UI';
 import { BaZiChart, Gender, MatchType } from './bazi.types';
@@ -212,8 +212,7 @@ export function BaZiTabMatchMaker({
             </T>
           </TouchableOpacity>
 
-          <ScrollView
-            horizontal
+          <ScrollView horizontal
             showsHorizontalScrollIndicator={false}
             style={{ maxWidth: 175 }}
           >

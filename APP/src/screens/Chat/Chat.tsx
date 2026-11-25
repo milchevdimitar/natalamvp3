@@ -5,7 +5,7 @@ import { ActiveChatView } from './ActiveChatView';
 import { ConversationsListView } from './ConversationsListView';
 import { profileId } from '../../services/profileLinks';
 
-export default function Chat({ onOpenProfile }: { onOpenProfile: (id: string) => void }) {
+export default function Chat({ onOpenProfile, initialChatId }: { onOpenProfile: (id: string, chatId: string) => void; initialChatId?: string }) {
   const {
     colors,
     user,
@@ -18,6 +18,7 @@ export default function Chat({ onOpenProfile }: { onOpenProfile: (id: string) =>
   const currentUserEmail = user?.email || '';
 
   const chat = useChat({
+    initialChatId,
     currentUserEmail,
     selectedChat,
     setSelectedChat,
@@ -25,7 +26,8 @@ export default function Chat({ onOpenProfile }: { onOpenProfile: (id: string) =>
   });
 
   if (chat.activeConversation) {
-    const partnerId = profileId(chat.activeConversation.partnerId);
+    const { id: chatId, partnerId: rawPartnerId } = chat.activeConversation;
+    const partnerId = profileId(rawPartnerId);
     const ownIds = [user?._id, user?.id, currentUserEmail].filter(Boolean).map((id) => String(id).toLowerCase());
     return (
       <ActiveChatView
@@ -42,7 +44,7 @@ export default function Chat({ onOpenProfile }: { onOpenProfile: (id: string) =>
         onSelectReplyMessage={chat.setReplyingToMessage}
         onSendMessage={chat.handleSendMessage}
         onBack={() => chat.setActiveChatId(null)}
-        onOpenPartner={partnerId ? () => onOpenProfile(partnerId) : undefined}
+        onOpenPartner={partnerId ? () => onOpenProfile(partnerId, chatId) : undefined}
         destinations={chat.conversations.filter(({ id }) => id !== chat.activeConversation?.id)}
         onForward={chat.forwardMessage}
         ownStories={stories.filter(({ userId }) => ownIds.includes(String(userId).toLowerCase()))}

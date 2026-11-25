@@ -128,7 +128,8 @@ export default function Home() {
     return [...planets, ...points];
   }, [codexOpen, planetaryPositions, user, atlasDay, remoteAtlas]);
   const retrogradeCount = planetaryPositions.filter(({ isRetrograde }) => isRetrograde).length;
-  const close = () => setDetail(null);
+  const [atlasReturnIndex, setAtlasReturnIndex] = useState<number | undefined>(undefined);
+  const close = () => { setAtlasReturnIndex(undefined); setDetail(null); };
   const refresh = useCallback(async () => {
     setRefreshing(true);
     setNow(new Date());
@@ -186,7 +187,7 @@ export default function Home() {
           <SkyCard title="Retrogrades" subtitle={planetaryPositions.length
             ? (retrogradeCount === 1 ? '1 planet in retrograde' : retrogradeCount + ' planets in retrograde')
             : loadingNASA ? 'Checking planetary motion…' : 'Planetary motion unavailable'}
-            hint="See which planets are retrograde and when they turn direct" artwork={<SkyArtwork kind="retro" />} onPress={() => setDetail('retrogrades')} disabled={!planetaryPositions.length} />
+            hint="See which planets are retrograde and when they turn direct" artwork={<SkyArtwork kind="retro" />} onPress={() => { setAtlasReturnIndex(undefined); setDetail('retrogrades'); }} disabled={!planetaryPositions.length} />
         </View>
 
         <SkyCard title="Your Cosmic Report" subtitle="A personalized reading" hint="Explore 12 chapters about your life"
@@ -213,7 +214,8 @@ export default function Home() {
         kind="codex"
         slides={codexSlides}
         onClose={close}
-        onRetrogrades={() => setDetail('retrogrades')}
+        initialIndex={atlasReturnIndex}
+        onRetrogrades={(index) => { setAtlasReturnIndex(index); setDetail('retrogrades'); }}
         reduced={reduced}
       />}
       {detail === 'moon' && <DetailScreen title="" onClose={close} offset={still} reduced={reduced} darkBottom>
@@ -222,7 +224,7 @@ export default function Home() {
       {detail === 'streak' && streak && <DetailScreen title="" onClose={close} offset={still} reduced={reduced} darkBottom>
         <StreakCalendar today={streak.day} days={streak.days} count={streak.count} />
       </DetailScreen>}
-      {detail === 'retrogrades' && <DetailScreen title="" onClose={close} offset={still} reduced={reduced} darkBottom>
+      {detail === 'retrogrades' && <DetailScreen title="" onClose={() => setDetail(atlasReturnIndex === undefined ? null : 'codex')} offset={still} reduced={reduced} darkBottom>
         <ScrollView contentContainerStyle={styles.detailBody}>
           {planetaryPositions.some(({ isLiveNASA }) => !isLiveNASA) && <Text style={styles.muted}>Includes locally estimated positions</Text>}
           <RetrogradeSection planetaryPositions={planetaryPositions} />

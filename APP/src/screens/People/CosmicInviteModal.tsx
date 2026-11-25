@@ -1,3 +1,4 @@
+import { StarField } from '../../components/StarField';
 import React, { useEffect, useRef, useState } from 'react';
 import { Linking, Modal, Platform, Pressable, StyleSheet, TextInput, View } from 'react-native';
 import { CameraView, useCameraPermissions } from 'expo-camera';
@@ -56,6 +57,7 @@ export function CosmicInviteModal({ colors, onClose, onConnectByCode, onOpenProf
     <Modal visible transparent animationType="fade" onRequestClose={onClose}>
       <View style={localStyles.backdrop}>
         <View style={[localStyles.card, { backgroundColor: colors.surface, borderColor: colors.line }]}>
+          <StarField subtle />
           <View style={localStyles.header}>
             <View style={localStyles.title}><ScanLine size={21} color={colors.purple} /><T bold size={18}>Scan a profile</T></View>
             <Pressable accessibilityRole="button" accessibilityLabel="Close scanner" onPress={onClose} style={localStyles.close}><X size={21} color={colors.text} /></Pressable>

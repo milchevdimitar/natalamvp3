@@ -38,6 +38,7 @@
     },
     "plugins": [
       "expo-font",
+      ["expo-sensors", { "motionPermission": "Allow Natala to move the star background as you tilt your device." }],
       "expo-splash-screen",
       "expo-asset",
       "expo-status-bar",

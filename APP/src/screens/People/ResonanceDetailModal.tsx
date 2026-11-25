@@ -1,3 +1,4 @@
+import { StarField } from '../../components/StarField';
 import { ProfileAvatar } from '../../components/ProfileAvatar';
 import React from 'react';
 import { View, Modal, Pressable, ScrollView } from 'react-native';
@@ -104,6 +105,7 @@ export function ResonanceDetailModal({
       onRequestClose={onClose}
     >
       <View style={styles.modalBackdrop}>
+        <StarField subtle />
         <View
           style={[
             styles.modalCard,

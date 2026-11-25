@@ -1,6 +1,8 @@
+import { PagePager, type PagePagerHandle } from '../../components/PagePager';
+import { usePageProgress } from '../../components/pageProgress';
 import { PagerDots } from '../../components/PagerDots';
 import React, { useRef, useState } from 'react';
-import { Animated, Platform, ScrollView, StyleSheet, View } from 'react-native';
+import { ScrollView, StyleSheet, View } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { T } from '../../components/UI';
 import { DetailScreen } from '../Home/CelestialDetails';
@@ -46,26 +48,21 @@ const guide: Record<DoshaName, {
 
 export function DoshaGuide({ dosha, onClose }: { dosha: DoshaName; onClose: () => void }) {
   const reduced = useReducedMotion();
-  const offset = useRef(new Animated.Value(0)).current;
-  const pager = useRef<React.ComponentRef<typeof ScrollView>>(null);
+  const pager = useRef<PagePagerHandle>(null);
   const [width, setWidth] = useState(0);
+  const { position, fraction, offset } = usePageProgress(width);
   const [index, setIndex] = useState(0);
   const content = guide[dosha];
   const color = DOSHA_META[dosha].color;
   const Icon = DOSHA_ICONS[dosha];
   const move = (page: number) => {
-    if (page >= 0 && page < states.length) pager.current?.scrollTo({ x: page * width, animated: !reduced });
+    if (page >= 0 && page < states.length) pager.current?.setPage(page, !reduced);
   };
 
   return <DetailScreen title="" onClose={onClose} offset={offset} reduced={reduced} darkBottom travel={width * 3}>
     <View style={styles.body} onLayout={(event) => setWidth(event.nativeEvent.layout.width)}>
-      {width > 0 && <Animated.ScrollView ref={pager} horizontal pagingEnabled bounces={false}
-        directionalLockEnabled nestedScrollEnabled showsHorizontalScrollIndicator={false} scrollEventThrottle={16}
-        onScroll={Animated.event([{ nativeEvent: { contentOffset: { x: offset } } }], {
-          useNativeDriver: Platform.OS !== 'web',
-          listener: (event: { nativeEvent: { contentOffset: { x: number } } }) =>
-            setIndex(Math.max(0, Math.min(states.length - 1, Math.round(event.nativeEvent.contentOffset.x / width)))),
-        })}>
+      {width > 0 && <PagePager pagerRef={pager} width={width} position={position} fraction={fraction}
+            onIndexChange={setIndex}>
         {content.readings.map(([title, reading, reflection], page) => (
           <View key={states[page]} style={{ width }}>
             <ScrollView style={styles.body} nestedScrollEnabled directionalLockEnabled contentContainerStyle={styles.chapter}>
@@ -86,7 +83,7 @@ export function DoshaGuide({ dosha, onClose }: { dosha: DoshaName; onClose: () =
             </ScrollView>
           </View>
         ))}
-      </Animated.ScrollView>}
+      </PagePager>}
       <PagerDots labels={states} index={index} onSelect={move} />
       </View>
   </DetailScreen>;

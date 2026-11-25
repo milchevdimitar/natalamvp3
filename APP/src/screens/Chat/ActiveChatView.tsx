@@ -1,3 +1,5 @@
+import { StarField } from '../../components/StarField';
+import { useLocalBack } from '../../components/NavigationBack';
 import { BackButton } from '../../components/BackButton';
 import React, { useEffect, useRef } from 'react';
 import {
@@ -66,6 +68,15 @@ export function ActiveChatView({
   const [sendingForward, setSendingForward] = React.useState(false);
   const [forwardNotice, setForwardNotice] = React.useState('');
   const [feedback, setFeedback] = React.useState('');
+  const back = () => {
+    if (sendingForward) return;
+    if (panel || forwarding) {
+      setPanel(null);
+      setForwarding(null);
+    } else onBack();
+  };
+  useLocalBack(true, back);
+
   const forwardTo = async (destination: Conversation) => {
     if (!forwarding || sendingForward) return;
     setSendingForward(true);
@@ -96,7 +107,7 @@ export function ActiveChatView({
     >
       {/* Хедър */}
       <View style={[thread.header, { borderBottomColor: colors.line }]}>
-        <BackButton onPress={onBack} label="Back to chats" />
+        <BackButton onPress={back} label="Back to chats" />
 
         <ProfileAvatar name={conversation.partnerName} source={conversation.partnerAvatar} size={40} />
         <T bold size={16} numberOfLines={1} style={thread.partner}>{conversation.partnerName}</T>
@@ -243,6 +254,7 @@ export function ActiveChatView({
         if (!sendingForward) { setPanel(null); setForwarding(null); }
       }}>
         <View style={thread.backdrop}>
+          <StarField subtle />
           <Card style={[thread.dialog, { backgroundColor: colors.surface }]}>
             <View style={thread.dialogHeading}>
               <T bold size={18}>{forwarding ? 'Forward message' : 'Conversation information'}</T>

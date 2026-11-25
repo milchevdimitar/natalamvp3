@@ -1,5 +1,5 @@
 import React, { useMemo, useState } from 'react';
-import { View, TouchableOpacity, TextInput, ScrollView, ActivityIndicator } from 'react-native';
+import { ScrollView, View, TouchableOpacity, TextInput, ActivityIndicator } from 'react-native';
 import {
   Plus,
   Users,

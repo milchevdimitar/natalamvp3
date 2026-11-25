@@ -1,3 +1,4 @@
+import { StarField } from './StarField';
 import React, { useMemo } from 'react';
 import { Modal, Pressable, StyleSheet, View } from 'react-native';
 import { Share2, X } from 'lucide-react-native';
@@ -24,6 +25,7 @@ export function ProfileQrCard({ id, name, photo, onShare, onClose, notice }: {
   return (
     <Modal visible transparent animationType="fade" onRequestClose={onClose}>
       <View style={styles.backdrop}>
+        <StarField subtle />
         <Card style={styles.card}>
           <View style={styles.header}>
             <Brand size={32} />

@@ -13,13 +13,13 @@ import { DetailScreen } from './Home/CelestialDetails';
 import { useReducedMotion } from './Home/CosmicBackground';
 
 export function ExploreSystemHeader({ route, children }: React.PropsWithChildren<{ route: ExploreRoute }>) {
-  const { setPage, colors } = useApp();
+  const { goBack, handleBack, colors } = useApp();
   const [guideOpen, setGuideOpen] = useState(false);
   const guide = systemGuides[route];
 
   return (
     <View style={styles.header}>
-      <BackButton label="Back to Explore" onPress={() => setPage('explore')} />
+      <BackButton onPress={() => { if (!handleBack()) goBack('explore'); }} />
       {children}
       <Pressable accessibilityRole="button" accessibilityLabel={'About ' + guide.title}
         onPress={() => setGuideOpen(true)} style={({ pressed }) => [styles.infoButton, pressed && styles.pressed]}>

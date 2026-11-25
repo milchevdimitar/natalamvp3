@@ -1,3 +1,4 @@
+import { StarField } from '../../components/StarField';
 import React from 'react';
 import {
   View,
@@ -41,6 +42,7 @@ export function NewChatModal({
         onPress={onClose}
         style={styles.modalBackdrop}
       >
+        <StarField subtle />
         <TouchableOpacity
           activeOpacity={1}
           onPress={(e) => e.stopPropagation()}

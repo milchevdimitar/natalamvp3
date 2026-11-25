@@ -1,3 +1,4 @@
+import { StarField } from '../../components/StarField';
 import { BackButton } from '../../components/BackButton';
 import React from 'react';
 import {
@@ -126,6 +127,7 @@ export function AyurvedaSheetModal({
           justifyContent: 'flex-end',
         }}
       >
+        <StarField subtle />
         <Pressable
           onPress={(e) => e.stopPropagation()}
           style={{

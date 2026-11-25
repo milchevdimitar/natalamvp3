@@ -1,8 +1,7 @@
 import React, { useMemo, useState } from 'react';
-import {
+import { ScrollView,
   View,
   TouchableOpacity,
-  ScrollView,
   useWindowDimensions,
 } from 'react-native';
 import { Maximize2, Sparkles, TrendingUp } from 'lucide-react-native';

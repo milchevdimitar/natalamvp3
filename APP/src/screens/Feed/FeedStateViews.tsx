@@ -1,3 +1,4 @@
+import { StarField } from '../../components/StarField';
 import React from 'react';
 import { View, TouchableOpacity, ActivityIndicator, LayoutChangeEvent } from 'react-native';
 import { Sparkles, RefreshCw, AlertCircle } from 'lucide-react-native';
@@ -15,6 +16,7 @@ export function FeedLoadingState({
 }) {
   return (
     <View style={styles.centerStateContainer} onLayout={onLayout}>
+      <StarField subtle />
       <ActivityIndicator size="large" color={colors.purple} />
       <T bold size={14} style={{ color: '#FFFFFF', marginTop: 12 }}>
         Подбираме видеа за теб...
@@ -39,6 +41,7 @@ export function FeedErrorState({
 }) {
   return (
     <View style={styles.centerStateContainer} onLayout={onLayout}>
+      <StarField subtle />
       <AlertCircle size={40} color="#FF6B6B" />
       <T bold size={15} style={{ color: '#FFFFFF', marginTop: 12, textAlign: 'center' }}>
         Възникна проблем при зареждането
@@ -72,6 +75,7 @@ export function FeedEmptyState({
 }) {
   return (
     <View style={styles.centerStateContainer} onLayout={onLayout}>
+      <StarField subtle />
       <Sparkles size={38} color={colors.gold} />
       <T bold size={15} style={{ color: '#FFFFFF', marginTop: 12 }}>
         {hasCompletedSystems ? 'Няма намерени видеа' : 'Открий теми за твоя Feed'}

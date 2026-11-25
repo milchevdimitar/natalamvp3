@@ -1,10 +1,12 @@
+import { PagePager, type PagePagerHandle } from '../components/PagePager';
+import { usePageProgress } from '../components/pageProgress';
 import { PagerDots } from '../components/PagerDots';
 import { BackButton, backHeaderSpacing } from '../components/BackButton';
 import * as FileSystem from 'expo-file-system/legacy';
 import * as IntentLauncher from 'expo-intent-launcher';
 import * as Sharing from 'expo-sharing';
 import React, { useEffect, useRef, useState } from 'react';
-import { ActivityIndicator, Alert, Animated, Platform, Pressable, ScrollView, StyleSheet, View } from 'react-native';
+import { ActivityIndicator, Alert, Platform, Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import { Download, Sparkles } from 'lucide-react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { T } from '../components/UI';
@@ -19,9 +21,9 @@ export function ProfileReading({ userId, onClose }: {
   userId: string; onClose: () => void;
 }) {
   const reduced = useReducedMotion();
-  const offset = useRef(new Animated.Value(0)).current;
-  const pager = useRef<React.ComponentRef<typeof ScrollView>>(null);
+  const pager = useRef<PagePagerHandle>(null);
   const [width, setWidth] = useState(0);
+  const { position, fraction, offset } = usePageProgress(width);
   const [index, setIndex] = useState(0);
   const [attempt, setAttempt] = useState(0);
   const [pages, setPages] = useState<ReadingPage[]>([]);
@@ -177,7 +179,7 @@ export function ProfileReading({ userId, onClose }: {
   const move = (next: number) => {
     if (next < 0 || next >= pages.length || !width) return;
     setIndex(next);
-    pager.current?.scrollTo({ x: width * next, animated: !reduced });
+    pager.current?.setPage(next, !reduced);
   };
 
   return <DetailScreen title="" onClose={onClose} offset={offset} reduced={reduced} darkBottom travel={width * 13} header={
@@ -208,17 +210,8 @@ export function ProfileReading({ userId, onClose }: {
         <T bold size={20} style={styles.text}>Preparing your cosmic report</T>
         <T size={14} style={styles.muted}>Natala is connecting the results from your profile.</T>
       </View> : width > 0 && <>
-        <Animated.ScrollView
-          ref={pager}
-          horizontal pagingEnabled bounces={false} showsHorizontalScrollIndicator={false}
-          directionalLockEnabled nestedScrollEnabled scrollEventThrottle={16}
-
-          onScroll={Animated.event([{ nativeEvent: { contentOffset: { x: offset } } }], {
-            useNativeDriver: Platform.OS !== 'web',
-            listener: (event: { nativeEvent: { contentOffset: { x: number } } }) =>
-              setIndex(Math.min(12, Math.max(0, Math.round(event.nativeEvent.contentOffset.x / width)))),
-          })}
-        >
+        <PagePager pagerRef={pager} width={width} position={position} fraction={fraction}
+            onIndexChange={setIndex}>
           {pages.map((page) => <View key={page.id} style={{ width }}>
             <ScrollView style={styles.body} nestedScrollEnabled directionalLockEnabled contentContainerStyle={styles.chapter}>
               <LinearGradient colors={['#654571', '#282c65', '#171d4a']} style={styles.orb}>
@@ -232,7 +225,7 @@ export function ProfileReading({ userId, onClose }: {
               </View>
             </ScrollView>
           </View>)}
-        </Animated.ScrollView>
+        </PagePager>
         <PagerDots labels={pages.map(({ title }) => title)} index={index} onSelect={move} />
       </>}
     </View>

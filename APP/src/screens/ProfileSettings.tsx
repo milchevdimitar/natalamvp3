@@ -1,3 +1,5 @@
+import { AppearanceSettings } from './AppearanceSettings';
+import { useEdgeBack } from '../components/NavigationBack';
 import { BirthPickerFields } from '../components/BirthPickerFields';
 import type { BirthDate } from '../components/BirthWheelPicker';
 import { BackButton, backHeaderSpacing } from '../components/BackButton';
@@ -5,9 +7,9 @@ import { SubscriptionDetails } from './SubscriptionDetails';
 import { authorizedFetch, deleteAccount } from '../services/account';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import React, { useRef, useState } from 'react';
-import { ActivityIndicator, Animated, Linking, Modal, Platform, Pressable, ScrollView, StyleSheet, TextInput, View } from 'react-native';
-import { Bell, CalendarDays, ChevronRight, Mail, Pencil, UserRound, LogOut, Trash2, CreditCard } from 'lucide-react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { ActivityIndicator, Animated, Linking, Modal, Platform, Pressable, StyleSheet, TextInput, View } from 'react-native';
+import { Bell, Sparkles, CalendarDays, ChevronRight, Mail, Pencil, UserRound, LogOut, Trash2, CreditCard } from 'lucide-react-native';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Card, Section, T } from '../components/UI';
 import { useApp } from '../context/AppContext';
 import { API_BASE_URL, saveUserProfile } from '../services/api';
@@ -19,7 +21,8 @@ import { CosmicBackground, useReducedMotion } from './Home/CosmicBackground';
 export function ProfileSettings({ onClose, birthLabel, birthCity, initialSubscription = false }: {
   onClose: () => void; birthLabel?: string; birthCity?: string; initialSubscription?: boolean;
 }) {
-  const { user, setUser, colors, theme, logout } = useApp();
+  const { handleLocalBack, user, setUser, colors, theme, logout } = useApp();
+  const insets = useSafeAreaInsets();
   const offset = useRef(new Animated.Value(0)).current;
   const reduced = useReducedMotion();
   const [name, setName] = useState(String(user?.name || ''));
@@ -35,16 +38,25 @@ export function ProfileSettings({ onClose, birthLabel, birthCity, initialSubscri
   const [editingGender, setEditingGender] = useState(false);
   const [deviceNotice, setDeviceNotice] = useState('');
   const [confirm, setConfirm] = useState(false);
+  const [showAppearance, setShowAppearance] = useState(false);
   const [showSubscription, setShowSubscription] = useState(initialSubscription);
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [deleteNotice, setDeleteNotice] = useState('');
   const back = () => {
-    if (showSubscription && !initialSubscription) {
+    if (saving) return;
+    if (showAppearance) { offset.setValue(0); setShowAppearance(false); return; }
+    if (showSubscription && handleLocalBack()) return;
+    if (confirmDelete) setConfirmDelete(false);
+    else if (confirm) setConfirm(false);
+    else if (editingBirth) { setEditingBirth(false); setBirthNotice(''); }
+    else if (editingGender) { setEditingGender(false); setGenderNotice(''); }
+    else if (editing) { setEditing(false); setNotice(''); }
+    else if (showSubscription && !initialSubscription) {
       offset.setValue(0);
       setShowSubscription(false);
-    }
-    else onClose();
+    } else onClose();
   };
+  const edgeBack = useEdgeBack(back);
   const removeAccount = async () => {
     setSaving(true);
     setDeleteNotice('');
@@ -162,33 +174,35 @@ export function ProfileSettings({ onClose, birthLabel, birthCity, initialSubscri
   };
 
   return (
-    <Modal visible animationType={reduced ? 'none' : 'fade'} onRequestClose={() => { if (!saving) back(); }}>
-      <SafeAreaView style={{ flex: 1, backgroundColor: colors.bg }}>
+    <Modal visible statusBarTranslucent navigationBarTranslucent animationType={reduced ? 'none' : 'fade'} onRequestClose={back}>
+      <SafeAreaView edges={['left', 'right', 'bottom']} {...edgeBack} style={{ flex: 1, backgroundColor: colors.bg }}>
         <CosmicBackground offset={offset} reduced={reduced} light={theme === 'light'} />
-        <View style={styles.header}>
-          <BackButton onPress={back} disabled={saving} />
-        </View>
         <Animated.ScrollView
-          key={showSubscription ? 'subscription' : 'settings'}
+          key={showAppearance ? 'appearance' : showSubscription ? 'subscription' : 'settings'}
           keyboardShouldPersistTaps="handled"
           scrollEventThrottle={16}
           onScroll={Animated.event([{ nativeEvent: { contentOffset: { y: offset } } }], { useNativeDriver: Platform.OS !== 'web' })}
-          contentContainerStyle={styles.content}
+          contentInsetAdjustmentBehavior="never"
+          contentContainerStyle={{ paddingTop: insets.top }}
         >
-          <T bold size={30} style={styles.title}>{showSubscription ? 'Subscription' : 'Settings'}</T>
-          {showSubscription ? <SubscriptionDetails /> : <>
+          <View style={styles.header}>
+            <BackButton onPress={back} disabled={saving} />
+          </View>
+          <View style={styles.content}>
+          <T bold size={30} style={styles.title}>{showAppearance ? 'Appearance' : showSubscription ? 'Subscription' : 'Settings'}</T>
+          {showAppearance ? <AppearanceSettings /> : showSubscription ? <SubscriptionDetails /> : <>
 
           <Section>Account</Section>
           <Card style={styles.card}>
             <View style={styles.row}>
               <View style={[styles.icon, { backgroundColor: colors.purpleSoft }]}><UserRound size={20} color={colors.purple} /></View>
-              <View style={styles.copy}><T bold size={15}>Display name</T><T muted size={12}>{user?.name || 'Add a name'}</T></View>
-              {!editing && <Pressable accessibilityRole="button" accessibilityLabel="Edit display name" onPress={() => { setName(String(user?.name || '')); setNotice(''); setEditing(true); }} style={[styles.edit, { backgroundColor: colors.purpleSoft }]}>
+              <View style={styles.copy}><T bold size={15}>Your name</T><T muted size={12}>{user?.name || 'Add a name'}</T></View>
+              {!editing && <Pressable accessibilityRole="button" accessibilityLabel="Edit your name" onPress={() => { setName(String(user?.name || '')); setNotice(''); setEditing(true); }} style={[styles.edit, { backgroundColor: colors.purpleSoft }]}>
                 <Pencil size={14} color={colors.purple} /><T bold size={12} style={{ color: colors.purple }}>Edit</T>
               </Pressable>}
             </View>
             {editing && <>
-              <TextInput accessibilityLabel="Display name" autoFocus value={name} onChangeText={setName} maxLength={80} editable={!saving} returnKeyType="done" onSubmitEditing={saveName} style={[styles.input, { color: colors.text, backgroundColor: colors.surface, borderColor: colors.line }]} />
+              <TextInput accessibilityLabel="Your name" autoFocus value={name} onChangeText={setName} maxLength={80} editable={!saving} returnKeyType="done" onSubmitEditing={saveName} style={[styles.input, { color: colors.text, backgroundColor: colors.surface, borderColor: colors.line }]} />
               <View style={styles.actions}>
                 <Pressable accessibilityRole="button" disabled={saving} onPress={() => { setEditing(false); setNotice(''); }} style={[styles.action, { borderColor: colors.line }]}>
                   <T bold size={13}>Cancel</T>
@@ -247,7 +261,7 @@ export function ProfileSettings({ onClose, birthLabel, birthCity, initialSubscri
           {!!user?.email && <Card style={styles.card}>
             <View style={styles.row}>
               <View style={[styles.icon, { backgroundColor: colors.purpleSoft }]}><Mail size={19} color={colors.purple} /></View>
-              <View style={styles.copy}><T bold size={15}>Sign-in email</T><T muted size={12}>{user.email}</T></View>
+              <View style={styles.copy}><T bold size={15}>Email</T><T muted size={12}>{user.email}</T></View>
             </View>
           </Card>}
 
@@ -262,7 +276,6 @@ export function ProfileSettings({ onClose, birthLabel, birthCity, initialSubscri
           </Card> : accountRow('Delete account', Trash2, () => setConfirmDelete(true))}
 
           {Platform.OS !== 'web' && <>
-            <Section>Notifications</Section>
             <Card style={styles.card} onPress={() => Linking.openSettings().catch(() => setDeviceNotice('Could not open device settings.'))}>
               <View style={styles.row}>
                 <View style={[styles.icon, { backgroundColor: colors.purpleSoft }]}><Bell size={19} color={colors.purple} /></View>
@@ -273,6 +286,7 @@ export function ProfileSettings({ onClose, birthLabel, birthCity, initialSubscri
             {!!deviceNotice && <T muted size={12}>{deviceNotice}</T>}
           </>}
 
+          {accountRow('Appearance', Sparkles, () => { offset.setValue(0); setShowAppearance(true); })}
           {accountRow('Manage subscriptions', CreditCard, () => { offset.setValue(0); setShowSubscription(true); })}
 
           {confirm ? <Card style={styles.card}>
@@ -283,6 +297,7 @@ export function ProfileSettings({ onClose, birthLabel, birthCity, initialSubscri
             </View>
           </Card> : accountRow('Sign out', LogOut, () => setConfirm(true))}
           </>}
+          </View>
         </Animated.ScrollView>
       </SafeAreaView>
     </Modal>

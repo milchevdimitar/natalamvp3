@@ -1,3 +1,4 @@
+import { StarField } from './StarField';
 import React, { useState, useEffect, useRef, useMemo } from 'react';
 import {
   View,
@@ -287,8 +288,7 @@ export function StoryViewer({ circular = false, circleSize = 55 }: { circular?: 
   return (
     <>
       {/* Сторита по потребители */}
-      <ScrollView
-        horizontal
+      <ScrollView horizontal
         showsHorizontalScrollIndicator={false}
         contentContainerStyle={styles.scrollContent}
       >
@@ -358,6 +358,7 @@ export function StoryViewer({ circular = false, circleSize = 55 }: { circular?: 
         }}
       >
         <SafeAreaView style={styles.modalBackground}>
+          <StarField subtle />
           {activeGroup && activeStory && (
             <KeyboardAvoidingView
               behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
@@ -526,6 +527,7 @@ export function StoryViewer({ circular = false, circleSize = 55 }: { circular?: 
                   }}
                   style={styles.sheetBackdrop}
                 >
+                  <StarField subtle />
                   <TouchableOpacity
                     activeOpacity={1}
                     onPress={(e) => e.stopPropagation()}

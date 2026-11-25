@@ -1,5 +1,5 @@
 import { useTabActivity } from '../services/tabActivity';
-import React, { createContext, useContext, useState, useEffect } from 'react';
+import React, { createContext, useContext, useState, useEffect, useCallback, useRef } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { UserProfile } from '../models/User';
 import { cosmicTabColors, isCosmicPage } from '../theme/cosmic';
@@ -35,7 +35,13 @@ export interface SelectedChatData {
 interface AppContextType {
   page: string;
   tabActivity: { chat: boolean; people: boolean };
-  setPage: (page: string) => void;
+  setPage: (page: string, profileId?: string, returnChatId?: string) => void;
+  sharedProfileId?: string;
+  resumeChatId?: string;
+  goBack: (fallback?: string) => boolean;
+  handleBack: () => boolean;
+  handleLocalBack: () => boolean;
+  registerBack: (handler: () => boolean) => () => void;
   theme: 'dark' | 'light';
   toggleTheme: () => void;
   colors: any;
@@ -63,7 +69,48 @@ interface AppContextType {
 const AppContext = createContext<AppContextType | undefined>(undefined);
 
 export function AppProvider({ children }: { children: React.ReactNode }) {
-  const [page, setPage] = useState('home');
+  const [routes, setRoutes] = useState<{ page: string; profileId?: string; chatId?: string }[]>([{ page: 'home' }]);
+  const routeHistory = useRef(routes);
+  const backHandlers = useRef(new Set<() => boolean>());
+  const { page, profileId: sharedProfileId, chatId: resumeChatId } = routes[routes.length - 1];
+  const updateRoutes = useCallback((next: typeof routes) => {
+    routeHistory.current = next;
+    setRoutes(next);
+  }, []);
+  const setPage = useCallback((next: string, profileId?: string, returnChatId?: string) => {
+    const history = routeHistory.current;
+    const current = history[history.length - 1];
+    if (next === 'login' || current.page === 'login') {
+      updateRoutes([{ page: next, profileId }]);
+    } else if (next !== current.page || profileId !== current.profileId) {
+      const previous = returnChatId && current.page === 'chat'
+        ? [...history.slice(0, -1), { ...current, chatId: returnChatId }] : history;
+      updateRoutes([...previous.slice(-49), { page: next, profileId }]);
+    }
+  }, [updateRoutes]);
+  const goBack = useCallback((fallback?: string) => {
+    const history = routeHistory.current;
+    if (history.length > 1) {
+      updateRoutes(history.slice(0, -1));
+      return true;
+    }
+    if (fallback && fallback !== history[0].page) {
+      updateRoutes([{ page: fallback }]);
+      return true;
+    }
+    return false;
+  }, [updateRoutes]);
+  const registerBack = useCallback((handler: () => boolean) => {
+    backHandlers.current.add(handler);
+    return () => { backHandlers.current.delete(handler); };
+  }, []);
+  const handleLocalBack = useCallback(() => {
+    for (const handler of [...backHandlers.current].reverse()) {
+      if (handler()) return true;
+    }
+    return false;
+  }, []);
+  const handleBack = useCallback(() => handleLocalBack() || goBack(), [handleLocalBack, goBack]);
   const [theme, setTheme] = useState<'dark' | 'light'>('dark');
   const [themeLoaded, setThemeLoaded] = useState(false);
   const [user, setUserState] = useState<UserProfile | null>(null);
@@ -298,6 +345,12 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       value={{
         page,
         setPage,
+        sharedProfileId,
+        resumeChatId,
+        goBack,
+        handleBack,
+        handleLocalBack,
+        registerBack,
         tabActivity,
         theme,
         toggleTheme,

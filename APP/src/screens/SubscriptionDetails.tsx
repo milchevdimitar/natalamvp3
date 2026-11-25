@@ -1,3 +1,4 @@
+import { useLocalBack } from '../components/NavigationBack';
 import { Check, Settings2 } from 'lucide-react-native';
 import React, { useEffect, useState } from 'react';
 import { Linking, Pressable, StyleSheet, Switch, View } from 'react-native';
@@ -18,6 +19,12 @@ export function SubscriptionDetails() {
   const [busy, setBusy] = useState(false);
   const [confirm, setConfirm] = useState(false);
   const [error, setError] = useState('');
+  useLocalBack(Boolean(editingTier) || confirm, () => {
+    if (busy) return;
+    setEditingTier(null);
+    setConfirm(false);
+    setError('');
+  });
   useEffect(() => {
     let active = true;
     void refreshAccount().then((result) => { if (active) setAccount(result); }).catch(() => {

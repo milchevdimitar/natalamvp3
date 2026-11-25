@@ -1,3 +1,4 @@
+import { useEdgeBack } from './NavigationBack';
 import React, { useEffect, useRef, useState } from 'react';
 import { Animated, Modal, Platform, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import type { NativeScrollEvent, NativeSyntheticEvent } from 'react-native';
@@ -95,6 +96,7 @@ type Props = { onClose: () => void } & (
 );
 
 export function BirthWheelPicker(props: Props) {
+  const edgeBack = useEdgeBack(props.onClose);
   const offset = useRef(new Animated.Value(0)).current;
   const reduced = useReducedMotion();
   const [today] = useState(() => new Date());
@@ -116,7 +118,7 @@ export function BirthWheelPicker(props: Props) {
 
   return (
     <Modal visible animationType={reduced ? 'none' : 'slide'} onRequestClose={props.onClose}>
-      <View style={styles.screen}>
+      <View {...edgeBack} style={styles.screen}>
         <CosmicBackground offset={offset} reduced={reduced} darkBottom />
         <SafeAreaView style={styles.safe}>
           <BirthPickerHeader title={props.mode === 'date' ? 'Set birthday' : 'Set birth time'} onBack={props.onClose} />

@@ -1,3 +1,4 @@
+import { StarField } from './StarField';
 import React, { useState } from 'react';
 import { ActivityIndicator, Image, Modal, Pressable, StyleSheet, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -66,6 +67,7 @@ export function ProfilePhoto({ name, source }: { name: string; source?: string }
     {!preview && !!notice && <T muted size={12} style={styles.notice}>{notice}</T>}
     {preview && !!source && <Modal visible animationType="fade" onRequestClose={() => { if (!busy) setPreview(false); }}>
       <SafeAreaView style={styles.preview}>
+        <StarField subtle />
         <Pressable accessibilityRole="button" accessibilityLabel="Close photo preview" disabled={busy} onPress={() => setPreview(false)} style={styles.close}>
           <X size={22} color="white" />
         </Pressable>

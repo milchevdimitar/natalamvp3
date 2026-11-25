@@ -1,3 +1,4 @@
+import { useLocalBack } from '../../components/NavigationBack';
 import { ExploreSystemHeader } from '../ExploreSystemHeader';
 import React from 'react';
 
@@ -35,6 +36,7 @@ export default function MBTI() {
     handleNextPage,
     handleCompletePress,
   } = useMbtiTest(user, setUser, addStory);
+  useLocalBack(!showSavedResult && !isFinished && currentPage > 0, () => setCurrentPage((page) => page - 1));
 
   return (
     <>

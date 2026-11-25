@@ -15,6 +15,7 @@ interface UseChatParams {
   currentUserEmail: string;
   selectedChat: SelectedChatData | null;
   setSelectedChat?: (val: SelectedChatData | null) => void;
+  initialChatId?: string;
   setHideBottomNav?: (hide: boolean) => void;
 }
 
@@ -23,9 +24,10 @@ export function useChat({
   selectedChat,
   setSelectedChat,
   setHideBottomNav,
+  initialChatId,
 }: UseChatParams) {
   const [conversations, setConversations] = useState<Conversation[]>([]);
-  const [activeChatId, setActiveChatId] = useState<string | null>(null);
+  const [activeChatId, setActiveChatId] = useState<string | null>(initialChatId ?? null);
   const [searchQuery, setSearchQuery] = useState('');
   const [messageInput, setMessageInput] = useState('');
 

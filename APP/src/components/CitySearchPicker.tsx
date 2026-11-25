@@ -1,3 +1,4 @@
+import { useEdgeBack } from './NavigationBack';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { BirthPickerHeader } from './BirthPickerHeader';
 import { CosmicBackground, useReducedMotion } from '../screens/Home/CosmicBackground';
@@ -28,6 +29,7 @@ export function CitySearchPicker({ selectedCity, onSelectCity, colors, cosmicThe
   const reducedMotion = useReducedMotion();
   const offset = useRef(new Animated.Value(0)).current;
   const [modalVisible, setModalVisible] = useState(false);
+  const edgeBack = useEdgeBack(() => setModalVisible(false));
   const [query, setQuery] = useState('');
   const [results, setResults] = useState<CityLocation[]>([]);
   const [loading, setLoading] = useState(false);
@@ -135,7 +137,7 @@ export function CitySearchPicker({ selectedCity, onSelectCity, colors, cosmicThe
         animationType="slide"
         onRequestClose={() => setModalVisible(false)}
       >
-        <SafeAreaView style={[styles.modalContainer, { backgroundColor: bgColor }]}>
+        <SafeAreaView {...edgeBack} style={[styles.modalContainer, { backgroundColor: bgColor }]}>
           {modalVisible && cosmicTheme && <CosmicBackground offset={offset} reduced={reducedMotion} light={cosmicTheme === 'light'} />}
           <BirthPickerHeader title="Place of birth" onBack={() => setModalVisible(false)}
             color={colors.text} onDark={cosmicTheme === 'dark'} />

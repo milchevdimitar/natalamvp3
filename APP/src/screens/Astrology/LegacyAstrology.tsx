@@ -1,3 +1,4 @@
+import { useBacktrackedSelection } from '../../components/NavigationBack';
 import React, { useMemo, useState } from 'react';
 import {
   View,
@@ -50,7 +51,7 @@ const DEFAULT_COLLECTIONS: UserCollectionGroup[] = [
 
 export function LegacyAstrology() {
   const { colors, setPage, user, setUser } = useApp();
-  const [activeTab, setActiveTab] = useState<AstrologyAppTab>('chart');
+  const [activeTab, setActiveTab] = useBacktrackedSelection<AstrologyAppTab>('chart');
   const [viewMode, setViewMode] = useState<ChartViewMode>('2D');
 
   const [aiChartText, setAiChartText] = useState<string | null>(null);

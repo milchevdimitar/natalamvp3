@@ -256,13 +256,12 @@ export default function Cardology() {
       {selectedCard ? (
         <View style={{ gap: 18, marginBottom: 40 }}>
           {/* Birth card display */}
-          <Card style={{ alignItems: 'center', paddingVertical: 26, gap: 12 }}>
+          <View style={{ alignItems: 'center', gap: 12 }}>
 
             <View style={{
               width: '64%', maxWidth: CARD_WIDTH, aspectRatio: CARD_ASPECT_RATIO,
               borderRadius: 14, overflow: 'hidden', marginVertical: 4,
-              backgroundColor: colors.purpleSoft, alignItems: 'center', justifyContent: 'center',
-              boxShadow: '0 8px 23px rgba(5, 7, 24, 0.45)',
+              backgroundColor: artwork ? 'transparent' : colors.purpleSoft, alignItems: 'center', justifyContent: 'center',
             }}>
               {artwork ? <Image
                 key={cardCode}
@@ -281,7 +280,7 @@ export default function Cardology() {
             <T bold size={24} style={{ color: colors.purple }}>
               {selectedCard.nameBg}
             </T>
-          </Card>
+          </View>
 
           {/* Interpretation */}
           <Section>Meaning & Characteristics</Section>

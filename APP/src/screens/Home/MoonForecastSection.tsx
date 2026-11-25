@@ -1,5 +1,7 @@
-import React, { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
-import { Animated, Easing, PanResponder, Platform, Pressable, StyleSheet, Text, View, type ViewStyle } from 'react-native';
+import { PagePager, type PagePagerHandle } from '../../components/PagePager';
+import { usePageProgress } from '../../components/pageProgress';
+import React, { useLayoutEffect, useMemo, useRef, useState } from 'react';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { ChevronLeft, ChevronRight } from 'lucide-react-native';
 import { getMoonPhaseData } from './home.calculations';
 import { cosmic } from '../../theme/cosmic';
@@ -7,7 +9,6 @@ import { localDay } from './useDiscoveryStreak';
 import { calendarDetailStyles as calendar } from './calendarDetailStyles';
 
 const weekdays = ['Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa', 'Su'];
-const webSwipeStyle: ViewStyle & { touchAction: 'pan-y' } = { touchAction: 'pan-y' };
 const dateLabel = (date: Date) => date.toLocaleDateString(undefined, { dateStyle: 'long' });
 
 function getMonthPage(current: Date, delta: number) {
@@ -26,78 +27,46 @@ export function MoonForecastSection({ reduced, selected, onSelect }: { reduced: 
   const [today] = useState(() => new Date());
   const [month, setMonth] = useState(() => new Date(selected.getFullYear(), selected.getMonth(), 1));
   const [width, setWidth] = useState(0);
-  const offset = useRef(new Animated.Value(0)).current;
-  const moving = useRef(false);
-  const animation = useRef<Animated.CompositeAnimation | null>(null);
+  const pager = useRef<PagePagerHandle>(null);
+  const { position, fraction } = usePageProgress(width, 1);
+  const recentering = useRef(false);
   const pages = useMemo(() => [-1, 0, 1].map((delta) => getMonthPage(month, delta)), [month]);
 
   useLayoutEffect(() => {
-    offset.setValue(0);
-    moving.current = false;
-  }, [month, offset]);
+    if (!recentering.current) return;
+    pager.current?.setPage(1, false);
+    recentering.current = false;
+  }, [month]);
 
-  useEffect(() => () => animation.current?.stop(), []);
-
-  const settle = useCallback((delta: number) => {
-    if (moving.current) return;
-    moving.current = true;
-    const finish = () => {
-      if (delta) {
-        setMonth((current) => new Date(current.getFullYear(), current.getMonth() + delta, 1));
-      } else {
-        offset.setValue(0);
-        moving.current = false;
-      }
-    };
-    if (reduced || !width) {
-      finish();
-      return;
-    }
-
-    animation.current = Animated.timing(offset, {
-      toValue: -delta * width,
-      duration: delta ? 240 : 160,
-      easing: Easing.out(Easing.cubic),
-      useNativeDriver: Platform.OS !== 'web',
-    });
-    animation.current.start(({ finished }) => {
-      animation.current = null;
-      if (finished) finish();
-      else moving.current = false;
-    });
-  }, [offset, reduced, width]);
-
-  const swipe = useMemo(() => PanResponder.create({
-    onMoveShouldSetPanResponder: (_, { dx, dy }) => !moving.current && Math.abs(dx) > 12 && Math.abs(dx) > 1.5 * Math.abs(dy),
-    onPanResponderMove: (_, { dx }) => {
-      if (!reduced && !moving.current) offset.setValue(Math.max(-width, Math.min(width, dx)));
-    },
-    onPanResponderRelease: (_, { dx, dy }) => settle(Math.abs(dx) > 38 && Math.abs(dx) > Math.abs(dy) ? (dx < 0 ? 1 : -1) : 0),
-    onPanResponderTerminate: () => settle(0),
-  }), [offset, reduced, settle, width]);
+  const settleMonth = (page: number) => {
+    if (page === 1 || recentering.current) return;
+    recentering.current = true;
+    setMonth((current) => new Date(current.getFullYear(), current.getMonth() + page - 1, 1));
+  };
 
   return (
     <View style={styles.calendar}>
       <View style={calendar.month}>
-        <Pressable accessibilityRole="button" accessibilityLabel="Previous month" onPress={() => settle(-1)} style={calendar.arrow}>
+        <Pressable accessibilityRole="button" accessibilityLabel="Previous month" onPress={() => pager.current?.setPage(0, !reduced)} style={calendar.arrow}>
           <ChevronLeft size={22} color={cosmic.text} />
         </Pressable>
         <Text accessibilityRole="header" accessibilityLiveRegion="polite" style={calendar.monthTitle}>
           {month.toLocaleDateString(undefined, { month: 'long', year: 'numeric' })}
         </Text>
-        <Pressable accessibilityRole="button" accessibilityLabel="Next month" onPress={() => settle(1)} style={calendar.arrow}>
+        <Pressable accessibilityRole="button" accessibilityLabel="Next month" onPress={() => pager.current?.setPage(2, !reduced)} style={calendar.arrow}>
           <ChevronRight size={22} color={cosmic.text} />
         </Pressable>
       </View>
       <View style={calendar.weekdays}>
         {weekdays.map((label) => <Text key={label} style={calendar.weekday}>{label}</Text>)}
       </View>
-      <View {...swipe.panHandlers} onLayout={(event) => setWidth(event.nativeEvent.layout.width)} style={[styles.window, Platform.OS === 'web' && webSwipeStyle]}>
-        {width > 0 && <Animated.View style={[styles.track, { width: width * 3, marginLeft: -width, transform: [{ translateX: offset }] }]}>
+      <View onLayout={(event) => setWidth(event.nativeEvent.layout.width)} style={styles.window}>
+        {width > 0 && <PagePager pagerRef={pager} width={width} initialIndex={1} position={position} fraction={fraction}
+          onSettled={settleMonth}>
           {pages.map((page, pageIndex) => {
             const active = pageIndex === 1;
             return (
-              <View key={page.month.toISOString()} pointerEvents={active ? 'auto' : 'none'} aria-hidden={!active} importantForAccessibility={active ? 'auto' : 'no-hide-descendants'} style={[calendar.grid, { width }]}>
+              <View key={pageIndex} pointerEvents={active ? 'auto' : 'none'} aria-hidden={!active} importantForAccessibility={active ? 'auto' : 'no-hide-descendants'} style={[calendar.grid, { width }]}>
                 {page.days.map((day, i) => {
                   if (!day) return <View key={i} style={calendar.column} />;
                   const isToday = day.date.toDateString() === today.toDateString();
@@ -121,7 +90,7 @@ export function MoonForecastSection({ reduced, selected, onSelect }: { reduced: 
               </View>
             );
           })}
-        </Animated.View>}
+        </PagePager>}
       </View>
     </View>
   );
@@ -129,8 +98,7 @@ export function MoonForecastSection({ reduced, selected, onSelect }: { reduced: 
 
 const styles = StyleSheet.create({
   calendar: { gap: 9 },
-  window: { overflow: 'hidden', minHeight: 284 },
-  track: { flexDirection: 'row' },
+  window: { overflow: 'hidden', height: 284 },
   selected: { backgroundColor: cosmic.purple },
   selectedText: { color: cosmic.bg },
   phase: { fontSize: 12 },

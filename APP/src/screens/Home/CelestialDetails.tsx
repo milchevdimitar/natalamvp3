@@ -1,6 +1,9 @@
+import { PagePager, type PagePagerHandle } from '../../components/PagePager';
+import { usePageProgress } from '../../components/pageProgress';
+import { useEdgeBack } from '../../components/NavigationBack';
 import { PagerDots } from '../../components/PagerDots';
 import { BackButton, backHeaderSpacing } from '../../components/BackButton';
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { Animated, Easing, Modal, Platform, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -73,11 +76,12 @@ export function zodiacSlides(currentSign: string, now: Date): CelestialSlide[] {
 
 export function DetailScreen({ title, onClose, children, offset, reduced, travel, header, darkBottom }: {
   title: string; onClose: () => void; children: React.ReactNode;
-  offset: Animated.Value; reduced: boolean; travel?: number; header?: React.ReactNode; darkBottom?: boolean;
+  offset: Animated.Value | ReturnType<typeof Animated.subtract> | ReturnType<typeof Animated.multiply>; reduced: boolean; travel?: number; header?: React.ReactNode; darkBottom?: boolean;
 }) {
+  const edgeBack = useEdgeBack(onClose);
   return (
     <Modal visible statusBarTranslucent navigationBarTranslucent animationType={reduced ? 'none' : 'fade'} onRequestClose={onClose}>
-      <View style={styles.detail}>
+      <View {...edgeBack} style={styles.detail}>
         <CosmicBackground offset={offset} horizontal reduced={reduced} travel={travel} darkBottom={darkBottom} />
         <SafeAreaView style={styles.safeContent}>
         {header ?? <View style={styles.header}>
@@ -246,17 +250,17 @@ function CodexReading({ slide }: { slide: CelestialSlide }) {
   );
 }
 
-export function CelestialCarousel({ title, kind, slides, onClose, reduced, onRetrogrades }: {
+export function CelestialCarousel({ title, kind, slides, onClose, reduced, initialIndex, onRetrogrades }: {
   title: string; kind: 'zodiac' | 'codex'; slides: CelestialSlide[]; onClose: () => void; reduced: boolean;
-  onRetrogrades?: () => void;
+  initialIndex?: number;
+  onRetrogrades?: (index: number) => void;
 }) {
   const zodiac = kind === 'zodiac';
-  const [index, setIndex] = useState(() => Math.max(0, slides.findIndex((slide) => slide.current)));
+  const [index, setIndex] = useState(() => Math.max(0, Math.min(slides.length - 1, initialIndex ?? slides.findIndex((slide) => slide.current))));
   const [viewport, setViewport] = useState({ width: 0, height: 0 });
   const { width, height } = viewport;
-  const offset = useRef(new Animated.Value(0)).current;
-  const scroller = useRef<React.ComponentRef<typeof ScrollView>>(null);
-  const activeIndex = useRef(index);
+  const { position, fraction, offset } = usePageProgress(width, index);
+  const scroller = useRef<PagePagerHandle>(null);
   const float = useRef(new Animated.Value(0)).current;
   const travel = width * (slides.length - 1);
 
@@ -271,19 +275,51 @@ export function CelestialCarousel({ title, kind, slides, onClose, reduced, onRet
     return () => animation.stop();
   }, [float, reduced]);
 
-  useEffect(() => {
-    if (!width) return;
-    const frame = requestAnimationFrame(() => {
-      scroller.current?.scrollTo({ x: activeIndex.current * width, animated: false });
-    });
-    return () => cancelAnimationFrame(frame);
-  }, [width]);
-
-  const move = (next: number) => {
-    scroller.current?.scrollTo({ x: next * width, animated: !reduced });
-  };
+  const move = (next: number) => scroller.current?.setPage(next, !reduced);
 
   const orbSize = zodiac ? celestialOrbSize(width) : Math.min(celestialOrbSize(width), height * 0.28);
+
+  const pages = width > 0 && height > 0 ? slides.map((slide, i) => {
+    const heading = <>
+      <View style={styles.slideHeading}>
+        <Text style={styles.eyebrow}>{formatIndex(i)} · {zodiac ? 'SOLAR SEASON' : 'CELESTIAL STORY'}</Text>
+        <Text accessibilityRole="header" style={styles.slideTitle}>{slide.title.toUpperCase()}</Text>
+        <Text style={styles.subtitle}>{slide.tagline}</Text>
+      </View>
+      <View style={[styles.hero, { minHeight: zodiac ? Math.max(175, orbSize + 22) : orbSize + 16 }]}>
+        <Animated.View pointerEvents="none" style={{ transform: [{ translateY: float }] }}>
+          <CelestialOrb slide={slide} zodiac={zodiac} size={orbSize} animateRays={!reduced && i === index} />
+        </Animated.View>
+        <View style={styles.position}>
+          <Text style={styles.positionSymbol}>{slide.symbol}</Text>
+          <Text style={styles.positionText}>{slide.position}</Text>
+        </View>
+      </View>
+    </>;
+    return zodiac ? (
+      <ScrollView key={slide.title} style={{ width, height }} contentContainerStyle={styles.slide} nestedScrollEnabled directionalLockEnabled>
+        {heading}
+        <View style={styles.description}>
+          <LinearGradient colors={glassPanel.colors} start={glassPanel.start} end={glassPanel.end} style={StyleSheet.absoluteFill} />
+          <View style={styles.factHeader}>
+            <Text style={styles.eyebrow}>{zodiac ? 'SEASONAL MEANING' : 'MEANING IN ASTROLOGY'}</Text>
+            <Text style={[styles.badge, slide.retrograde && styles.retroBadge]}>{slide.retrograde ? '↺ ' : ''}{slide.badge}</Text>
+          </View>
+          <Text style={styles.copy}>{slide.summary ?? planetSummaries[slide.title] ?? slide.tagline}</Text>
+          <View style={styles.divider} />
+          <Text style={styles.more}>{slide.description}</Text>
+        </View>
+        {slide.note && <Text style={styles.note}>{slide.note}</Text>}
+      </ScrollView>
+    ) : (
+      <View key={slide.title} style={{ width, height }}>
+        <View style={[styles.slide, styles.codexSlide]}>
+          {heading}
+          <CodexReading slide={slide} />
+        </View>
+      </View>
+    );
+  }) : null;
 
   return (
     <DetailScreen title={title} onClose={onClose} offset={offset} reduced={reduced} travel={travel} darkBottom header={
@@ -291,75 +327,15 @@ export function CelestialCarousel({ title, kind, slides, onClose, reduced, onRet
         <BackButton onPress={onClose} label="Back to Home" onDark />
         <Text accessibilityLabel={title + ', card ' + (index + 1) + ' of ' + slides.length} style={styles.counter}>{formatIndex(index)} / {slides.length}</Text>
         <View style={styles.headerEnd}>
-          {onRetrogrades && <Pressable accessibilityRole="button" onPress={onRetrogrades} style={styles.shortcut}><Text style={styles.link}>↺ Retrogrades</Text></Pressable>}
+          {onRetrogrades && <Pressable accessibilityRole="button" onPress={() => onRetrogrades(index)} style={styles.shortcut}><Text style={styles.link}>↺ Retrogrades</Text></Pressable>}
         </View>
       </View>
     }>
       <View style={styles.track} onLayout={({ nativeEvent: { layout } }) => {
         setViewport((previous) => previous.width === layout.width && previous.height === layout.height ? previous : { width: layout.width, height: layout.height });
       }}>
-        {width > 0 && height > 0 && <Animated.ScrollView
-          ref={scroller}
-          horizontal
-          pagingEnabled
-          directionalLockEnabled
-          nestedScrollEnabled
-          showsHorizontalScrollIndicator={false}
-          scrollEventThrottle={16}
-          onScroll={Animated.event([{ nativeEvent: { contentOffset: { x: offset } } }], {
-            useNativeDriver: Platform.OS !== 'web',
-            listener: (event: { nativeEvent: { contentOffset: { x: number } } }) => {
-              const next = Math.max(0, Math.min(slides.length - 1, Math.round(event.nativeEvent.contentOffset.x / width)));
-              if (next !== activeIndex.current) {
-                activeIndex.current = next;
-                setIndex(next);
-              }
-            },
-          })}
-          style={styles.track}
-        >
-          {slides.map((slide, i) => {
-            const heading = <>
-              <View style={styles.slideHeading}>
-                <Text style={styles.eyebrow}>{formatIndex(i)} · {zodiac ? 'SOLAR SEASON' : 'CELESTIAL STORY'}</Text>
-                <Text accessibilityRole="header" style={styles.slideTitle}>{slide.title.toUpperCase()}</Text>
-                <Text style={styles.subtitle}>{slide.tagline}</Text>
-              </View>
-              <View style={[styles.hero, { minHeight: zodiac ? Math.max(175, orbSize + 22) : orbSize + 16 }]}>
-                <Animated.View pointerEvents="none" style={{ transform: [{ translateY: float }] }}>
-                  <CelestialOrb slide={slide} zodiac={zodiac} size={orbSize} animateRays={!reduced && i === index} />
-                </Animated.View>
-                <View style={styles.position}>
-                  <Text style={styles.positionSymbol}>{slide.symbol}</Text>
-                  <Text style={styles.positionText}>{slide.position}</Text>
-                </View>
-              </View>
-            </>;
-            return zodiac ? (
-            <ScrollView key={slide.title} style={{ width, height }} contentContainerStyle={styles.slide} nestedScrollEnabled directionalLockEnabled>
-              {heading}
-              <View style={styles.description}>
-                <LinearGradient colors={glassPanel.colors} start={glassPanel.start} end={glassPanel.end} style={StyleSheet.absoluteFill} />
-                <View style={styles.factHeader}>
-                  <Text style={styles.eyebrow}>{zodiac ? 'SEASONAL MEANING' : 'MEANING IN ASTROLOGY'}</Text>
-                  <Text style={[styles.badge, slide.retrograde && styles.retroBadge]}>{slide.retrograde ? '↺ ' : ''}{slide.badge}</Text>
-                </View>
-                <Text style={styles.copy}>{slide.summary ?? planetSummaries[slide.title] ?? slide.tagline}</Text>
-                <View style={styles.divider} />
-                <Text style={styles.more}>{slide.description}</Text>
-              </View>
-              {slide.note && <Text style={styles.note}>{slide.note}</Text>}
-            </ScrollView>
-            ) : (
-              <View key={slide.title} style={{ width, height }}>
-                <View style={[styles.slide, styles.codexSlide]}>
-                  {heading}
-                  <CodexReading slide={slide} />
-                </View>
-              </View>
-            );
-          })}
-        </Animated.ScrollView>}
+        {pages && <PagePager initialIndex={index} width={width} position={position} fraction={fraction}
+          pagerRef={scroller} onIndexChange={setIndex}>{pages}</PagePager>}
       </View>
       <PagerDots labels={slides.map(({ title }) => title)} index={index} onSelect={move} />
     </DetailScreen>

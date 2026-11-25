@@ -65,8 +65,7 @@ export default function People({ onOpenProfile }: { onOpenProfile: (id: string) 
       />
 
       <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-        <ScrollView
-          horizontal
+        <ScrollView horizontal
           showsHorizontalScrollIndicator={false}
           contentContainerStyle={styles.filtersRow}
         >

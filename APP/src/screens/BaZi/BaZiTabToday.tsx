@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { View, TouchableOpacity, ScrollView } from 'react-native';
+import { ScrollView, View, TouchableOpacity } from 'react-native';
 import { Clock, RefreshCw, Sparkles } from 'lucide-react-native';
 import { Card, T } from '../../components/UI';
 import { BaZiChart, BaZiViewComplexity, CityPreset } from './bazi.types';

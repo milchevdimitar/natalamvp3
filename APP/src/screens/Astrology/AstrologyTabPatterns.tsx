@@ -1,5 +1,5 @@
 import React, { useMemo, useState } from 'react';
-import { View, TouchableOpacity, ScrollView } from 'react-native';
+import { ScrollView, View, TouchableOpacity } from 'react-native';
 import { Layers, Trash2, ChevronRight } from 'lucide-react-native';
 import { Card, T, Section } from '../../components/UI';
 import {

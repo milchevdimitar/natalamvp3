@@ -1,8 +1,8 @@
+import { StarField } from '../../components/StarField';
 import React, { useState } from 'react';
-import {
+import { ScrollView,
   View,
   Pressable,
-  ScrollView,
   Modal,
   TouchableOpacity,
   ActivityIndicator,
@@ -40,8 +40,7 @@ export function PlanetaryCodexSection({
         )}
       </View>
 
-      <ScrollView
-        horizontal
+      <ScrollView horizontal
         showsHorizontalScrollIndicator={false}
         contentContainerStyle={{ gap: 14, paddingRight: 10 }}
       >
@@ -126,6 +125,7 @@ export function PlanetaryCodexSection({
           style={styles.modalBackdrop}
           onPress={() => setSelectedPlanet(null)}
         >
+          <StarField subtle />
           {selectedPlanet && (
             <Pressable
               onPress={(e) => e.stopPropagation()}

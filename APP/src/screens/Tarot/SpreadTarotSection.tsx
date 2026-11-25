@@ -1,3 +1,4 @@
+import { useLocalBack } from '../../components/NavigationBack';
 import { BackButton } from '../../components/BackButton';
 import React, { useEffect, useRef, useState } from 'react';
 import { ActivityIndicator, Animated, Platform, Pressable, ScrollView, StyleSheet, TextInput, View } from 'react-native';
@@ -94,6 +95,7 @@ export function SpreadTarotSection(props: Props) {
     onDrawSpread, onRevealCard, onAddClarification, onRevealAll, onShareToStory,
   } = props;
   const [editing, setEditing] = useState(false);
+  useLocalBack(editing && spreadDrawn, () => setEditing(false));
   const [inspected, setInspected] = useState<number | null>(null);
   const [activeCard, setActiveCard] = useState(0);
   const reduced = useReducedMotion();

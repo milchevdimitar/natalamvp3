@@ -1,3 +1,4 @@
+import { useBacktrackedSelection } from '../../components/NavigationBack';
 import { ExploreSystemHeader } from '../ExploreSystemHeader';
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import {
@@ -91,7 +92,7 @@ export default function BaZi() {
 
   const initial = useMemo(() => extractInitialProfile(user), [user]);
 
-  const [activeTab, setActiveTab] = useState<BaZiTabId>('chart');
+  const [activeTab, setActiveTab] = useBacktrackedSelection<BaZiTabId>('chart');
   const [viewComplexity, setViewComplexity] = useState<BaZiViewComplexity>('simple');
   const [showInputModal, setShowInputModal] = useState(false);
   const [showOverviewModal, setShowOverviewModal] = useState(false);

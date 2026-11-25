@@ -1,5 +1,5 @@
 import React, { useMemo, useState } from 'react';
-import { View, TouchableOpacity, ScrollView, ActivityIndicator } from 'react-native';
+import { ScrollView, View, TouchableOpacity, ActivityIndicator } from 'react-native';
 import {
   Clock,
   Bookmark,

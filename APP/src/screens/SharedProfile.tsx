@@ -1,13 +1,15 @@
+import { StarField } from '../components/StarField';
+import { BackButton } from '../components/BackButton';
 import React, { useCallback, useEffect, useState } from 'react';
 import { ActivityIndicator, Image, Modal, Pressable, StyleSheet, View } from 'react-native';
-import { ArrowLeft, MessageCircle, UserPlus, X } from 'lucide-react-native';
+import { MessageCircle, UserPlus, X } from 'lucide-react-native';
 import { Card, Pill, Section, T } from '../components/UI';
 import { ProfileAvatar } from '../components/ProfileAvatar';
 import { useApp } from '../context/AppContext';
 import { fetchSharedProfile, likeOrRequestPerson, type SharedProfile as SharedProfileData } from '../services/peopleService';
 
 export default function SharedProfile({ id }: { id: string }) {
-  const { colors, user, setPage, setSelectedChat } = useApp();
+  const { colors, user, setPage, goBack, setSelectedChat } = useApp();
   const [profile, setProfile] = useState<SharedProfileData | null>(null);
   const [loading, setLoading] = useState(true);
   const [sending, setSending] = useState(false);
@@ -50,7 +52,7 @@ export default function SharedProfile({ id }: { id: string }) {
 
   return (
     <>
-      <Pressable accessibilityRole="button" onPress={() => setPage('people')} style={styles.back}><ArrowLeft color={colors.purple} size={18} /><T bold size={13}>People</T></Pressable>
+      <BackButton onPress={() => goBack('people')} />
       {loading && !profile && <ActivityIndicator style={styles.loader} color={colors.purple} />}
       {!!notice && <Card style={{ marginBottom: 12, gap: 8 }}><T muted size={13}>{notice}</T>{!profile && <Pill onPress={() => load({ cancelled: false })}>Try again</Pill>}</Card>}
       {profile && <>
@@ -78,6 +80,7 @@ export default function SharedProfile({ id }: { id: string }) {
       </>}
       {story && <Modal visible transparent animationType="fade" onRequestClose={() => setStory(null)}>
         <View style={styles.storyBackdrop}>
+          <StarField subtle />
           <Pressable accessibilityRole="button" accessibilityLabel="Close story" onPress={() => setStory(null)} style={styles.storyClose}><X size={24} color="#fff" /></Pressable>
           <Image source={{ uri: story.imageUrl }} resizeMode="contain" style={styles.storyImage} />
         </View>

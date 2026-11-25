@@ -1,4 +1,5 @@
-import React, { useState } from 'react';
+import { useBacktrackedSelection } from '../../components/NavigationBack';
+import React from 'react';
 import { StyleSheet } from 'react-native';
 import { SegmentedControl } from '../../components/SegmentedControl';
 import { Card, Hero, T } from '../../components/UI';
@@ -14,7 +15,7 @@ const modes = [
 type AstrologyMode = (typeof modes)[number]['value'];
 
 export default function Astrology() {
-  const [mode, setMode] = useState<AstrologyMode>('legacy');
+  const [mode, setMode] = useBacktrackedSelection<AstrologyMode>('legacy');
 
   return (
     <>

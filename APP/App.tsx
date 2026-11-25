@@ -1,3 +1,6 @@
+import { TiltParallaxProvider } from './src/components/TiltParallax';
+import { StarField } from './src/components/StarField';
+import { useEdgeBack } from './src/components/NavigationBack';
 import { backHeaderSpacing } from './src/components/BackButton';
 import { isExploreRoute } from './src/data/exploreRoutes';
 import { hasFeature, isPlanFeature } from './src/services/account';
@@ -10,6 +13,7 @@ import {
   Platform,
   StatusBar,
   ActivityIndicator,
+  BackHandler,
   Linking,
 } from 'react-native';
 import { StatusBar as ExpoStatusBar } from 'expo-status-bar';
@@ -46,9 +50,9 @@ import { registerForPushNotificationsAsync } from './src/services/notifications'
 
 function Shell() {
   const insets = useSafeAreaInsets();
-  const { page, setPage, colors, theme, user, hideBottomNav, account, restoring } = useApp();
+  const { page, setPage, goBack, handleBack, sharedProfileId, resumeChatId, colors, theme, user, hideBottomNav, account, restoring } = useApp();
   const [pendingProfile, setPendingProfile] = useState<string | null>(null);
-  const [sharedProfile, setSharedProfile] = useState<string | null>(null);
+  const edgeBack = useEdgeBack(handleBack, !restoring);
   const backend = useBackendConnection();
   const [showSplash, setShowSplash] = useState(true);
   const fade = useRef(new Animated.Value(1)).current;
@@ -73,10 +77,15 @@ function Shell() {
 
   useEffect(() => {
     if (!user || !pendingProfile) return;
-    setSharedProfile(pendingProfile);
-    setPage('shared-profile');
+    setPage('shared-profile', pendingProfile);
     setPendingProfile(null);
   }, [pendingProfile, setPage, user]);
+
+  useEffect(() => {
+    if (Platform.OS !== 'android') return;
+    const subscription = BackHandler.addEventListener('hardwareBackPress', handleBack);
+    return () => subscription.remove();
+  }, [handleBack]);
 
   useEffect(() => {
     tabScroll.setValue(0);
@@ -113,18 +122,18 @@ function Shell() {
     ayurveda: <Ayurveda />,
     bazi: <BaZi />,
     'chinese-zodiac': <ChineseZodiac />,
-    chat: <Chat onOpenProfile={openSharedProfile} />,
+    chat: <Chat initialChatId={resumeChatId} onOpenProfile={(id, chatId) => setPage('shared-profile', id, chatId)} />,
     people: <People onOpenProfile={openSharedProfile} />,
     feed: <Feed />,
     profile: <Profile scrollOffset={tabScroll} />,
-    'shared-profile': sharedProfile ? <SharedProfile key={sharedProfile} id={sharedProfile} /> : <People onOpenProfile={openSharedProfile} />,
+    'shared-profile': sharedProfileId ? <SharedProfile key={sharedProfileId} id={sharedProfileId} /> : <People onOpenProfile={openSharedProfile} />,
     login: <Login />,
   };
 
   const gated = isPlanFeature(page) && !hasFeature(account, page);
   const showSubscription = page === 'subscription' || gated;
   const activePageNode = restoring ? null : !user ? <Login /> : showSubscription
-    ? <ProfileSettings initialSubscription onClose={() => setPage(gated ? 'explore' : 'profile')} />
+    ? <ProfileSettings initialSubscription onClose={() => goBack(gated ? 'explore' : 'profile')} />
     : pages[page] || <Home />;
 
   // Страниците Login, Home, Chat и Feed управляват сами своя скрол и клавиатура
@@ -136,17 +145,20 @@ function Shell() {
   const screenTop = alignedHeader ? insets.top + backHeaderSpacing.paddingTop : topInset;
 
   return (
-    <View style={{ flex: 1, backgroundColor: page === 'feed' ? '#000000' : colors.bg }}>
+    <View {...edgeBack} style={{ flex: 1, backgroundColor: page === 'feed' ? '#000000' : colors.bg }}>
       <ExpoStatusBar style={!user || cosmicHome || theme === 'dark' ? 'light' : 'dark'} />
 
       <BlurTargetView ref={navBlurTarget} style={{ flex: 1 }}>
       {cosmicTab && <CosmicBackground offset={tabScroll} reduced={reducedMotion} light={theme === 'light'} />}
-      {!cosmicTab && !cosmicHome && <ShootingStar reduced={reducedMotion} light={page !== 'feed' && theme === 'light'} />}
+      {user && !cosmicTab && !cosmicHome && <>
+        <StarField subtle light={page !== 'feed' && theme === 'light'} />
+        <ShootingStar reduced={reducedMotion} light={page !== 'feed' && theme === 'light'} />
+      </>}
       <View
         key={user ? page : 'login'}
         style={{
           flex: 1,
-          paddingTop: !user || cosmicHome || showSubscription || page === 'profile' || page === 'explore' ? 0 : screenTop,
+          paddingTop: user && isFullHeightPage && page === 'chat' ? screenTop : 0,
           paddingHorizontal: !user || cosmicHome || page === 'feed' || page === 'profile' ? 0 : backHeaderSpacing.paddingHorizontal,
           width: '100%',
           maxWidth: !user || cosmicHome || page === 'feed' ? '100%' : cosmicTab ? 620 : 720,
@@ -157,12 +169,13 @@ function Shell() {
           activePageNode
         ) : (
           <Animated.ScrollView
+            contentInsetAdjustmentBehavior="never"
             showsVerticalScrollIndicator={false}
             keyboardShouldPersistTaps="handled"
             scrollEventThrottle={cosmicTab ? 16 : undefined}
             onScroll={cosmicTab ? Animated.event([{ nativeEvent: { contentOffset: { y: tabScroll } } }], { useNativeDriver: Platform.OS !== 'web' }) : undefined}
             contentContainerStyle={{
-              paddingTop: page === 'explore' ? topInset : 0,
+              paddingTop: screenTop,
               paddingBottom: user ? 120 : 40,
             }}
           >
@@ -218,7 +231,9 @@ export default function App() {
   return (
     <SafeAreaProvider>
       <AppProvider>
-        <Shell />
+        <TiltParallaxProvider>
+          <Shell />
+        </TiltParallaxProvider>
       </AppProvider>
     </SafeAreaProvider>
   );
