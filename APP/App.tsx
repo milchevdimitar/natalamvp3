@@ -126,7 +126,7 @@ function Shell() {
     chat: <Chat initialChatId={resumeChatId} onOpenProfile={(id, chatId) => setPage('shared-profile', id, chatId)} />,
     people: <People onOpenProfile={openSharedProfile} />,
     feed: <Feed />,
-    profile: <Profile scrollOffset={tabScroll} />,
+    profile: <Profile scrollOffset={tabScroll} onOpenProfile={openSharedProfile} />,
     'shared-profile': sharedProfileId ? <SharedProfile key={sharedProfileId} id={sharedProfileId} /> : <People onOpenProfile={openSharedProfile} />,
     login: <Login />,
   };

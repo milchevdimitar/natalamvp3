@@ -24,7 +24,7 @@ import { degToZodiac, unwrapUserObject } from './astrology.calculations';
 import { useAstrologyChart } from './useAstrologyChart';
 import { buildPersonalPsychologicalInsights } from './astrology.insights';
 import { requestAstrologyAI } from './astrology.ai';
-import { NatalChartWheel } from './NatalChartWheel';
+import { ReadableNatalWheel } from './ReadableNatalWheel';
 import { NatalChart3DDome } from './NatalChart3DDome';
 import {
   PrimaryPlacementsRow,
@@ -308,7 +308,7 @@ export function LegacyAstrology() {
 
               <Card style={styles.chartCard}>
                 {viewMode === '2D' ? (
-                  <NatalChartWheel results={results} colors={colors} variant="2D" />
+                  <ReadableNatalWheel key={results.signature} results={results} />
                 ) : (
                   <NatalChart3DDome results={results} colors={colors} />
                 )}

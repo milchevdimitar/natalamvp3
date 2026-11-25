@@ -9,7 +9,7 @@ import { CountUp, DashboardProgressBar, DoshaTriangle, ElementSymbols, useDashbo
 import { DOSHA_CATEGORIES } from './Ayurveda/ayurveda.data';
 import { ProfileSettings } from './ProfileSettings';
 import { ProfilePhoto } from '../components/ProfilePhoto';
-import { ProfileQrCard } from '../components/ProfileQrCard';
+import { ProfileQrScreen } from '../components/ProfileQrScreen';
 import { profileId, shareProfile } from '../services/profileLinks';
 import type { ExploreRoute } from '../data/exploreRoutes';
 import { useApp } from '../context/AppContext';
@@ -23,7 +23,7 @@ const systemIcons: Record<ExploreRoute, typeof Sun> = {
   ayurveda: Leaf, bazi: Compass, 'chinese-zodiac': Orbit,
 };
 
-export default function Profile({ scrollOffset }: { scrollOffset: Animated.Value }) {
+export default function Profile({ scrollOffset, onOpenProfile }: { scrollOffset: Animated.Value; onOpenProfile: (id: string) => void }) {
   const { colors, user, setPage, account } = useApp();
   const insets = useSafeAreaInsets();
   const [settingsOpen, setSettingsOpen] = useState(false);
@@ -88,8 +88,8 @@ export default function Profile({ scrollOffset }: { scrollOffset: Animated.Value
         <View style={styles.shareActions}>
           <Pressable accessibilityRole="button" accessibilityLabel="Share profile" onPress={share} style={[styles.shareAction, { borderColor: colors.line, backgroundColor: colors.purpleSoft }]}><Share2 color={colors.purple} size={20} /></Pressable>
           <Pressable accessibilityRole="button" accessibilityLabel="Show profile QR code" onPress={() => {
-            if (publicId) { setShareNotice(''); setQrOpen(true); }
-            else setShareNotice('Sign in to a saved Natala account to show a QR code.');
+            setQrOpen(true);
+
           }} style={[styles.shareAction, { borderColor: colors.line, backgroundColor: colors.purpleSoft }]}><QrCode color={colors.purple} size={20} /></Pressable>
         </View>
         {!!shareNotice && !qrOpen && <T muted size={12}>{shareNotice}</T>}
@@ -185,7 +185,7 @@ export default function Profile({ scrollOffset }: { scrollOffset: Animated.Value
     </Animated.ScrollView>
     {readingOpen && publicId && <ProfileReading userId={publicId} onClose={() => setReadingOpen(false)} />}
     {settingsOpen && <ProfileSettings birthLabel={birthLabel} birthCity={birthCity} onClose={() => setSettingsOpen(false)} />}
-    {qrOpen && publicId && <ProfileQrCard id={publicId} name={name || 'Natala profile'} photo={photo} onClose={() => setQrOpen(false)} onShare={share} notice={shareNotice} />}
+    {qrOpen && <ProfileQrScreen initialMode="code" onClose={() => setQrOpen(false)} onOpenProfile={onOpenProfile} />}
     </>
   );
 }

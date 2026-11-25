@@ -170,13 +170,12 @@ export default function Home() {
         <View style={styles.greeting}>
           <Text style={styles.date}>{now.toLocaleDateString(undefined, { weekday: 'long', month: 'long', day: 'numeric' })}</Text>
           <View style={styles.greetingRow}>
-            <Text accessibilityRole="header" style={styles.hero}>Your daily <Text style={styles.heroAccent}>cosmic moment.</Text></Text>
+            <Text accessibilityRole="header" style={styles.hero}>Your daily <Text style={styles.heroAccent}>cosmic moment</Text></Text>
             {streak !== null && <Pressable accessibilityRole="button" accessibilityLabel="Open discovery streak calendar" onPress={() => setDetail('streak')} style={styles.streak}>
               <Flame size={13} color="#ff963f" fill="#ff963f" />
               <Text style={styles.streakText}>{streak.count + (streak.count === 1 ? ' day' : ' days')}</Text>
             </Pressable>}
           </View>
-          <Text style={styles.greetingSub}>Your sky, your stories, a little magic.</Text>
         </View>
 
         <View style={styles.group}>
@@ -188,23 +187,22 @@ export default function Home() {
             ? (retrogradeCount === 1 ? '1 planet in retrograde' : retrogradeCount + ' planets in retrograde')
             : loadingNASA ? 'Checking planetary motion…' : 'Planetary motion unavailable'}
             hint="See which planets are retrograde and when they turn direct" artwork={<SkyArtwork kind="retro" />} onPress={() => { setAtlasReturnIndex(undefined); setDetail('retrogrades'); }} disabled={!planetaryPositions.length} />
+          <SkyCard title="Your Cosmic Report" subtitle="A personalized reading" hint="Explore 12 chapters about your life"
+            artwork={<SkyArtwork kind="report" />} premium onPress={() => {
+              if (!hasFeature(account, 'pdf-report')) { setPage('subscription'); return; }
+              if (reportUserId) setDetail('report');
+            }} />
+
+          <FortuneCookieCard
+            colors={palette}
+            addStory={addStory}
+            onShareMessage={(draftMessage) => {
+              setSelectedChat({ draftMessage });
+              setPage('chat');
+            }}
+            onOpenConfetti={() => { if (!reduced) setConfetti(Date.now()); }}
+          />
         </View>
-
-        <SkyCard title="Your Cosmic Report" subtitle="A personalized reading" hint="Explore 12 chapters about your life"
-          artwork={<SkyArtwork kind="report" />} premium onPress={() => {
-            if (!hasFeature(account, 'pdf-report')) { setPage('subscription'); return; }
-            if (reportUserId) setDetail('report');
-          }} />
-
-        <FortuneCookieCard
-          colors={palette}
-          addStory={addStory}
-          onShareMessage={(draftMessage) => {
-            setSelectedChat({ draftMessage });
-            setPage('chat');
-          }}
-          onOpenConfetti={() => { if (!reduced) setConfetti(Date.now()); }}
-        />
       </Animated.ScrollView>
 
       {detail === 'report' && reportUserId && <ProfileReading userId={reportUserId} onClose={close} />}
@@ -250,7 +248,6 @@ const styles = StyleSheet.create({
   date: { color: '#a9bceb', fontSize: 10, fontWeight: '800', letterSpacing: 1.1, textTransform: 'uppercase' },
   hero: { flexShrink: 1, maxWidth: 260, fontSize: 29, lineHeight: 33, fontWeight: '800', letterSpacing: -1.25, color: cosmic.text },
   heroAccent: { color: '#b7b4ff' },
-  greetingSub: { color: cosmic.muted, fontSize: 12, lineHeight: 19, marginTop: 2 },
   streak: { flexDirection: 'row', gap: 4, alignItems: 'center', flexShrink: 0, marginTop: 5, backgroundColor: 'rgba(24,53,121,0.44)', borderRadius: 16, paddingHorizontal: 10, paddingVertical: 8, borderColor: cosmic.line, borderWidth: 1 },
   streakText: { color: cosmic.gold, fontWeight: '800', fontSize: 12 },
   group: { gap: 11 },

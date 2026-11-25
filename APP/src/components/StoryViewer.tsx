@@ -279,7 +279,7 @@ export function StoryViewer({ circular = false, circleSize = 55 }: { circular?: 
     return (
       <View style={styles.emptyContainer}>
         <T muted size={12} style={circular ? { color: '#b9c8ea' } : undefined}>
-          Все още няма активни сторита от последните 24 часа.
+          No active stories
         </T>
       </View>
     );

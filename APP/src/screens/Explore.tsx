@@ -45,7 +45,7 @@ export default function Explore() {
       <Hero
         eyebrow="YOUR ATLAS · EXPLORE & DISCOVER"
         first="Find a"
-        accent="new lens."
+        accent="new lens"
         description="Explore the systems that shape your inner world and discover new perspectives."
       />
       <SearchBar value={search} onChange={setSearch} placeholder="Search systems" />

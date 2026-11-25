@@ -44,7 +44,7 @@ export function ConversationsListView({
       <Hero
         eyebrow="COSMIC MESSAGES"
         first="Your"
-        accent="Conversations."
+        accent="Conversations"
         description="Connect with friends and astrological soulmates by email."
       />
 

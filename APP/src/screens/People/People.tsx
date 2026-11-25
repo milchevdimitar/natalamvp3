@@ -9,7 +9,7 @@ import { PotentialMatchCard } from './PotentialMatchCard';
 import { FriendListSection } from './FriendListSection';
 import { DiscoverGridSection } from './DiscoverGridSection';
 import { ResonanceDetailModal } from './ResonanceDetailModal';
-import { CosmicInviteModal } from './CosmicInviteModal';
+import { ProfileQrScreen } from '../../components/ProfileQrScreen';
 import { styles } from './people.styles';
 
 export default function People({ onOpenProfile }: { onOpenProfile: (id: string) => void }) {
@@ -45,7 +45,6 @@ export default function People({ onOpenProfile }: { onOpenProfile: (id: string) 
     handleDeclineRequest,
     handleRemoveFriend,
     handleOpenChatWith,
-    handleConnectByCode,
   } = usePeople(user, setPage);
 
   return (
@@ -53,7 +52,7 @@ export default function People({ onOpenProfile }: { onOpenProfile: (id: string) 
       <Hero
         eyebrow="YOUR CIRCLE · DISCOVER & CONNECT"
         first="People who"
-        accent="resonate."
+        accent="resonate"
         description="Discover real connections, compare natal charts & MBTI, and grow your circle."
       />
 
@@ -182,10 +181,9 @@ export default function People({ onOpenProfile }: { onOpenProfile: (id: string) 
       )}
 
       {inviteModalVisible && (
-        <CosmicInviteModal
-          colors={colors}
+        <ProfileQrScreen
+          initialMode="scan"
           onClose={() => setInviteModalVisible(false)}
-          onConnectByCode={handleConnectByCode}
           onOpenProfile={onOpenProfile}
         />
       )}
